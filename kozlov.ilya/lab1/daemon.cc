@@ -35,7 +35,7 @@ std::string Daemon::hist_log_;
 
 bool Daemon::Init(char* config_file)
 {
-  openlog(NAME.c_str(), LOG_PID | LOG_NDELAY, LOG_LOCAL0);
+  openlog(NAME.c_str(), LOG_PID | LOG_NDELAY, LOG_USER);
   config_file_ = realpath(config_file, nullptr);
   if (config_file_ == nullptr)
   {
@@ -86,7 +86,7 @@ bool Daemon::LoadConfig()
   std::ifstream in_file(config_file_);
   if (!in_file)
   {
-    syslog(LOG_ERR, "Can't open file");
+    syslog(LOG_ERR, "Can't open config file");
     return false;
   }
   std::map<std::string, std::string> config_dict = ParseFile(in_file, DELIM);
@@ -165,7 +165,6 @@ void Daemon::CheckPidFile()
 
 void Daemon::SetPidFile()
 {
-  syslog(LOG_INFO, "Setting pid file...");
   std::ofstream out;
   out.open(pid_file_, std::ofstream::out | std::ofstream::trunc);
   if (!out.is_open())
@@ -253,6 +252,9 @@ void Daemon::SignalHandler(int sig_num)
   }
   else if (sig_num == SIGHUP)
   {
-    LoadConfig();
+    if (!LoadConfig())
+    {
+      Terminate();
+    }
   }
 }
