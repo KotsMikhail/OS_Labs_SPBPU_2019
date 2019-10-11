@@ -34,7 +34,7 @@ void ConfigHolder::destroy() {
 ConfigHolder::ConfigHolder(const std::string &config_file_name) {
     std::fstream f(config_file_name);
     if (!f.is_open()){
-        syslog(LOG_ERR, "can't open config file");
+        syslog(LOG_LOCAL0, "can't open config file");
         return;
     }
 
@@ -68,6 +68,6 @@ ConfigHolder* ConfigHolder::getInstance(){
     if (m_inst)
         return m_inst;
     else
-        syslog(LOG_ERR, "config holder is not init");
+        syslog(LOG_LOCAL0, "config holder is not init");
     return nullptr;
 }

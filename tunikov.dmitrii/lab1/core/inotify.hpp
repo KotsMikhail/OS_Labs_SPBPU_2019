@@ -26,7 +26,6 @@ private:
     std::map<int, std::string> watchers;
 
     void addWatchers() {
-        removeWatchers();
         ConfigHolder *ch = ConfigHolder::getInstance();
         for (auto &watch_dir : ch->get("watch_directories")) {
             int wd = inotify_add_watch(fd, watch_dir.c_str(), IN_CREATE | IN_MODIFY | IN_DELETE);
@@ -79,15 +78,26 @@ public:
         return obj;
     }
 
+    void printWatchDirs()
+    {
+        std::string wds = "";
+        for (auto& wd : watchers)
+            wds += wd.second + "; ";
+        syslog(LOG_LOCAL0, "new watch dirs: %s", wds.c_str());
+    }
+
     void reloadNotifier()
     {
+        removeWatchers();
         addWatchers();
     }
 
     int runNotifier() {
+        syslog(LOG_LOCAL0, "start watching direcrories");
         while (true) {
             int offset = 0;
             int len = read(fd, buf, BUF_LEN);
+            syslog(LOG_LOCAL0, "change something");
             if (len == -1) {
                 throw CommonException("can't read buff from fd");
             }

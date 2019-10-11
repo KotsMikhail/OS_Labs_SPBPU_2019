@@ -31,6 +31,7 @@ void signalHandler(int sig)
     int rc = 0;
     switch (sig){
         case SIGHUP:
+            syslog(LOG_LOCAL0, "reload config signal was accepted");
             //reread config file
             rc = ConfigHolder::init(cfgFile);
             if (rc) {
@@ -40,6 +41,8 @@ void signalHandler(int sig)
 
             try {
                 inotifier->reloadNotifier();
+                inotifier->printWatchDirs();
+                syslog(LOG_LOCAL0, "config was successfully reloaded");
             }
             catch (CommonException& e)
             {
@@ -70,21 +73,6 @@ int main(int argc, char** argv) {
         return (EXIT_FAILURE);
     }
 
-    /* Open the log file */
-    openlog ("inotify ", 0, LOG_LOCAL0);
-    syslog(LOG_LOCAL0, "Starting daemon...");
-
-    try{
-        inotifier = inotifier::createNotifier();
-        inotifier->runNotifier();
-    }
-    catch (CommonException& e)
-    {
-        syslog(LOG_LOCAL0, "%s", e.what());
-        delete inotifier;
-        return EXIT_FAILURE;
-    }
-/*
     int pid = fork();
     if (pid == -1)
     {
@@ -93,27 +81,21 @@ int main(int argc, char** argv) {
     }
     else if (pid == 0)
     {
-        //child started
-        //this code executes inside child
+        cout << "Hello from child with pid = " << getpid() << " and ppid = " << getppid() << endl;
+        //check daemon already exist
+        utils::pidFile::updatePidFile();
 
-        //set files rules bits
-        umask(0);
-
-        //create new session independent from parent
-        setsid();
-
-        //close input/output descriptots
-        close(STDIN_FILENO);
-        close(STDOUT_FILENO);
-        close(STDERR_FILENO);
+        /* Open the log file */
+        openlog ("inotify ", LOG_PID | LOG_NDELAY, LOG_LOCAL0);
+        syslog(LOG_LOCAL0, "Starting daemon...");
 
         //set signals
         signal(SIGTERM, signalHandler);
         signal(SIGHUP, signalHandler);
 
-        openlog ("inotify ", 0, LOG_LOCAL0);
-        syslog(LOG_LOCAL0, "Starting daemon...");
-
+        umask(0);
+        setsid();
+        chdir("/");
         try{
             inotifier = inotifier::createNotifier();
             inotifier->runNotifier();
@@ -127,8 +109,9 @@ int main(int argc, char** argv) {
     }
     else //it is parent
     {
+        cout << "parent here";
         return EXIT_SUCCESS;
-    }*/
+    }
 
     return EXIT_SUCCESS;
 }
