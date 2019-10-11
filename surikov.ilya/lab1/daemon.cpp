@@ -12,6 +12,8 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <ctime>
+#include <sys/sendfile.h>
+#include <fcntl.h>
 
 #define PID_FILE "/var/run/daemon_lab.pid"
 #define TEN_MIN 600
@@ -42,12 +44,8 @@ void kill_prev_daemon() {
     if (ipidFile.is_open() && !ipidFile.eof())
     {
         pid_t prev;
-        char proc[20] = "/proc/";
         ipidFile >> prev;
-        sprintf(proc + 6, "%d", prev);
-        struct stat s;
-        if (!stat(proc, &s) && S_ISDIR(s.st_mode))
-            kill(prev, SIGTERM);
+        kill(prev, SIGTERM);
     }
     ipidFile.close();
 }
@@ -59,10 +57,25 @@ void set_pid_file() {
         exit(EXIT_FAILURE);
     }
     pid_file << getpid();
+    pid_file.close();
 }
 
-void move_file(const std::string& path_src, const std::string& path_dst) {
-    system( (std::string("mv ") + path_src + std::string(" ") + path_dst).c_str() );
+void move_file(const char* path_src, const char* path_dst) {
+    int source = open(path_src, O_RDONLY, 0);
+    int dest = open(path_dst, O_WRONLY | O_CREAT , 0644);
+
+    // struct required, rationale: function stat() exists also
+    struct stat stat_source;
+    fstat(source, &stat_source);
+
+    sendfile(dest, source, nullptr, stat_source.st_size);
+
+    close(source);
+    close(dest);
+
+    if (std::remove(path_src) != 0) {
+        syslog(LOG_ERR, "Could not move file");
+    }
 }
 
 void signal_handler(int sig)
@@ -88,7 +101,6 @@ void signal_handler(int sig)
 
 
 void process_directory(const std::string& folder_src, const std::string& folder_dst, int mode) {
-    syslog(LOG_NOTICE, "Successfully working");
     struct stat t_stat;
     time_t creation_time, cur_time;
 
@@ -112,12 +124,12 @@ void process_directory(const std::string& folder_src, const std::string& folder_
         switch (mode) {
             case OLDER:
                 if ( (cur_time - creation_time) >  TEN_MIN) {
-                    move_file(file_path_src, file_path_dst);
+                    move_file(file_path_src.c_str(), file_path_dst.c_str());
                 }
                 break;
             case YOUNGER:
                 if ( (cur_time - creation_time) <  TEN_MIN) {
-                    move_file(file_path_src, file_path_dst);
+                    move_file(file_path_src.c_str(), file_path_dst.c_str());
                 }
                 break;
             default:
@@ -132,31 +144,33 @@ void process_directory(const std::string& folder_src, const std::string& folder_
 
 int main(int argc,char **argv)
 {
-    pid_t pid = fork(), sid;
+    pid_t pid = fork();
     if (pid == -1)
         exit(EXIT_FAILURE);
     else if (pid > 0)
         exit(EXIT_SUCCESS);
 
     if (argc != 2) {
-        printf("Wrong number of arguments. Expected: 2. Got: %d", argc);
-        return 0;
+        exit(EXIT_FAILURE);
     }
     cfg_path = argv[1];
-
-    kill_prev_daemon();
 
     openlog("daemon_lab", LOG_NOWAIT | LOG_PID, LOG_USER);
     syslog(LOG_NOTICE, "Successfully started daemon_lab");
 
     umask(0);
 
-    sid = setsid();
-    if (sid < 0)
+    if (setsid() < 0)
     {
         syslog(LOG_ERR, "Could not generate session ID for child process");
         exit(EXIT_FAILURE);
     }
+
+    pid = fork();
+    if (pid == -1)
+        exit(EXIT_FAILURE);
+    else if (pid > 0)
+        exit(EXIT_SUCCESS);
 
     read_config();
     cfg_path = realpath(cfg_path.c_str(), nullptr);
@@ -174,9 +188,10 @@ int main(int argc,char **argv)
     signal(SIGHUP, signal_handler);
     signal(SIGTERM, signal_handler);
 
+    kill_prev_daemon();
     set_pid_file();
 
-    while (1)
+    while (true)
     {
          if(need_work) {
              process_directory(folder1, folder2, OLDER);
