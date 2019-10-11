@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 11)
 set(SOURCES
     main.cc
     daemon.cc
-    daemon.h)
+    daemon.h
+    parser.cc
+    parser.h)
 
 add_executable(${PROJECT_NAME} ${SOURCES})

@@ -1,6 +1,5 @@
 #include <iostream>
 #include <unistd.h>
-#include <wait.h>
 
 #include "daemon.h"
 
@@ -11,7 +10,6 @@ int main(int argc, char** argv)
     std::cout << "Usage: ./lab1 path/to/config.conf" << std::endl;
     exit(EXIT_FAILURE);
   }
-
   pid_t pid = fork();
   if (pid == -1)
   {
@@ -33,8 +31,6 @@ int main(int argc, char** argv)
   else // parent
   {
     std::cout << "Hello from parent with pid = " << getpid() << ", child pid = " << pid << std::endl;
-    //int status;
-    //waitpid(pid, &status, 0);
   }
   return EXIT_SUCCESS;
 }
