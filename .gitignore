@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+
+/tunikov.dmitrii/lab1/.idea/ 
+/tunikov.dmitrii/lab1/cmake-build-debug/
