@@ -5,7 +5,6 @@
 #include "parser.h"
 
 #include <vector>
-#include <syslog.h>
 
 std::map<std::string, std::string> ParseFile(std::ifstream& in_file, const std::string& delim)
 {
@@ -41,6 +40,7 @@ std::map<std::string, std::string> ParseFile(std::ifstream& in_file, const std::
         words_str += w;
       }
       std::map<std::string, std::string> err_map;
+      // Error map with one pair = ["ERROR", <current words>]
       err_map.insert(std::pair<std::string, std::string>(PARSER_ERROR, words_str.c_str()));
       return err_map;
     }

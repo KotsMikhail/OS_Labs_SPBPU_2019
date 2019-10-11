@@ -10,6 +10,9 @@
 #include <syslog.h>
 #include <fstream>
 #include <map>
+#include <dirent.h>
+#include <cstring>
+#include <iomanip>
 
 #include "parser.h"
 
@@ -19,19 +22,20 @@ const std::string Daemon::INTERVAL_KEY = "interval";
 const std::string Daemon::PID_FILE_KEY = "pid_file";
 const std::string Daemon::DIR1_KEY = "dir1";
 const std::string Daemon::DIR2_KEY = "dir2";
+const std::string Daemon::NAME = "LAB1 - DAEMON";
 // Static members, default values
 char* Daemon::config_file_ = nullptr;
 int Daemon::time_interval_ = 30;
-std::string Daemon::pid_file_ = "/var/run/lab1.pid";
-std::string Daemon::name_ = "LAB1 - DAEMON";
+std::string Daemon::pid_file_ = "lab1.pid";
 std::string Daemon::dir1_ = "dir1";
 std::string Daemon::dir2_ = "dir2";
+std::string Daemon::hist_log_;
 
 // PUBLIC //
 
 bool Daemon::Init(char* config_file)
 {
-  openlog(name_.c_str(), LOG_PID | LOG_NDELAY, LOG_LOCAL0);
+  openlog(NAME.c_str(), LOG_PID | LOG_NDELAY, LOG_LOCAL0);
   config_file_ = realpath(config_file, nullptr);
   if (config_file_ == nullptr)
   {
@@ -131,6 +135,7 @@ bool Daemon::LoadConfig()
   {
     return false;
   }
+  hist_log_ = dir2_ + "/hist.log";
   syslog(LOG_INFO, "interval: %d, pid_file: %s, dir1: %s, dir2: %s",
       time_interval_, pid_file_.c_str(), dir1_.c_str(), dir2_.c_str());
   return true;
@@ -148,8 +153,12 @@ void Daemon::CheckPidFile()
     pid_t other;
     pid_file >> other;
     pid_file.close();
-    // TODO: search in '/proc'
-    kill(other, SIGTERM);
+    struct stat sb;
+    std::string path_to_daemon = "/proc/" + std::to_string(other);
+    if (stat(path_to_daemon.c_str(), &sb) == 0)
+    {
+      kill(other, SIGTERM);
+    }
     SetPidFile();
   }
 }
@@ -184,10 +193,56 @@ void Daemon::StartWork()
   }
 }
 
-void Daemon::DoWork()
-{
-  // TODO: main work with dirs
+void Daemon::DoWork() {
   syslog(LOG_INFO, "Working...");
+  std::ofstream hist_file;
+  hist_file.open(hist_log_, std::ostream::out | std::ostream::app);
+  if (hist_file.is_open())
+  {
+    time_t now = time(0);
+    struct tm tstruct;
+    char buf[80];
+    tstruct = *localtime(&now);
+    strftime(buf, sizeof(buf), "%Y-%m-%d.%X\n", &tstruct);
+    hist_file << buf;
+    ListDirRec(hist_file, dir1_, 0);
+    hist_file.close();
+  }
+}
+
+void Daemon::ListDirRec(std::ofstream& hist_log, std::string& path, int indent)
+{
+  DIR *dir;
+  struct dirent *entry;
+  if (!(dir = opendir(path.c_str())))
+  {
+    syslog(LOG_ERR, "Can't open %s", path.c_str());
+    return;
+  }
+  while ((entry = readdir(dir)) != nullptr)
+  {
+    if (entry->d_type == DT_DIR)
+    {
+      if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+      {
+        continue;
+      }
+      std::string new_path = path + "/" + std::string(entry->d_name);
+      for (int i = 0; i < indent; i++)
+      {
+        hist_log << " ";
+      }
+      hist_log << entry->d_name << "/" << std::endl;
+      ListDirRec(hist_log, new_path, indent + 2);
+    } else {
+      for (int i = 0; i < indent; i++)
+      {
+        hist_log << " ";
+      }
+      hist_log << entry->d_name << std::endl;
+    }
+  }
+  closedir(dir);
 }
 
 void Daemon::SignalHandler(int sig_num)

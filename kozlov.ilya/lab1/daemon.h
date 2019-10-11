@@ -15,13 +15,14 @@ private:
   static const std::string PID_FILE_KEY;
   static const std::string DIR1_KEY;
   static const std::string DIR2_KEY;
+  static const std::string NAME;
 
   static std::string pid_file_;
   static std::string dir1_;
   static std::string dir2_;
+  static std::string hist_log_;
   static char* config_file_;
   static int time_interval_;
-  static std::string name_;
 
 public:
   static bool Init(char* config_file);
@@ -37,6 +38,7 @@ private:
   static void DoWork();
   static void SignalHandler(int sig_num);
   static std::string GetFullPath(std::string& path);
+  static void ListDirRec(std::ofstream& hist_log, std::string& path, int indent);
 };
 
 #endif //LAB1__DAEMON_H_
