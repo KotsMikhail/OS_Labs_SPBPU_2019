@@ -35,7 +35,7 @@ ConfigHolder::ConfigHolder(const std::string &config_file_name) {
     std::fstream f(config_file_name);
     if (!f.is_open()){
         syslog(LOG_ERR, "can't open config file");
-        throw std::exception();
+        return;
     }
 
     std::string cur_line;
@@ -54,17 +54,20 @@ ConfigHolder::ConfigHolder(const std::string &config_file_name) {
     f.close();
 }
 
-void ConfigHolder::init(const std::string& config_file_name){
-    if (m_inst) {
-        syslog(LOG_INFO, "ConfigHolder already initialized");
-        return;
-    }
+int ConfigHolder::init(const std::string& config_file_name){
+    if (m_inst)
+        delete m_inst;
+
     m_inst = new ConfigHolder(config_file_name);
+    if (m_inst)
+        return 0;
+    else
+        return 1;
 }
 ConfigHolder* ConfigHolder::getInstance(){
     if (m_inst)
         return m_inst;
     else
         syslog(LOG_ERR, "config holder is not init");
-    throw std::exception();
+    return nullptr;
 }

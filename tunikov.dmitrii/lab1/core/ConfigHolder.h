@@ -12,7 +12,7 @@
 class ConfigHolder {
 public:
     std::vector<std::string> get(const std::string& conf_elem_name);
-    static void init(const std::string& config_file_name);
+    static int init(const std::string& config_file_name);
     static ConfigHolder* getInstance();
     static void destroy();
 private:
