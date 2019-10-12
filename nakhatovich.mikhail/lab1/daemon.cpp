@@ -11,11 +11,11 @@
 
 #define PID_FILE "/var/run/disk_monitor.pid"
 
-config_t *config = NULL;
 inotify_t inotify;
 
 void load_config()
 {
+    config_t * config = config_t::get_instance();
     if (!config)
         return;
     
@@ -34,7 +34,7 @@ void signal_handler(int sig)
         break;
     case SIGTERM:
         syslog(LOG_NOTICE, "Terminate signal catched. Stopping disk_monitor.");
-        delete config;
+        config_t::destroy();
         exit(EXIT_SUCCESS);
         break;
     }
@@ -92,7 +92,7 @@ void init_base()
 
 int main(int argc, char **argv) 
 {
-    
+    config_t * config;
     pid_t pid;
 
     pid = fork();
@@ -109,8 +109,8 @@ int main(int argc, char **argv)
 
         initialize_home_directory();
         if (argc > 1)
-            config = config_t::init(argv[1]);
-        if (config == NULL)
+            config = config_t::get_instance(argv[1]);
+        if (!config)
         {
             syslog(LOG_ERR, "Couldn't initialize configuration file. Stopped disk_monitor.");
             closelog();

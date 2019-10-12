@@ -5,6 +5,8 @@
 #include "config.h"
 #include "utils.h"
 
+config_t * config_t::_instance = NULL;
+
 config_t::config_t(string_t &path) : _conf_path(path)
 {};
 
@@ -15,16 +17,25 @@ config_t::~config_t()
     _added_directories.clear();
 }
 
-config_t * config_t::init(const char *path)
+config_t * config_t::get_instance(const char *path)
 {
-    string_t conf_path(path);
-    conf_path = get_realpath(conf_path);
-    if (conf_path.length() == 0 || is_dir(conf_path))
+    if (!_instance && path)
     {
-        syslog(LOG_ERR, "Incorrect path to configuration file.");
-        return NULL;
+        string_t conf_path(path);
+        conf_path = get_realpath(conf_path);
+        if (conf_path.length() == 0 || is_dir(conf_path))
+        {
+            syslog(LOG_ERR, "Incorrect path to configuration file.");
+            return NULL;
+        }
+        _instance = new (std::nothrow) config_t(conf_path);
     }
-    return new (std::nothrow) config_t(conf_path);
+    return _instance;
+}
+
+void config_t::destroy()
+{
+    delete _instance;
 }
 
 set_string_t config_t::load_directories()
