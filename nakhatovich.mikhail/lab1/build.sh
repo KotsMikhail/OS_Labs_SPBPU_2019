@@ -35,4 +35,4 @@ fi
 
 chmod 666 "$pid_location"
 
-g++ -Wall -Werror types.h utils.h utils.cpp inotify.h inotify.cpp config.h config.cpp daemon.cpp -o daemon
+g++ -std=c++11 -Wall -Werror types.h utils.h utils.cpp inotify.h inotify.cpp config.h config.cpp daemon.cpp -o daemon
