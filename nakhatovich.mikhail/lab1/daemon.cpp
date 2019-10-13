@@ -11,30 +11,26 @@
 
 #define PID_FILE "/var/run/disk_monitor.pid"
 
-void load_config()
+void destroy_all() 
 {
-    config_t * config = config_t::get_instance();
-    inotify_t * inotify = inotify_t::get_instance();
-    if (!config || !inotify)
-        return;
-    
-    config->load();
-    inotify->add_watchers(config->get_difference_add());
-    inotify->remove_watchers(config->get_difference_delete());
+    inotify_t::destroy();
+    config_t::destroy();
 }
 
 void signal_handler(int sig) 
 {
+    inotify_t * inotify;
     switch (sig) 
     {
     case SIGHUP:
         syslog(LOG_NOTICE, "Hangup signal catched.");
-        load_config();
+        inotify = inotify_t::get_instance();
+        if (inotify)
+            inotify->update();
         break;
     case SIGTERM:
         syslog(LOG_NOTICE, "Terminate signal catched. Stopping disk_monitor.");
-        inotify_t::destroy();
-        config_t::destroy();
+        destroy_all();
         exit(EXIT_SUCCESS);
         break;
     }
@@ -124,13 +120,14 @@ int main(int argc, char **argv)
         {
             syslog(LOG_WARNING, "Couldn't initialize inotify. Stopped disk_monitor.");
             closelog();
+            destroy_all();
             exit(EXIT_FAILURE);
         }
         syslog(LOG_NOTICE, "Successfully initialized inotify.");
         
         save_pid();
         init_base();
-        load_config();
+        inotify->update();
 
         while (true)
             inotify->do_inotify();
@@ -140,8 +137,10 @@ int main(int argc, char **argv)
         syslog(LOG_ERR, "%s.", e.what());
         syslog(LOG_NOTICE, "Stopping disk_monitor.");
         closelog();
+        destroy_all();
         exit(EXIT_FAILURE);
     }
 
+    destroy_all();
     exit(EXIT_SUCCESS);
 }

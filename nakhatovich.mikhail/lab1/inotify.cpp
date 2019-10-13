@@ -4,6 +4,7 @@
 
 #include <algorithm>
 
+#include "config.h"
 #include "inotify.h"
 
 #define MAX_EVENTS          64 
@@ -73,6 +74,17 @@ void inotify_t::remove_watchers(const set_string_t & directories_to_rm)
             _watch_directories.erase(it);
         }
     }
+}
+
+void inotify_t::update()
+{
+    config_t * config = config_t::get_instance();
+    if (!config)
+        return;
+    
+    config->load();
+    add_watchers(config->get_difference_add());
+    remove_watchers(config->get_difference_delete());
 }
 
 void log_event(const char *event_name, const char *file_or_dir, const char *filename, const char *directory, const uint32_t *cookie=NULL)

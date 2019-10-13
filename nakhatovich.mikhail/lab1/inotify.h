@@ -12,8 +12,7 @@ public:
     static void destroy();
 
     void do_inotify();
-    void add_watchers(const set_string_t & directories_to_add);
-    void remove_watchers(const set_string_t & directories_to_rm);
+    void update();
 
 private:
     inotify_t() = delete;
@@ -24,6 +23,8 @@ private:
     ~inotify_t();
 
     void handle_event(inotify_event *event);
+    void add_watchers(const set_string_t & directories_to_add);
+    void remove_watchers(const set_string_t & directories_to_rm);
 
     static inotify_t * _instance;
 
