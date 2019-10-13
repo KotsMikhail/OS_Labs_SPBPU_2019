@@ -11,7 +11,9 @@
 #define EVENT_SIZE          (sizeof(inotify_event)) 
 #define BUF_LEN             (MAX_EVENTS * (EVENT_SIZE + LEN_NAME))
 
-inotify_t::inotify_t() : _fd(-1)
+inotify_t * inotify_t::_instance = NULL;
+
+inotify_t::inotify_t(int fd) : _fd(fd)
 {};
 
 inotify_t::~inotify_t()
@@ -19,12 +21,25 @@ inotify_t::~inotify_t()
     _watch_directories.clear();
 }
 
+inotify_t * inotify_t::get_instance()
+{
+    if (!_instance)
+    {
+        int fd = inotify_init();
+        if (fd >= 0) 
+            _instance = new (std::nothrow) inotify_t(fd);
+    }
+    return _instance;
+}
+
+void inotify_t::destroy()
+{
+    delete _instance;
+}
+
 void inotify_t::add_watchers(const set_string_t & directories_to_add)
 {
     int wd = -1;
-    init();
-    if (_fd < 0)
-        return; 
 
     for (const string_t & path : directories_to_add)
     {
@@ -33,7 +48,7 @@ void inotify_t::add_watchers(const set_string_t & directories_to_add)
             syslog(LOG_WARNING, "Couldn't add watch to \"%s\".", path.c_str());
         else
         {
-            syslog(LOG_NOTICE, "Added watch to %s.", path.c_str());
+            syslog(LOG_NOTICE, "Added watch to \"%s\".", path.c_str());
             _watch_directories.insert(pair_int_string_t(wd, path));
         }
     }
@@ -42,8 +57,6 @@ void inotify_t::add_watchers(const set_string_t & directories_to_add)
 void inotify_t::remove_watchers(const set_string_t & directories_to_rm)
 {
     map_int_string_t::iterator it;
-    if (_fd < 0)
-        return;
     
     for (const string_t & path : directories_to_rm)
     {
@@ -59,18 +72,6 @@ void inotify_t::remove_watchers(const set_string_t & directories_to_rm)
                 syslog(LOG_NOTICE, "Removed watch to \"%s\".", path.c_str());
             _watch_directories.erase(it);
         }
-    }
-}
-
-void inotify_t::init()
-{
-    if (_fd < 0)
-    {
-        _fd = inotify_init();
-        if (_fd < 0) 
-            syslog(LOG_WARNING, "Couldn't initialize inotify.");
-        else
-            syslog(LOG_NOTICE, "Successfully initialized inotify with FD #%d.", _fd);
     }
 }
 

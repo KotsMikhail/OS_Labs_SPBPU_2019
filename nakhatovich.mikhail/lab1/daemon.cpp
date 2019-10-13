@@ -11,17 +11,16 @@
 
 #define PID_FILE "/var/run/disk_monitor.pid"
 
-inotify_t inotify;
-
 void load_config()
 {
     config_t * config = config_t::get_instance();
-    if (!config)
+    inotify_t * inotify = inotify_t::get_instance();
+    if (!config || !inotify)
         return;
     
     config->load();
-    inotify.add_watchers(config->get_difference_add());
-    inotify.remove_watchers(config->get_difference_delete());
+    inotify->add_watchers(config->get_difference_add());
+    inotify->remove_watchers(config->get_difference_delete());
 }
 
 void signal_handler(int sig) 
@@ -34,6 +33,7 @@ void signal_handler(int sig)
         break;
     case SIGTERM:
         syslog(LOG_NOTICE, "Terminate signal catched. Stopping disk_monitor.");
+        inotify_t::destroy();
         config_t::destroy();
         exit(EXIT_SUCCESS);
         break;
@@ -93,6 +93,7 @@ void init_base()
 int main(int argc, char **argv) 
 {
     config_t * config;
+    inotify_t * inotify;
     pid_t pid;
 
     pid = fork();
@@ -117,14 +118,22 @@ int main(int argc, char **argv)
             exit(EXIT_FAILURE);
         }
         syslog(LOG_NOTICE, "Successfully initialized configuration file.");  
+
+        inotify = inotify_t::get_instance();
+        if (!inotify)
+        {
+            syslog(LOG_WARNING, "Couldn't initialize inotify. Stopped disk_monitor.");
+            closelog();
+            exit(EXIT_FAILURE);
+        }
+        syslog(LOG_NOTICE, "Successfully initialized inotify.");
         
         save_pid();
         init_base();
-        inotify.init();
         load_config();
 
         while (true)
-            inotify.do_inotify();
+            inotify->do_inotify();
     }
     catch (const std::exception &e)
     {
