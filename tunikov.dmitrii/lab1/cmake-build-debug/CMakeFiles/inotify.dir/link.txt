@@ -1,1 +1,0 @@
-/usr/bin/c++  -g   CMakeFiles/inotify.dir/main.cpp.o CMakeFiles/inotify.dir/core/ConfigHolder.cpp.o  -o inotify 

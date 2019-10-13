@@ -1,2 +1,0 @@
-cmake -Wall -Werror ..
-make
