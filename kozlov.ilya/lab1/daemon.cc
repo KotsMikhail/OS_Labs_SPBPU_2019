@@ -57,11 +57,16 @@ void Daemon::Start()
   StartWork();
 }
 
-void Daemon::Terminate()
+void Daemon::Clear()
 {
   free(config_file_);
   syslog(LOG_INFO, "Closing...");
   closelog();
+}
+
+void Daemon::Terminate()
+{
+  Clear();
   exit(SIGTERM);
 }
 
@@ -87,6 +92,7 @@ bool Daemon::LoadConfig()
   if (!in_file)
   {
     syslog(LOG_ERR, "Can't open config file");
+    Clear();
     return false;
   }
   std::map<std::string, std::string> config_dict = ParseFile(in_file, DELIM);
@@ -94,6 +100,7 @@ bool Daemon::LoadConfig()
   if (config_dict.size() == 1 && config_dict.find(PARSER_ERROR) != config_dict.end())
   {
     syslog(LOG_ERR, "CONFIG ERROR: words are %s", config_dict.at(PARSER_ERROR).c_str());
+    Clear();
     return false;
   }
   if (config_dict.find(INTERVAL_KEY) != config_dict.end())
@@ -104,6 +111,7 @@ bool Daemon::LoadConfig()
     }
     catch (std::exception &e) {
       syslog(LOG_ERR, "CONFIG ERROR: %s", e.what());
+      Clear();
       return false;
     }
   }
@@ -123,16 +131,19 @@ bool Daemon::LoadConfig()
   pid_file_ = GetFullPath(pid_file_);
   if (pid_file_.empty())
   {
+    Clear();
     return false;
   }
   dir1_ = GetFullPath(dir1_);
   if (dir1_.empty())
   {
+    Clear();
     return false;
   }
   dir2_ = GetFullPath(dir2_);
   if (dir2_.empty())
   {
+    Clear();
     return false;
   }
   hist_log_ = dir2_ + "/hist.log";
@@ -193,7 +204,6 @@ void Daemon::StartWork()
 }
 
 void Daemon::DoWork() {
-  syslog(LOG_INFO, "Working...");
   std::ofstream hist_file;
   hist_file.open(hist_log_, std::ostream::out | std::ostream::app);
   if (hist_file.is_open())

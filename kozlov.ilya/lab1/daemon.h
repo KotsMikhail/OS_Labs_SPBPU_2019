@@ -29,6 +29,7 @@ public:
   static void Start();
 
 private:
+  static void Clear();
   static void Terminate();
   static bool LoadConfig();
   static void CheckPidFile();

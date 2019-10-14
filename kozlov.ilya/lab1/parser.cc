@@ -32,7 +32,12 @@ std::map<std::string, std::string> ParseFile(std::ifstream& in_file, const std::
     {
       words.push_back(cur_word);
     }
-    if (words.size() != 2)
+    unsigned cur_words_size = words.size();
+    if (cur_words_size == 0)
+    {
+      continue;
+    }
+    if (cur_words_size != 2)
     {
       std::string words_str;
       for (std::string& w : words)
