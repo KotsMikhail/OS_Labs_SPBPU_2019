@@ -97,13 +97,11 @@ public:
         while (true) {
             int offset = 0;
             int len = read(fd, buf, BUF_LEN);
-            syslog(LOG_LOCAL0, "change something");
             if (len == -1) {
                 throw CommonException("can't read buff from fd");
             }
 
             auto *event = (inotify_event *) &buf[offset];
-
             while (offset < len) {
                 if (event->len) {
                     if (event->mask & IN_CREATE) {
@@ -116,7 +114,7 @@ public:
                         }
                     }
 
-                    if (event->mask & IN_MODIFY) {
+                    else if (event->mask & IN_MODIFY) {
                         if (event->mask & IN_ISDIR)
                             syslog(LOG_LOCAL0, "The directory %s was modified into watch_dir %s\n", event->name,
                                    watchers.find(event->wd)->second.c_str());
@@ -125,17 +123,22 @@ public:
                                    watchers.find(event->wd)->second.c_str());
                     }
 
-                    if (event->mask & IN_DELETE) {
+                    else if (event->mask & IN_DELETE) {
                         if (event->mask & IN_ISDIR)
                             syslog(LOG_LOCAL0, "The directory %s was deleted into watch_dir %s\n", event->name,
                                    watchers.find(event->wd)->second.c_str());
                         else
                             syslog(LOG_LOCAL0, "The file %s was deleted into watch_dir %s\n", event->name,
                                    watchers.find(event->wd)->second.c_str());
+                    } else{
+                        syslog(LOG_LOCAL0, "unknown change %s\n", event->name);
                     }
+
 
                     offset += EVENT_SIZE * event->len;
                 }
+                else
+                    break;
             }
         }
     }
