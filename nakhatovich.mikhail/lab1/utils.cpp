@@ -8,7 +8,7 @@
 
 string_t home_directory("");
 
-void initialize_home_directory()
+void init_home_directory()
 {
     passwd *pw;
     uid_t uid;

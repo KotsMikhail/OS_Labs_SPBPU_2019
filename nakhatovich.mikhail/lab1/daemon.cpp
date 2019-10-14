@@ -11,10 +11,12 @@
 
 #define PID_FILE "/var/run/disk_monitor.pid"
 
-void destroy_all() 
+void exit_daemon(int exit_code=EXIT_SUCCESS) 
 {
+    closelog();
     inotify_t::destroy();
     config_t::destroy();
+    exit(exit_code);
 }
 
 void signal_handler(int sig) 
@@ -30,8 +32,7 @@ void signal_handler(int sig)
         break;
     case SIGTERM:
         syslog(LOG_NOTICE, "Terminate signal catched. Stopping disk_monitor.");
-        destroy_all();
-        exit(EXIT_SUCCESS);
+        exit_daemon(EXIT_SUCCESS);
         break;
     }
 }
@@ -62,20 +63,68 @@ void save_pid()
     }
 }
 
-void init_base()
+void make_fork() 
 {
-    umask(0);
+    pid_t pid = fork();
+    if (pid == -1) 
+    {
+        syslog(LOG_ERR, "Fork failed. Stopping disk_monitor.");
+        exit_daemon(EXIT_FAILURE);
+    }
+    else if (pid > 0) 
+    {
+        syslog(LOG_NOTICE, "Soccessfully made fork. Child's pid is %d.", pid);
+        exit_daemon(EXIT_SUCCESS);  
+    }
+}
+
+void init_config(int argc, char **argv)
+{
+    config_t * config = NULL;
+    if (argc > 1)
+        config = config_t::get_instance(argv[1]);
+    if (!config)
+    {
+        syslog(LOG_ERR, "Couldn't initialize configuration file. Stopping disk_monitor.");
+        exit_daemon(EXIT_FAILURE);
+    }
+    syslog(LOG_NOTICE, "Successfully initialized configuration file.");
+}
+
+void init_inotify()
+{
+    inotify_t * inotify = inotify_t::get_instance();
+    if (!inotify)
+    {
+        syslog(LOG_ERR, "Couldn't initialize inotify. Stopping disk_monitor.");
+        exit_daemon(EXIT_FAILURE);
+    }
+    syslog(LOG_NOTICE, "Successfully initialized inotify.");
+}
+
+
+void init_daemon(int argc, char **argv)
+{
+    make_fork();
 
     if (setsid() < 0)
     {
-        syslog(LOG_ERR, "Couldn't generate session ID for child process.");
-        exit(EXIT_FAILURE);
+        syslog(LOG_ERR, "Couldn't generate session ID for child process. Stopping disk_monitor.");
+        exit_daemon(EXIT_FAILURE);
     }
+
+    make_fork();
+
+    umask(0);
+
+    init_home_directory();
+    init_config(argc, argv);  
+    init_inotify();
 
     if ((chdir("/")) < 0)
     {
-        syslog(LOG_ERR, "Couldn't change working directory to /.");
-        exit(EXIT_FAILURE);
+        syslog(LOG_ERR, "Couldn't change working directory to /. Stopping disk_monitor.");
+        exit_daemon(EXIT_FAILURE);
     }
 
     close(STDIN_FILENO);
@@ -88,45 +137,19 @@ void init_base()
 
 int main(int argc, char **argv) 
 {
-    config_t * config;
-    inotify_t * inotify;
-    pid_t pid;
-
-    pid = fork();
-    if (pid == -1) 
-        exit(EXIT_FAILURE);
-    else if (pid > 0) 
-        exit(EXIT_SUCCESS); 
+    inotify_t * inotify = NULL;
 
     try
     {
-        terminate_another_instance();
         openlog("disk_monitor", LOG_NOWAIT | LOG_PID, LOG_LOCAL0);
         syslog(LOG_NOTICE, "Started disk_monitor.");  
 
-        initialize_home_directory();
-        if (argc > 1)
-            config = config_t::get_instance(argv[1]);
-        if (!config)
-        {
-            syslog(LOG_ERR, "Couldn't initialize configuration file. Stopped disk_monitor.");
-            closelog();
-            exit(EXIT_FAILURE);
-        }
-        syslog(LOG_NOTICE, "Successfully initialized configuration file.");  
+        init_daemon(argc, argv);
+
+        terminate_another_instance();
+        save_pid();
 
         inotify = inotify_t::get_instance();
-        if (!inotify)
-        {
-            syslog(LOG_WARNING, "Couldn't initialize inotify. Stopped disk_monitor.");
-            closelog();
-            destroy_all();
-            exit(EXIT_FAILURE);
-        }
-        syslog(LOG_NOTICE, "Successfully initialized inotify.");
-        
-        save_pid();
-        init_base();
         inotify->update();
 
         while (true)
@@ -134,13 +157,9 @@ int main(int argc, char **argv)
     }
     catch (const std::exception &e)
     {
-        syslog(LOG_ERR, "%s.", e.what());
-        syslog(LOG_NOTICE, "Stopping disk_monitor.");
-        closelog();
-        destroy_all();
-        exit(EXIT_FAILURE);
+        syslog(LOG_ERR, "%s. Stopping disk_monitor.", e.what());
+        exit_daemon(EXIT_FAILURE);
     }
-
-    destroy_all();
-    exit(EXIT_SUCCESS);
+    
+    exit_daemon(EXIT_SUCCESS);
 }

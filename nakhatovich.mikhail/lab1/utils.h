@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-void initialize_home_directory();
+void init_home_directory();
 string_t get_realpath(string_t &path);
 bool is_dir(string_t &path);
 
