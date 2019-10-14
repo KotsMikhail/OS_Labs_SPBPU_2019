@@ -24,6 +24,7 @@ private:
     char *buf;
     int fd;
     std::map<int, std::string> watchers;
+    bool is_running;
 
     void addWatchers() {
         ConfigHolder *ch = ConfigHolder::getInstance();
@@ -75,6 +76,7 @@ public:
             delete obj;
             throw CommonException(e);
         }
+        obj->is_running = true;
         return obj;
     }
 
@@ -88,13 +90,18 @@ public:
 
     void reloadNotifier()
     {
+        is_running = false;
         removeWatchers();
         addWatchers();
+        is_running = true;
     }
 
     int runNotifier() {
         syslog(LOG_LOCAL0, "start watching direcrories");
         while (true) {
+            if (!is_running)
+                continue;
+
             int offset = 0;
             int len = read(fd, buf, BUF_LEN);
             syslog(LOG_LOCAL0, "change something");
