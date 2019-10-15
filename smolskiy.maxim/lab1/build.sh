@@ -9,5 +9,5 @@ fi
 
 chmod ugo+rw $absPidPath
 
-g++ -Wall -Werror -o daemon main.cpp
+g++ -std=c++11 -Wall -Werror -o daemon main.cpp
 

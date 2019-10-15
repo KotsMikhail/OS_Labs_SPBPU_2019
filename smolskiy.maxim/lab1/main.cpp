@@ -23,6 +23,13 @@ struct Config
     {
         ifstream cfgFile(absPath);
         cfgFile >> absfldrPath >> interval;
+
+        if (cfgFile.eof())
+        {
+            syslog(LOG_ERR, "Bad config.");
+            exit(EXIT_FAILURE);
+        }
+
         cfgFile.close();
         syslog(LOG_INFO, "Read config.");
     }
@@ -30,7 +37,14 @@ struct Config
     Config(char *cfgName)
     {
         char buf[PATH_MAX];
-        absPath = realpath(cfgName, buf);
+
+        if (realpath(cfgName, buf) == nullptr)
+        {
+            syslog(LOG_ERR, "Config doesn't exist.");
+            exit(EXIT_FAILURE);
+        }
+
+        absPath = buf;
         ReadConfig();
     }
 };
@@ -53,7 +67,7 @@ void ProtectAgainstRestart()
     pidOutputFile.close();
 }
 
-void SigHandler(int sigNum)
+void HandleSignal(int sigNum)
 {
     switch(sigNum)
     {
@@ -129,6 +143,12 @@ void DeleteAllSubfolders()
 
 int main(int argc, char **argv)
 {
+    if (argc != 2)
+    {
+        cout << "Usage: ./daemon config.cfg" << endl;
+        exit(EXIT_FAILURE);
+    }
+
     openlog("daemon", LOG_CONS | LOG_PID, LOG_DAEMON);
     syslog(LOG_INFO, "Opened a connection to the system logger.");
     syslog(LOG_INFO, "Run.");
@@ -165,14 +185,18 @@ int main(int argc, char **argv)
     if (pid != 0)
         exit(EXIT_SUCCESS);
     
-    chdir("/");
+    if (chdir("/") == -1)
+    {
+        syslog(LOG_ERR, "Chdir error.");
+        exit(EXIT_FAILURE);
+    }
 
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
 
-    signal(SIGHUP, SigHandler);
-    signal(SIGTERM, SigHandler);
+    signal(SIGHUP, HandleSignal);
+    signal(SIGTERM, HandleSignal);
 
     ProtectAgainstRestart();
 
@@ -182,4 +206,3 @@ int main(int argc, char **argv)
         sleep(cfg.interval);
     }
 }
-
