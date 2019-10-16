@@ -19,10 +19,8 @@ std::string folder1;
 std::string folder2;
 unsigned int interval = 0;
 
-namespace patch
-{
-    template < typename T > std::string to_string( const T& n )
-    {
+namespace patch {
+    template < typename T > std::string to_string( const T& n ) {
         std::ostringstream stm ;
         stm << n ;
         return stm.str() ;
@@ -62,10 +60,8 @@ void copy_file(std::string src_path, std::string dst_path) {
     dst << src.rdbuf();
 }
 
-static int rmFiles(const char *pathname, const struct stat *sbuf, int type, struct FTW *ftwb)
-{
-    if (remove(pathname) < 0)
-    {
+static int rmFiles(const char *pathname, const struct stat *sbuf, int type, struct FTW *ftwb) {
+    if (remove(pathname) < 0) {
         perror("ERROR: remove");
         return -1;
     }
@@ -121,14 +117,36 @@ int read_config_file() {
         printf("Empty args, please check config file %s. \n", config_path.c_str());
         return EXIT_FAILURE;
     }
+
+    if (!is_dir_exist(folder1)) {
+        printf("Directory %s is not exist \n", folder1.c_str());
+        return EXIT_FAILURE;
+    }
+
     return EXIT_SUCCESS;
 }
 
-void signal_handler(int signum) 
-{
+
+void kill_last_daemon() {
+    std::ifstream pid_file(pid_file_path.c_str());
+
+    if (pid_file.is_open() && !pid_file.eof()) {
+        pid_t prev_daemon_pid;
+        pid_file >> prev_daemon_pid;
+        std::string proc = "/proc/" + patch::to_string(prev_daemon_pid);
+        syslog (LOG_NOTICE, "Kill daemon.");
+        kill(prev_daemon_pid, SIGTERM);
+    }
+
+    pid_file.close();
+}
+
+void signal_handler(int signum) {
     if (signum == SIGHUP) {
         syslog (LOG_NOTICE, "SIGHUP signal caught.");
-        read_config_file();
+        if (read_config_file() != EXIT_SUCCESS) {
+            kill_last_daemon();
+        }
     }
     else if (signum == SIGTERM) {
         syslog (LOG_NOTICE, "SIGTERM signal caught.");
@@ -137,10 +155,8 @@ void signal_handler(int signum)
     }
 }
 
-static void create_daemon()
-{
-    /* create new daemon */
 
+static void create_daemon() {
     pid_t pid;
 
     pid = fork();
@@ -174,19 +190,7 @@ static void create_daemon()
 
     syslog (LOG_NOTICE, "New daemon.");
 
-    /* kill previous daemon */
-
-    std::ifstream pid_file(pid_file_path.c_str());
-
-    if (pid_file.is_open() && !pid_file.eof()) {
-        pid_t prev_daemon_pid;
-        pid_file >> prev_daemon_pid;
-        std::string proc = "/proc/" + patch::to_string(prev_daemon_pid);
-        syslog (LOG_NOTICE, "Kill previous daemon.");
-        kill(prev_daemon_pid, SIGTERM);
-    }
-
-    pid_file.close();
+    kill_last_daemon();
 
     /* set new pid */
 
@@ -199,8 +203,7 @@ static void create_daemon()
 
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     if (argc != 2) {
         printf("Error: exprected 2 arguments, got %d", argc);
         return EXIT_FAILURE;
@@ -219,8 +222,7 @@ int main(int argc, char **argv)
     
     create_daemon();
 
-    while (true)
-    {
+    while (true) {
         if (!is_dir_exist(folder2))
             printf("WARNING: Destination directory %s is not exist. It will be created. \n", folder2.c_str());
 
