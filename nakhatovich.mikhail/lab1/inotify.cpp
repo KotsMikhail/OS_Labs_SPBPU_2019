@@ -12,7 +12,7 @@
 #define EVENT_SIZE          (sizeof(inotify_event)) 
 #define BUF_LEN             (MAX_EVENTS * (EVENT_SIZE + LEN_NAME))
 
-inotify_t * inotify_t::_instance = NULL;
+inotify_t * inotify_t::_instance = nullptr;
 
 inotify_t::inotify_t(int fd) : _fd(fd)
 {};
@@ -87,7 +87,7 @@ void inotify_t::update()
     remove_watchers(config->get_difference_delete());
 }
 
-void log_event(const char *event_name, const char *file_or_dir, const char *filename, const char *directory, const uint32_t *cookie=NULL)
+void log_event(const char *event_name, const char *file_or_dir, const char *filename, const char *directory, const uint32_t *cookie=nullptr)
 {
     if (cookie)
         syslog(LOG_NOTICE, "%s: %s \"%s\" in \"%s\". Cookie=%u.", event_name, file_or_dir, filename, directory, *cookie);
@@ -102,7 +102,7 @@ void inotify_t::handle_event(inotify_event *event)
     int wd = event->wd;
     uint32_t cookie = event->cookie;
     map_int_string_t::iterator it = _watch_directories.find(wd);
-    const char *directory = NULL;
+    const char *directory = nullptr;
     if (it != _watch_directories.end())
         directory = it->second.c_str();
 

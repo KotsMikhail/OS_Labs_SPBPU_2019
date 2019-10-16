@@ -5,7 +5,7 @@
 #include "config.h"
 #include "utils.h"
 
-config_t * config_t::_instance = NULL;
+config_t * config_t::_instance = nullptr;
 
 config_t::config_t(string_t &path) : _conf_path(path)
 {};
@@ -26,7 +26,7 @@ config_t * config_t::get_instance(const char *path)
         if (conf_path.length() == 0 || is_dir(conf_path))
         {
             syslog(LOG_ERR, "Incorrect path to configuration file.");
-            return NULL;
+            return nullptr;
         }
         _instance = new (std::nothrow) config_t(conf_path);
     }

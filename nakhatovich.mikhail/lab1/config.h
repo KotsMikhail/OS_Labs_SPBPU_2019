@@ -6,7 +6,7 @@
 class config_t
 {
 public:
-    static config_t * get_instance(const char *path=NULL);
+    static config_t * get_instance(const char *path=nullptr);
     static void destroy();
     
     void load();

@@ -27,7 +27,7 @@ string_t get_realpath(std::string &path)
         return path;
     if (path[0] == '~')
         path.replace(0, 1, home_directory); 
-    char *canonical_path = realpath(path.c_str(), NULL);
+    char *canonical_path = realpath(path.c_str(), nullptr);
     if (!canonical_path)
     {
         syslog(LOG_WARNING, "Couldn't find file or directory \"%s\".", path.c_str());

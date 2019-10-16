@@ -46,9 +46,11 @@ void terminate_another_instance()
     if (pid_file.is_open() && !pid_file.eof())
     {
         pid_file >> prev;
-        proc += std::to_string(prev);
-        if (is_dir(proc))
+        if (prev > 0)
+        {
+            proc += std::to_string(prev);
             kill(prev, SIGTERM); 
+        }
     }
     pid_file.close();
 }
@@ -73,14 +75,14 @@ void make_fork()
     }
     else if (pid > 0) 
     {
-        syslog(LOG_NOTICE, "Soccessfully made fork. Child's pid is %d.", pid);
+        syslog(LOG_NOTICE, "Successfully made fork. Child's pid is %d.", pid);
         exit_daemon(EXIT_SUCCESS);  
     }
 }
 
 void init_config(int argc, char **argv)
 {
-    config_t * config = NULL;
+    config_t * config = nullptr;
     if (argc > 1)
         config = config_t::get_instance(argv[1]);
     if (!config)
@@ -137,7 +139,7 @@ void init_daemon(int argc, char **argv)
 
 int main(int argc, char **argv) 
 {
-    inotify_t * inotify = NULL;
+    inotify_t * inotify = nullptr;
 
     try
     {
