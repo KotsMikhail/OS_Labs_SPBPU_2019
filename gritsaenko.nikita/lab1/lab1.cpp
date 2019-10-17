@@ -126,16 +126,18 @@ int read_config_file() {
     return EXIT_SUCCESS;
 }
 
-
-void kill_last_daemon() {
+void kill_last_daemon()
+{
     std::ifstream pid_file(pid_file_path.c_str());
 
-    if (pid_file.is_open() && !pid_file.eof()) {
+    if (pid_file.is_open() && !pid_file.eof())
+    {
         pid_t prev_daemon_pid;
         pid_file >> prev_daemon_pid;
-        std::string proc = "/proc/" + patch::to_string(prev_daemon_pid);
-        syslog (LOG_NOTICE, "Kill daemon.");
-        kill(prev_daemon_pid, SIGTERM);
+        
+        if (prev_daemon_pid > 0) {
+            kill(prev_daemon_pid, SIGTERM);
+        }
     }
 
     pid_file.close();
