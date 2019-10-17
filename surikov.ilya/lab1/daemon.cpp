@@ -45,7 +45,9 @@ void kill_prev_daemon() {
     {
         pid_t prev;
         ipidFile >> prev;
-        kill(prev, SIGTERM);
+        if (prev > 0) {
+            kill(prev, SIGTERM);
+        }
     }
     ipidFile.close();
 }
@@ -150,13 +152,13 @@ int main(int argc,char **argv)
     else if (pid > 0)
         exit(EXIT_SUCCESS);
 
-    if (argc != 2) {
+    if (argc < 2) {
+        printf("Wrong numbers of arguments. Expected: 2. Got: %d", argc);
         exit(EXIT_FAILURE);
     }
     cfg_path = argv[1];
 
     openlog("daemon_lab", LOG_NOWAIT | LOG_PID, LOG_USER);
-    syslog(LOG_NOTICE, "Successfully started daemon_lab");
 
     umask(0);
 
@@ -180,6 +182,8 @@ int main(int argc,char **argv)
         syslog(LOG_ERR, "Could not change working directory to /");
         exit(EXIT_FAILURE);
     }
+
+    syslog(LOG_NOTICE, "Successfully started daemon_lab");
 
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
