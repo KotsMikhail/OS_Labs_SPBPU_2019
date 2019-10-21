@@ -22,16 +22,15 @@ namespace utils {
             pid_file << getpid();
             pid_file.close();
         }
-        static void updatePidFile()
+        static void updatePidFile(const std::string& pid_file_name)
         {
-            ConfigHolder *ch = ConfigHolder::getInstance();
-            std::string pid_file_name = !ch->get("pid_file").empty() ?ch->get("pid_file")[0] : throw CommonException("can't find pid_file_name");
-
             ifstream pid_file(pid_file_name);
             if (!pid_file)
             {
                 createPidFile(pid_file_name);
-            } else{
+            }
+            else
+            {
                 pid_t old_pid;
                 pid_file >> old_pid;
                 pid_file.close();

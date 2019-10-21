@@ -16,15 +16,15 @@ using namespace std;
 
 static std::string cfgFile = "inotify.cfg";
 
+static inotifier* inotifier;
 
 int close(int ret_code = 0)
 {
+    delete inotifier;
     closelog();
     ConfigHolder::destroy();
     exit(ret_code);
 }
-
-static inotifier* inotifier;
 
 void signalHandler(int sig)
 {
@@ -59,7 +59,7 @@ void signalHandler(int sig)
 }
 
 int main(int argc, char** argv) {
-    if (argc < 2)
+    if (argc < 3)
     {
         cout << "use config path: /lab1/path/to/inotify.cfg";
         return (EXIT_FAILURE);
@@ -73,6 +73,10 @@ int main(int argc, char** argv) {
         return (EXIT_FAILURE);
     }
 
+    /* Open the log file */
+    openlog ("inotify ", LOG_PID | LOG_NDELAY, LOG_LOCAL0);
+    syslog(LOG_LOCAL0, "Starting daemon...");
+
     int pid = fork();
     if (pid == -1)
     {
@@ -83,11 +87,7 @@ int main(int argc, char** argv) {
     {
         cout << "Hello from child with pid = " << getpid() << " and ppid = " << getppid() << endl;
         //check daemon already exist
-        utils::pidFile::updatePidFile();
-
-        /* Open the log file */
-        openlog ("inotify ", LOG_PID | LOG_NDELAY, LOG_LOCAL0);
-        syslog(LOG_LOCAL0, "Starting daemon...");
+        utils::pidFile::updatePidFile(argv[2]);
 
         //set signals
         signal(SIGTERM, signalHandler);
@@ -103,8 +103,7 @@ int main(int argc, char** argv) {
         catch (CommonException& e)
         {
             syslog(LOG_LOCAL0, "%s", e.what());
-            delete inotifier;
-            return EXIT_FAILURE;
+            close(1);
         }
     }
     else //it is parent
