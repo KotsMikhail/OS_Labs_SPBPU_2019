@@ -119,7 +119,6 @@ static void _StopRunningIfOpened ()
     pidFile.close();
 
     INFO("Daemon was killed.");
-    RemovePidFile(s_pidFilePath);
 }
 
 static int _rmFiles (const char *pathName, const struct stat *sbuf, int type, struct FTW *ftwb)
@@ -224,7 +223,9 @@ void Daemonise ()
     _StopRunningIfOpened();
 
     RedirectStdIO();
-    CheckPidFile(s_pidFilePath);
+    if (!CheckPidFile(s_pidFilePath)) {
+        LOG_ERROR_AND_EXIT("Error! Pid file %s doesn't exist.", s_pidFilePath.c_str());
+    }
 
     _HandleSignals();
 }

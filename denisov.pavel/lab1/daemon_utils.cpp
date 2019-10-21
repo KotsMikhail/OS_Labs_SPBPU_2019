@@ -81,25 +81,16 @@ bool IsDirectoryExist (std::string &dirPath)
     return (dirPath.length() != 0 && stat(dirPath.c_str(), &sts) == 0 && S_ISDIR(sts.st_mode));
 }
 
-void CreatePidFileAndWritePid (const std::string &pidFilePath)
+void WritePidToFile (const std::string &pidFilePath)
 {
-    INFO("Trying to create file \'%s\'", pidFilePath.c_str());
     std::ofstream pidFile;
     pidFile.open(pidFilePath, std::ofstream::out | std::ofstream::trunc);
     if (!pidFile.is_open()) {
-        LOG_ERROR_AND_EXIT("Failed to create a pid file \'%s\' while daemonising. Error number is %d", pidFilePath.c_str(), errno);
+        LOG_ERROR_AND_EXIT("Failed to open a pid file \'%s\' while daemonising. Error number is %d", pidFilePath.c_str(), errno);
     }
 
     pidFile << getpid();
     pidFile.close();
-}
-
-void RemovePidFile (const std::string &pidFilePath)
-{
-    INFO("Trying to remove file \'%s\'", pidFilePath.c_str());
-    if (remove(pidFilePath.c_str()) != 0) {
-        LOG_ERROR_AND_EXIT("Failed to remove the pid file. Error number is %d", errno);
-    }
 }
 
 void StopRunningByPID (pid_t pid)
@@ -118,27 +109,23 @@ void StopRunningByPID (pid_t pid)
     INFO("Running process with pid %d was killed", pid);
 }
 
-void CheckPidFile (const std::string &pidFilePath)
+bool CheckPidFile (const std::string &pidFilePath)
 {
     INFO("Checking pid file...");
     std::ifstream pidFile(pidFilePath);
-    if (pidFile) {
-        // If it founded, try to read a pid-number
-        pid_t pidInFile;
-        pidFile >> pidInFile;
-        if (IsProcessRunning(pidInFile)) {
-            StopRunningByPID(pidInFile);
-        }
-        pidFile.close();
-
-        // Recreating the pid file to clear all information in it
-        RemovePidFile(pidFilePath);
-        CreatePidFileAndWritePid(pidFilePath);
-    } else {
-        // If the file doesn't exist, create it and write the currents process's pid to the file
-        INFO("The pid-file not found");
-        CreatePidFileAndWritePid(pidFilePath);
+    if (!pidFile) {
+        return false;
     }
+
+    // If it founded, try to read a pid-number
+    pid_t pidInFile;
+    pidFile >> pidInFile;
+    StopRunningByPID(pidInFile);
+    pidFile.close();
+
+    WritePidToFile(pidFilePath);
+
+    return true;
 }
 
 void SetRootAsWorkingDirectory ()
