@@ -11,9 +11,9 @@
 
 #include <dirent.h>
 #include <ftw.h>
+#include <errno.h>
 
 #include <sys/stat.h>
-
 
 using namespace std;
 
@@ -33,18 +33,29 @@ bool         NEED_WORK = true;
 int          WAIT_OF_KILLING_TIME = 1;
 
 
+void SafeChdir (const string& absPath)
+{
+   if (chdir(absPath.c_str()) < 0) {
+      syslog(LOG_USER, "Error during chdir: code %i, arg %s", errno, absPath.c_str());
+      exit(EXIT_FAILURE);
+   }
+}
+
+
 void CreateDirectory (const string& absPath, const string& name)
 {
    string currentPath(get_current_dir_name()); 
-   chdir(absPath.c_str());
+
+   SafeChdir(absPath);
 
    int mkdirErr = mkdir(name.c_str(), S_IRWXU);
    if (mkdirErr) {
-      syslog(LOG_USER, "Something goes wrong while creating directory");
+      syslog(LOG_USER, "Something goes wrong while creating directory (CreatingDirectory), stop executing");
       exit(EXIT_FAILURE);
-   }     
-
-   chdir(currentPath.c_str());
+   }   
+   
+   SafeChdir("/");
+   SafeChdir(currentPath.c_str());
 }
 
 
@@ -59,7 +70,7 @@ int UnlinkCB (const char* fpath, const struct stat* sb, int typeflag, struct FTW
    rv = remove(fpath);
    if (rv) {
       perror(fpath);
-      syslog(LOG_USER, "Something goes wrong while deleating files");
+      syslog(LOG_USER, "Something goes wrong while deleting files (UnlinkCB), stop executing");
       exit(EXIT_FAILURE);
    }  
 
@@ -84,7 +95,6 @@ vector<string> GetContentList (const string& absPath)
          if (ent->d_type == DT_DIR) {
             continue;
          }
-         cout << ent->d_name << endl;
          res.push_back(ent->d_name);
       }
       closedir(dir);
@@ -139,6 +149,17 @@ void DoDaemonWork (void)
 }
 
 
+bool IsExistDir (const string& absPath)
+{
+   DIR* dir = opendir(absPath.c_str());
+   if (dir) {
+      closedir(dir);
+      return true;
+   }
+   return false;
+}
+
+
 bool LoadConfig ()
 {
    string line;
@@ -147,13 +168,10 @@ bool LoadConfig ()
    if (in.is_open()) {
       getline(in, line);
       SRC_DIR = line;
-
       getline(in, line);
       DST_DIR = line;
-
       getline(in, line);
       UPDATE_FREQUENCY = atoi(line.c_str());
-
       return true;
    } 
    return false;
@@ -241,13 +259,39 @@ void OnSignalRecieve(int sig)
 }
 
 
+bool CheckConfigParams (void)
+{
+   if (UPDATE_FREQUENCY <= 0 || !IsExistDir(SRC_DIR) || !IsExistDir(DST_DIR)) {
+      return false;
+   }
+   return true;
+}
+
+
 void InitDaemon (void)
 {    
    openlog("daemon_lab", 0, LOG_USER);
  
    umask(0);
-   setsid();
-   chdir("/"); 
+   pid_t sid = setsid();
+   if (sid < 0) {
+      syslog(LOG_USER, "Error while making new session");
+      exit(EXIT_FAILURE);
+   }
+
+   int pid = fork();
+   if (pid == -1) {
+      syslog(LOG_USER, "Error while initing daemon");
+      exit(EXIT_FAILURE);
+   } else if (pid) {
+      return;
+   }
+
+   SafeChdir("/");
+   if (!CheckConfigParams()) {
+      syslog(LOG_USER, "Bad config params, stop executing");
+      exit(EXIT_FAILURE);
+   } 
 
    KillIfOpened();
    InitPidFile();
@@ -257,11 +301,14 @@ void InitDaemon (void)
    close(STDERR_FILENO);
   
    signal(SIGHUP, OnSignalRecieve);   
-   signal(SIGTERM, OnSignalRecieve);     
+   signal(SIGTERM, OnSignalRecieve);    
+
+   WorkProc(); 
 }
 
 
-int main (int argc, char** argv) {
+int main (int argc, char** argv) 
+{
    if (argc != 2) {
       cout << "Bad argument to launch daemon: needed config file name" << endl;
       return -1;
@@ -282,8 +329,6 @@ int main (int argc, char** argv) {
       return -1;
    } else if (!pid) {
       InitDaemon();
-      WorkProc();
-   } else {
-      return 0;
    }
+   return 0;
 }

@@ -1,1 +1,1 @@
-g++ -Wall -Werror main.cpp -o daemon 
+g++ -Wall -Werror -std=c++0x main.cpp -o daemon 
