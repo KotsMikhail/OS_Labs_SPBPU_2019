@@ -9,8 +9,21 @@
 #include <map>
 #include <fstream>
 
-#define PARSER_ERROR "ERROR"
+class Parser
+{
+public:
+  enum ConfigName
+  {
+    INTERVAL,
+    DIR1,
+    DIR2,
+    ERROR
+  };
 
-std::map<std::string, std::string> ParseFile(std::ifstream& in_file, const std::string& delim);
+  static std::map<ConfigName, std::string> ParseFile(std::ifstream& in_file);
+private:
+  static const std::string DELIM;
+  static const std::map<std::string, ConfigName> config_map;
+};
 
 #endif //LAB1__PARSER_H_

@@ -10,19 +10,15 @@
 class Daemon
 {
 private:
-  static const std::string DELIM;
-  static const std::string INTERVAL_KEY;
-  static const std::string PID_FILE_KEY;
-  static const std::string DIR1_KEY;
-  static const std::string DIR2_KEY;
   static const std::string NAME;
 
   static std::string pid_file_;
   static std::string dir1_;
   static std::string dir2_;
   static std::string hist_log_;
+  static std::string home_dir_;
   static char* config_file_;
-  static int time_interval_;
+  static unsigned int time_interval_;
 
 public:
   static bool Init(char* config_file);
@@ -32,8 +28,8 @@ private:
   static void Clear();
   static void Terminate();
   static bool LoadConfig();
-  static void CheckPidFile();
-  static void SetPidFile();
+  static bool CheckPidFile();
+  static bool SetPidFile();
   static void SetSignals();
   static void StartWork();
   static void DoWork();

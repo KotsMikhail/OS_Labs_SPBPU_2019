@@ -6,9 +6,19 @@
 
 #include <vector>
 
-std::map<std::string, std::string> ParseFile(std::ifstream& in_file, const std::string& delim)
+std::string const Parser::DELIM = " :=";
+
+std::map<std::string, Parser::ConfigName> const Parser::config_map = {
+    {"interval", INTERVAL},
+    {"dir1", DIR1},
+    {"dir2", DIR2},
+    {"error", ERROR}
+};
+
+std::map<Parser::ConfigName, std::string> Parser::ParseFile(std::ifstream& in_file)
 {
-  std::map<std::string, std::string> res_dict;
+  std::map<ConfigName, std::string> res_dict;
+  std::map<ConfigName, std::string> err_map;
   std::string cur_str;
   while (!in_file.eof())
   {
@@ -17,7 +27,7 @@ std::map<std::string, std::string> ParseFile(std::ifstream& in_file, const std::
     std::string cur_word;
     for (char ch : cur_str)
     {
-      if (isspace(ch) || delim.find(ch) != std::string::npos)
+      if (isspace(ch) || DELIM.find(ch) != std::string::npos)
       {
         if (!cur_word.empty())
         {
@@ -32,7 +42,7 @@ std::map<std::string, std::string> ParseFile(std::ifstream& in_file, const std::
     {
       words.push_back(cur_word);
     }
-    unsigned cur_words_size = words.size();
+    unsigned long cur_words_size = words.size();
     if (cur_words_size == 0)
     {
       continue;
@@ -44,12 +54,22 @@ std::map<std::string, std::string> ParseFile(std::ifstream& in_file, const std::
       {
         words_str += w;
       }
-      std::map<std::string, std::string> err_map;
-      // Error map with one pair = ["ERROR", <current words>]
-      err_map.insert(std::pair<std::string, std::string>(PARSER_ERROR, words_str.c_str()));
+      // Error map with one pair = [ERROR, <error value>]
+      std::string error = "Wrong words number = " + std::to_string(cur_words_size);
+      err_map.insert(std::pair<ConfigName, std::string>(ERROR, error));
       return err_map;
     }
-    res_dict.insert(std::pair<std::string, std::string>(words[0], words[1]));
+    if (config_map.find(words[0]) != config_map.end())
+    {
+      res_dict.insert(std::pair<ConfigName, std::string>(config_map.at(words[0]), words[1]));
+    }
+    else
+    {
+      // Error map with one pair = [ERROR, <error value>]
+      std::string error = "Wrong config name = " + words[0];
+      err_map.insert(std::pair<ConfigName, std::string>(ERROR, error));
+      return err_map;
+    }
   }
   return res_dict;
 }

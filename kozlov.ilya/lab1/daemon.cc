@@ -17,18 +17,14 @@
 #include "parser.h"
 
 // Daemon constants
-const std::string Daemon::DELIM = " :=";
-const std::string Daemon::INTERVAL_KEY = "interval";
-const std::string Daemon::PID_FILE_KEY = "pid_file";
-const std::string Daemon::DIR1_KEY = "dir1";
-const std::string Daemon::DIR2_KEY = "dir2";
 const std::string Daemon::NAME = "LAB1 - DAEMON";
 // Static members, default values
 char* Daemon::config_file_ = nullptr;
-int Daemon::time_interval_ = 30;
-std::string Daemon::pid_file_ = "lab1.pid";
+unsigned int Daemon::time_interval_ = 30;
+std::string Daemon::pid_file_ = "/var/run/lab1.pid";
 std::string Daemon::dir1_ = "dir1";
 std::string Daemon::dir2_ = "dir2";
+std::string Daemon::home_dir_;
 std::string Daemon::hist_log_;
 
 // PUBLIC //
@@ -42,19 +38,44 @@ bool Daemon::Init(char* config_file)
     syslog(LOG_ERR, "Can't get full path from: %s", config_file);
     return false;
   }
+  char buff[FILENAME_MAX];
+  getcwd(buff, FILENAME_MAX);
+  home_dir_ = buff;
+  syslog(LOG_INFO, "Home dir is %s", buff);
   SetSignals();
   return LoadConfig();
 }
 
 void Daemon::Start()
 {
-  umask(0);
-  setsid();
-  chdir("/");
-  close(STDIN_FILENO);
-  close(STDOUT_FILENO);
-  close(STDERR_FILENO);
-  StartWork();
+  if (setsid() == -1)
+  {
+    syslog(LOG_ERR, "setsid returned error: %d", errno);
+    Terminate();
+  }
+  pid_t pid = fork();
+  if (pid == -1)
+  {
+    syslog(LOG_ERR, "second fork failed");
+    Terminate();
+  }
+  if (pid == 0)
+  {
+    syslog(LOG_INFO, "Creating daemon-child...");
+    umask(0);
+    if (chdir("/") == -1) {
+      syslog(LOG_ERR, "chdir returned error: %d", errno);
+      Terminate();
+    }
+    if (close(STDIN_FILENO) == -1 ||
+        close(STDOUT_FILENO) == -1 ||
+        close(STDERR_FILENO) == -1) {
+      syslog(LOG_ERR, "close returned error: %d", errno);
+      Terminate();
+    }
+    StartWork();
+  }
+  syslog(LOG_INFO, "Exiting daemon-parent...");
 }
 
 void Daemon::Clear()
@@ -74,6 +95,11 @@ void Daemon::Terminate()
 
 std::string Daemon::GetFullPath(std::string& path)
 {
+  if (path[0] == '/')
+  {
+    return path;
+  }
+  path = home_dir_ + "/" + path;
   char* real = realpath(path.c_str(), nullptr);
   if (real == nullptr)
   {
@@ -95,19 +121,20 @@ bool Daemon::LoadConfig()
     Clear();
     return false;
   }
-  std::map<std::string, std::string> config_dict = ParseFile(in_file, DELIM);
+  // Getting values from config
+  std::map<Parser::ConfigName, std::string> config_dict = Parser::ParseFile(in_file);
   in_file.close();
-  if (config_dict.size() == 1 && config_dict.find(PARSER_ERROR) != config_dict.end())
+  if (config_dict.size() == 1 && config_dict.find(Parser::ERROR) != config_dict.end())
   {
-    syslog(LOG_ERR, "CONFIG ERROR: words are %s", config_dict.at(PARSER_ERROR).c_str());
+    syslog(LOG_ERR, "CONFIG ERROR: %s", config_dict.at(Parser::ERROR).c_str());
     Clear();
     return false;
   }
-  if (config_dict.find(INTERVAL_KEY) != config_dict.end())
+  if (config_dict.find(Parser::INTERVAL) != config_dict.end())
   {
     try
     {
-      time_interval_ = std::stoi(config_dict.at(INTERVAL_KEY));
+      time_interval_ = static_cast<unsigned int>(std::stol(config_dict.at(Parser::INTERVAL)));
     }
     catch (std::exception &e) {
       syslog(LOG_ERR, "CONFIG ERROR: %s", e.what());
@@ -115,25 +142,15 @@ bool Daemon::LoadConfig()
       return false;
     }
   }
-  if (config_dict.find(PID_FILE_KEY) != config_dict.end())
+  if (config_dict.find(Parser::DIR1) != config_dict.end())
   {
-    pid_file_ = config_dict.at(PID_FILE_KEY);
+    dir1_ = config_dict.at(Parser::DIR1);
   }
-  if (config_dict.find(DIR1_KEY) != config_dict.end())
+  if (config_dict.find(Parser::DIR2) != config_dict.end())
   {
-    dir1_ = config_dict.at(DIR1_KEY);
+    dir2_ = config_dict.at(Parser::DIR2);
   }
-  if (config_dict.find(DIR2_KEY) != config_dict.end())
-  {
-    dir2_ = config_dict.at(DIR2_KEY);
-  }
-  CheckPidFile();
-  pid_file_ = GetFullPath(pid_file_);
-  if (pid_file_.empty())
-  {
-    Clear();
-    return false;
-  }
+  // Getting full paths
   dir1_ = GetFullPath(dir1_);
   if (dir1_.empty())
   {
@@ -147,19 +164,15 @@ bool Daemon::LoadConfig()
     return false;
   }
   hist_log_ = dir2_ + "/hist.log";
-  syslog(LOG_INFO, "interval: %d, pid_file: %s, dir1: %s, dir2: %s",
-      time_interval_, pid_file_.c_str(), dir1_.c_str(), dir2_.c_str());
+  syslog(LOG_INFO, "interval: %d, dir1: %s, dir2: %s",
+      time_interval_, dir1_.c_str(), dir2_.c_str());
   return true;
 }
 
-void Daemon::CheckPidFile()
+bool Daemon::CheckPidFile()
 {
   std::ifstream pid_file(pid_file_);
-  if (!pid_file)
-  {
-    SetPidFile();
-  }
-  else
+  if (pid_file)
   {
     pid_t other;
     pid_file >> other;
@@ -170,21 +183,22 @@ void Daemon::CheckPidFile()
     {
       kill(other, SIGTERM);
     }
-    SetPidFile();
   }
+  return SetPidFile();
 }
 
-void Daemon::SetPidFile()
+bool Daemon::SetPidFile()
 {
   std::ofstream out;
   out.open(pid_file_, std::ofstream::out | std::ofstream::trunc);
   if (!out.is_open())
   {
-    syslog(LOG_ERR, "Can't create pid file...");
-    return;
+    syslog(LOG_ERR, "Can't open pid file...");
+    return false;
   }
   out << getpid();
   out.close();
+  return true;
 }
 
 void Daemon::SetSignals()
@@ -195,6 +209,15 @@ void Daemon::SetSignals()
 
 void Daemon::StartWork()
 {
+#ifdef PID_FILE
+  pid_file_ = PID_FILE;
+#endif
+  pid_file_ = GetFullPath(pid_file_);
+  if (pid_file_.empty() || !CheckPidFile())
+  {
+    Terminate();
+  }
+  syslog(LOG_INFO, "pid_file: %s", pid_file_.c_str());
   syslog(LOG_INFO, "Starting...");
   while (true)
   {
