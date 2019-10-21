@@ -19,14 +19,6 @@ std::string folder1;
 std::string folder2;
 unsigned int interval = 0;
 
-namespace patch {
-    template < typename T > std::string to_string( const T& n ) {
-        std::ostringstream stm ;
-        stm << n ;
-        return stm.str() ;
-    }
-}
-
 bool is_dir_exist(std::string& path) {
     if (path[0] == '~') {
          passwd *pw;
@@ -54,7 +46,6 @@ bool is_file_exist(const std::string &name) {
 }
 
 void copy_file(std::string src_path, std::string dst_path) {
-    //printf("copy file %s to %s \n", src_path.c_str(), dst_path.c_str());
     std::ifstream src(src_path.c_str(), std::ios::binary);
     std::ofstream dst(dst_path.c_str(), std::ios::binary);
     dst << src.rdbuf();
@@ -72,13 +63,13 @@ void clear_folder(const std::string& path) {
     nftw(path.c_str(), rmFiles, 10, FTW_DEPTH|FTW_MOUNT|FTW_PHYS);
     
     if (mkdir(path.c_str(), 0777) == -1) {
-       printf("Unable to create directory %s \n", path.c_str()); 
+       syslog (LOG_ERR, "Unable to create directory %s.", path.c_str());
     }
 }
 
 void copy_bk_files(std::string& src, std::string& dst) {
     if (!is_dir_exist(src)) {
-        printf("Source directory %s is not exist. Copy failed. \n", src.c_str());
+        syslog (LOG_ERR, "Source directory %s does not exist. Copy failed.", src.c_str());
         return;
     }
     glob_t glob_result;
@@ -104,11 +95,12 @@ void copy_bk_files(std::string& src, std::string& dst) {
 
 int read_config_file() {
     if (!is_file_exist(config_path.c_str())) {
-        printf("Config file %s is not exist. \n", config_path.c_str());
+        printf("Config file %s does not exist. \n", config_path.c_str());
         return EXIT_FAILURE;
     }
     std::ifstream config_file(config_path.c_str());
     if (config_file.is_open() && !config_file.eof()) {
+        interval = 0;
         config_file >> folder1 >> folder2 >> interval;
         config_file.close();
         config_path = realpath(config_path.c_str(), NULL);
@@ -119,19 +111,17 @@ int read_config_file() {
     }
 
     if (!is_dir_exist(folder1)) {
-        printf("Directory %s is not exist \n", folder1.c_str());
+        printf("Directory %s does not exist. \n", folder1.c_str());
         return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;
 }
 
-void kill_last_daemon()
-{
+void kill_last_daemon() {
     std::ifstream pid_file(pid_file_path.c_str());
 
-    if (pid_file.is_open() && !pid_file.eof())
-    {
+    if (pid_file.is_open() && !pid_file.eof()) {
         pid_t prev_daemon_pid;
         pid_file >> prev_daemon_pid;
         
@@ -147,6 +137,7 @@ void signal_handler(int signum) {
     if (signum == SIGHUP) {
         syslog (LOG_NOTICE, "SIGHUP signal caught.");
         if (read_config_file() != EXIT_SUCCESS) {
+            syslog(LOG_ERR, "Can't read config file");
             kill_last_daemon();
         }
     }
@@ -207,7 +198,7 @@ static void create_daemon() {
 
 int main(int argc, char **argv) {
     if (argc != 2) {
-        printf("Error: exprected 2 arguments, got %d", argc);
+        printf("Error: exprected 2 arguments, got %d \n", argc);
         return EXIT_FAILURE;
     }
 
@@ -226,7 +217,7 @@ int main(int argc, char **argv) {
 
     while (true) {
         if (!is_dir_exist(folder2))
-            printf("WARNING: Destination directory %s is not exist. It will be created. \n", folder2.c_str());
+            printf("WARNING: Destination directory %s does not exist. It will be created. \n", folder2.c_str());
 
         clear_folder(folder2);
         copy_bk_files(folder1, folder2);
