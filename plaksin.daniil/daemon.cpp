@@ -10,6 +10,7 @@
 #include <ctime>
 #include <fcntl.h>
 #include <string>
+#include <memory.h>
 
 #define PID_FILE "/var/run/daemon_lab.pid"
 #define ONE_MIN 60
@@ -33,8 +34,11 @@ void process_config_file() {
         exit(EXIT_FAILURE);
     }
 
-    time_t t_cur_time;
-    time(&t_cur_time);
+    time_t rawtime;
+    struct tm * timeinfo;
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    std::cout << timeinfo->tm_sec << std::endl;
 
     while (cfg_file >> msg_date >> msg_time >> msg_flag)
     {
@@ -53,26 +57,60 @@ void process_config_file() {
             msg_flag = "-m";
         }
 
-	std::cout << "process line with time " << t_cur_time << std::endl;
 
-	if (msg_flag.compare("-m") == 0)
+
+        struct tm t;
+        memset(&t, 0, sizeof t);  
+        if (3 != sscanf(msg_date.c_str(),"%d.%d.%d", &t.tm_mday, &t.tm_mon, &t.tm_year)) {
+            exit(EXIT_FAILURE);
+        }
+        if (3 != sscanf(msg_time.c_str(),"%d:%d:%d", &t.tm_hour, &t.tm_min, &t.tm_sec)) {
+            printf("fail");
+            exit(EXIT_FAILURE);
+        }
+            
+        t.tm_year -= 1900;
+        t.tm_mon--;
+            
+        if (mktime(&t) < 0) {
+            exit(EXIT_FAILURE);
+        }
+        printf("DOW(%s):%d (0=Sunday, 1=Monday, ...) AND %d %d\n", msg_date.c_str(), t.tm_wday, t.tm_hour, t.tm_min);
+
+
+
+    if (msg_flag.compare("-m") == 0)
         {
-	    int i_msg_time = atoi(msg_time.substr(6, 2).c_str());            
-
-            std::cout << "debug: " << i_msg_time << " " << t_cur_time % 100 << " " << i_msg_time - t_cur_time % 100 << std::endl;
-            if ( ABS(i_msg_time - t_cur_time % 100) % ONE_MIN < 10)
+        //system("gnome-terminal -e 'echo \"sas\"'");//(std::string("gnome-terminal -- 'grep -o \"") + msg_text + std::string("\" ~/.conf'")).c_str());
+            //system("gnome-terminal  echo sas");
+            
+            //system("xterm -e echo sas");
+            std::cout << "sas1" << std::endl;
+            if (ABS(timeinfo->tm_sec - t.tm_sec) <= interval)
             {
-                std::cout << msg_text << std::endl;
+                system(std::string(("gnome-terminal --working-directory='/home' -- echo ") +msg_text).c_str());//output msg_text
             }
         }
         else if (msg_flag.compare("-h") == 0)
         {
+            if (timeinfo->tm_min == t.tm_min && ABS(timeinfo->tm_sec - t.tm_sec) <= interval) 
+            {
+                system(std::string(("gnome-terminal --working-directory='/home' -- echo ") +msg_text).c_str());//output msg_text
+            }
         }
         else if (msg_flag.compare("-d") == 0)
         {
+            if (timeinfo->tm_hour == t.tm_hour && timeinfo->tm_min == t.tm_min && ABS(timeinfo->tm_sec - t.tm_sec) <= interval) 
+            {
+                system(std::string(("gnome-terminal --working-directory='/home' -- echo ") +msg_text).c_str());//output msg_text
+            }
         }
         else if (msg_flag.compare("-w") == 0)
         {
+            if (timeinfo->tm_wday == t.tm_wday && timeinfo->tm_hour == t.tm_hour && timeinfo->tm_min == t.tm_min && ABS(timeinfo->tm_sec - t.tm_sec) <= interval)
+            {
+                system(std::string(("gnome-terminal --working-directory='/home' -- echo ") +msg_text).c_str());
+            }
         }
 
 
@@ -166,6 +204,9 @@ int main(int argc,char **argv)
         exit(EXIT_FAILURE);
     }
 
+
+
+
     syslog(LOG_NOTICE, "Successfully started daemon_lab");
     std::cout << "pid: " << pid << std::endl;
     close(STDIN_FILENO);
@@ -178,7 +219,7 @@ int main(int argc,char **argv)
     kill_prev_daemon();
 
     set_pid_file();
-
+    
     while (true)
     {
          if(need_work) {
