@@ -55,8 +55,7 @@ ConfigHolder::ConfigHolder(const std::string &config_file_name) {
 }
 
 int ConfigHolder::init(const std::string& config_file_name){
-    if (m_inst)
-        delete m_inst;
+    delete m_inst;
 
     m_inst = new ConfigHolder(config_file_name);
     if (m_inst)

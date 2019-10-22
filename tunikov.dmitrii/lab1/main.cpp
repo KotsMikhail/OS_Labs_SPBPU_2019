@@ -85,26 +85,42 @@ int main(int argc, char** argv) {
     }
     else if (pid == 0)
     {
-        cout << "Hello from child with pid = " << getpid() << " and ppid = " << getppid() << endl;
-        //check daemon already exist
-        utils::pidFile::updatePidFile(argv[2]);
-
         //set signals
         signal(SIGTERM, signalHandler);
         signal(SIGHUP, signalHandler);
 
-        umask(0);
-        setsid();
-        chdir("/");
-        try{
-            inotifier = inotifier::createNotifier();
-            inotifier->runNotifier();
-        }
-        catch (CommonException& e)
+        int ec = setsid();
+        if (ec == -1)
+            throw CommonException("can't set sid");
+
+        pid = fork();
+        if (pid == -1)
         {
-            syslog(LOG_LOCAL0, "%s", e.what());
-            close(1);
+            syslog(LOG_ERR, "can't fork second time");
+            close();
         }
+        if (pid == 0)
+        {
+            //check daemon already exist
+            utils::pidFile::updatePidFile(argv[2]);
+            cout << "Hello from child with pid = " << getpid() << " and ppid = " << getppid() << endl;
+            //child
+            umask(0);
+            ec = chdir("/");
+            if (ec == -1)
+                throw CommonException("can't chdir to /");
+            try{
+                inotifier = inotifier::createNotifier();
+                inotifier->runNotifier();
+            }
+            catch (CommonException& e)
+            {
+                syslog(LOG_LOCAL0, "%s", e.what());
+                close(1);
+            }
+        }
+        //parent exit
+        syslog(LOG_LOCAL0, "parent exit...");
     }
     else //it is parent
     {
