@@ -38,11 +38,11 @@ void process_config_file() {
     struct tm * timeinfo;
     time(&rawtime);
     timeinfo = localtime(&rawtime);
-    std::cout << timeinfo->tm_sec << std::endl;
+    //std::cout << timeinfo->tm_sec << std::endl;
 
     while (cfg_file >> msg_date >> msg_time >> msg_flag)
     {
-        std::cout << "process line" << std::endl;
+        //std::cout << "process line" << std::endl;
         if (msg_flag.compare("-h") == 0 || msg_flag.compare("-d") == 0 || msg_flag.compare("-w") == 0 || msg_flag.compare("-m") == 0)
         {
             if (!(cfg_file >> msg_text))
@@ -65,7 +65,7 @@ void process_config_file() {
             exit(EXIT_FAILURE);
         }
         if (3 != sscanf(msg_time.c_str(),"%d:%d:%d", &t.tm_hour, &t.tm_min, &t.tm_sec)) {
-            printf("fail");
+            //printf("fail");
             exit(EXIT_FAILURE);
         }
             
@@ -75,7 +75,7 @@ void process_config_file() {
         if (mktime(&t) < 0) {
             exit(EXIT_FAILURE);
         }
-        printf("DOW(%s):%d (0=Sunday, 1=Monday, ...) AND %d %d\n", msg_date.c_str(), t.tm_wday, t.tm_hour, t.tm_min);
+        //printf("DOW(%s):%d (0=Sunday, 1=Monday, ...) AND %d %d\n", msg_date.c_str(), t.tm_wday, t.tm_hour, t.tm_min);
 
 
 
@@ -85,7 +85,7 @@ void process_config_file() {
             //system("gnome-terminal  echo sas");
             
             //system("xterm -e echo sas");
-            std::cout << "sas1" << std::endl;
+            //std::cout << "sas1" << std::endl;
             if (ABS(timeinfo->tm_sec - t.tm_sec) <= interval)
             {
                 system(std::string(("gnome-terminal --working-directory='/home' -- echo ") +msg_text).c_str());//output msg_text
@@ -208,7 +208,7 @@ int main(int argc,char **argv)
 
 
     syslog(LOG_NOTICE, "Successfully started daemon_lab");
-    std::cout << "pid: " << pid << std::endl;
+    //std::cout << "pid: " << pid << std::endl;
     close(STDIN_FILENO);
     //close(STDOUT_FILENO);
     close(STDERR_FILENO);
@@ -223,7 +223,7 @@ int main(int argc,char **argv)
     while (true)
     {
          if(need_work) {
-             std::cout << "work" << std::endl;
+             //std::cout << "work" << std::endl;
              process_config_file();
          }
         sleep(interval);
