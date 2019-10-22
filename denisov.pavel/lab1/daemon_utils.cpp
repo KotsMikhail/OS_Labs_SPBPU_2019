@@ -4,35 +4,33 @@
 #include <cerrno>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <pwd.h>
+#include <syslog.h>
 
-#include "common.h"
 #include "daemon_utils.h"
 
 void Fork ()
 {
     pid_t pid = fork();
     if (pid < 0) {
-        LOG_ERROR_AND_EXIT("Error occured in the fork while daemonising. Error number is %d", errno);
+        syslog(LOG_ERR, "Error occured in the fork while daemonising. Error number is %d", errno);
+        exit(SIGTERM);
     }
 
     if (pid > 0) {
-        INFO("Fork successful. (Parent process) PID: %d", pid);
         exit(0);
     }
-    INFO("Fork successful. (Child process) PID: %d", pid);
 }
 
 pid_t CreateSession ()
 {
     pid_t sid = setsid();
     if (sid < 0) {
-        LOG_ERROR_AND_EXIT("Error occured in making a new session while daemonising. Error number is %d", errno);
+        syslog(LOG_ERR, "Error occured in making a new session while daemonising. Error number is %d", errno);
+        exit(SIGTERM);
     }
-    INFO("New session was successfully created!");
     return sid;
 }
 
@@ -43,15 +41,18 @@ void RedirectStdIO ()
     close(STDERR_FILENO);
 
     if (open("/dev/null", O_RDONLY) == -1) {
-        LOG_ERROR_AND_EXIT("Failed to reopen stdin while daemonising. Error number is %d", errno);
+        syslog(LOG_ERR, "Failed to reopen stdin while daemonising. Error number is %d", errno);
+        exit(SIGTERM);
     }
 
     if (open("/dev/null", O_WRONLY) == -1) {
-        LOG_ERROR_AND_EXIT("Failed to reopen stdout while daemonising. Error number is %d", errno);
+        syslog(LOG_ERR, "Failed to reopen stdout while daemonising. Error number is %d", errno);
+        exit(SIGTERM);
     }
 
     if (open("/dev/null", O_RDWR) == -1) {
-        LOG_ERROR_AND_EXIT("Failed to reopen stderr while daemonising. Error number is %d", errno);
+        syslog(LOG_ERR, "Failed to reopen stderr while daemonising. Error number is %d", errno);
+        exit(SIGTERM);
     }
 }
 
@@ -73,7 +74,7 @@ bool IsDirectoryExist (std::string &dirPath)
         if (pw != nullptr) {
             dirPath.replace(0, 1, std::string("/home/") + pw->pw_name);
         } else {
-            WARNING("Couldn't find username by UID %d. There is no guarantee to find folder which path contains '~'.", uid);
+            syslog(LOG_WARNING, "Couldn't find username by UID %d. There is no guarantee to find folder which path contains '~'.", uid);
         }
     }
 
@@ -86,7 +87,8 @@ void WritePidToFile (const std::string &pidFilePath)
     std::ofstream pidFile;
     pidFile.open(pidFilePath, std::ofstream::out | std::ofstream::trunc);
     if (!pidFile.is_open()) {
-        LOG_ERROR_AND_EXIT("Failed to open a pid file \'%s\' while daemonising. Error number is %d", pidFilePath.c_str(), errno);
+        syslog(LOG_ERR, "Failed to open a pid file \'%s\' while daemonising. Error number is %d", pidFilePath.c_str(), errno);
+        exit(SIGTERM);
     }
 
     pidFile << getpid();
@@ -95,23 +97,18 @@ void WritePidToFile (const std::string &pidFilePath)
 
 void StopRunningByPID (pid_t pid)
 {
-    INFO("Running process with pid %d killing process started...", pid);
-
     if (pid <= 0) {
-        WARNING("Corrupted process ID found: %d", pid);
+        syslog(LOG_WARNING, "Corrupted process ID found: %d", pid);
         return;
     }
 
     if (IsProcessRunning(pid)) {
-        INFO("Try to kill process with id: %d", pid);
         kill(pid, SIGTERM);
     }
-    INFO("Running process with pid %d was killed", pid);
 }
 
 bool CheckPidFile (const std::string &pidFilePath)
 {
-    INFO("Checking pid file...");
     std::ifstream pidFile(pidFilePath);
     if (!pidFile) {
         return false;
@@ -131,6 +128,7 @@ bool CheckPidFile (const std::string &pidFilePath)
 void SetRootAsWorkingDirectory ()
 {
     if ((chdir("/")) < 0) {
-        LOG_ERROR_AND_EXIT("Failed to change working directory while daemonising. Error number is %d", errno);
+        syslog(LOG_ERR, "Failed to change working directory while daemonising. Error number is %d", errno);
+        exit(SIGTERM);
     }
 }

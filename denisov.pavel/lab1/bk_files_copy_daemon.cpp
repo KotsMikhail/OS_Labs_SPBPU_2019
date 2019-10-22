@@ -2,7 +2,6 @@
 #include <csignal>
 #include <cstdlib>
 #include <cerrno>
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <string>
 #include <fstream>
@@ -10,8 +9,8 @@
 #include <ftw.h>
 #include <functional>
 #include <dirent.h>
+#include <syslog.h>
 
-#include "common.h"
 #include "daemon_utils.h"
 #include "bk_files_copy_daemon.h"
 
@@ -41,26 +40,31 @@ static bool _ReadConfigFile (const std::string &configFilePath)
 
     getline(instream, s_srcDir);
     if (s_srcDir.length() == 0) {
-        LOG_ERROR_AND_EXIT("Error! Failed to parse the config file. First line is empty, bui it should be three not-empty lines.");
+        syslog(LOG_ERR, "Error! Failed to parse the config file. First line is empty, bui it should be three not-empty lines.");
+        exit(SIGTERM);
     }
 
     getline(instream, s_dstDir);
     if (s_dstDir.length() == 0) {
-        LOG_ERROR_AND_EXIT("Error! Failed to parse the config file. Second line is empty, bui it should be three not-empty lines.");
+        syslog(LOG_ERR, "Error! Failed to parse the config file. Second line is empty, bui it should be three not-empty lines.");
+        exit(SIGTERM);
     }
 
     // check directories existing
     if (!IsDirectoryExist(s_srcDir)) {
-        LOG_ERROR_AND_EXIT("Error! Directory %s doesn't exist.", s_srcDir.c_str());
+        syslog(LOG_ERR, "Error! Directory %s doesn't exist.", s_srcDir.c_str());
+        exit(SIGTERM);
     }
     if (!IsDirectoryExist(s_dstDir)) {
-        LOG_ERROR_AND_EXIT("Error! Directory %s doesn't exist.", s_dstDir.c_str());
+        syslog(LOG_ERR, "Error! Directory %s doesn't exist.", s_dstDir.c_str());
+        exit(SIGTERM);
     }
 
     std::string line;
     getline(instream, line);
     if (line.length() == 0) {
-        LOG_ERROR_AND_EXIT("Error! Failed to parse the config file. Third line is empty, bui it should be three not-empty lines.");
+        syslog(LOG_ERR, "Error! Failed to parse the config file. Third line is empty, bui it should be three not-empty lines.");
+        exit(SIGTERM);
     }
     s_sleepInterval = atoi(line.c_str());
 
@@ -71,7 +75,8 @@ static void _HandleSIGHUP ()
 {
     // Reread configuration file
     if (!_ReadConfigFile(s_configFilePath)) {
-        LOG_ERROR_AND_EXIT("Error! Failed to read config file %s", s_configFilePath.c_str());
+        syslog(LOG_ERR, "Error! Failed to read config file %s", s_configFilePath.c_str());
+        exit(SIGTERM);
     }
 }
 
@@ -79,14 +84,14 @@ static void _SignalHandler (int signalNumber)
 {
     switch (signalNumber) {
         case SIGTERM:
-            INFO("SIGTERM has been caught! Exiting...");
+            syslog(LOG_INFO, "SIGTERM has been caught! Exiting...");
             exit(SIGTERM);
             break;
         case SIGHUP:
             _HandleSIGHUP();
             break;
         default:
-            WARNING("Get unsupported signal %d", signalNumber);
+            syslog(LOG_WARNING, "Get unsupported signal %d", signalNumber);
     }
 }
 
@@ -94,20 +99,19 @@ static void _HandleSignals ()
 {
     for (int supportedSignal : s_supportedSignals) {
         if (signal(supportedSignal, _SignalHandler) == SIG_ERR) {
-            LOG_ERROR_AND_EXIT("Error! Can't handle signal number %d", supportedSignal);
+            syslog(LOG_ERR, "Error! Can't handle signal number %d", supportedSignal);
+            exit(SIGTERM);
         }
     }
 }
 
 static void _StopRunningIfOpened ()
 {
-    INFO("Daemon killing process started...");
-
     SetRootAsWorkingDirectory();
     // Try to find pid-file
     std::ifstream pidFile(s_pidFilePath);
     if (!pidFile) {
-        WARNING("The pid-file not found.");
+        syslog(LOG_WARNING, "The pid-file not found.");
         return;
     }
 
@@ -117,8 +121,6 @@ static void _StopRunningIfOpened ()
     StopRunningByPID(pidInFile);
 
     pidFile.close();
-
-    INFO("Daemon was killed.");
 }
 
 static int _rmFiles (const char *pathName, const struct stat *sbuf, int type, struct FTW *ftwb)
@@ -129,7 +131,8 @@ static int _rmFiles (const char *pathName, const struct stat *sbuf, int type, st
 
     int removeRes = remove(pathName);
     if (removeRes != 0) {
-        LOG_ERROR_AND_EXIT("Error! Failed to remove by path: %s. Error number is %d", pathName, errno);
+        syslog(LOG_ERR, "Error! Failed to remove by path: %s. Error number is %d", pathName, errno);
+        exit(SIGTERM);
     }
 
     return removeRes;
@@ -138,7 +141,8 @@ static int _rmFiles (const char *pathName, const struct stat *sbuf, int type, st
 static void _ClearDirWithAllSubDirs (std::string& dirPath)
 {
     if (!IsDirectoryExist(dirPath)) {
-        LOG_ERROR_AND_EXIT("Error! Directory %s doesn't exist.", dirPath.c_str());
+        syslog(LOG_ERR, "Error! Directory %s doesn't exist.", dirPath.c_str());
+        exit(SIGTERM);
     }
     nftw(dirPath.c_str(), _rmFiles, s_fdLimit, FTW_DEPTH | FTW_PHYS);
 }
@@ -147,7 +151,7 @@ static bool _CopyFile (const std::string &srcPath, const std::string &dstPath)
 {
     std::ifstream srcFile(srcPath.c_str(), std::ios::binary);
     if (!srcFile.good()) {
-        ERROR("Error! Source file \'%s\' doesn't exist", srcPath.c_str());
+        syslog(LOG_ERR, "Error! Source file \'%s\' doesn't exist", srcPath.c_str());
         return false;
     }
 
@@ -163,11 +167,13 @@ static bool _CopyFile (const std::string &srcPath, const std::string &dstPath)
 static void _CopyFilesFromSrcToDstDir (std::string &srcDir, std::string &dstDir, const FILE_DETECTOR_FUNC &detFunc)
 {
     if (!IsDirectoryExist(dstDir)) {
-        LOG_ERROR_AND_EXIT("Error! Directory %s doesn't exist.", dstDir.c_str());
+        syslog(LOG_ERR, "Error! Directory %s doesn't exist.", dstDir.c_str());
+        exit(SIGTERM);
     }
 
     if (!IsDirectoryExist(srcDir)) {
-        LOG_ERROR_AND_EXIT("Error! Directory %s doesn't exist.", srcDir.c_str());
+        syslog(LOG_ERR, "Error! Directory %s doesn't exist.", srcDir.c_str());
+        exit(SIGTERM);
     }
 
     DIR *srcDirHandler;
@@ -183,14 +189,14 @@ static void _CopyFilesFromSrcToDstDir (std::string &srcDir, std::string &dstDir,
             if (detFunc(fileName)) {
                 std::string srcPath = srcDir + "/" + ent->d_name;
                 std::string dstPath = dstDir + "/" + ent->d_name;
-                INFO("Copy file from %s to %s", srcPath.c_str(), dstPath.c_str());
                 _CopyFile(srcPath, dstPath);
             }
         }
 
         closedir(srcDirHandler);
     } else {
-        LOG_ERROR_AND_EXIT("Error! Failed to open source directory: %s. Error number: %d", srcDir.c_str(), errno);
+        syslog(LOG_ERR, "Error! Failed to open source directory: %s. Error number: %d", srcDir.c_str(), errno);
+        exit(SIGTERM);
     }
 }
 
@@ -201,20 +207,18 @@ static bool _CheckFileExt (const std::string& fileName)
 
 static void _DoJob ()
 {
-    INFO("Working...");
-    INFO("Clear destination folder %s", s_dstDir.c_str());
     _ClearDirWithAllSubDirs(s_dstDir);
-    INFO("Copy files");
     _CopyFilesFromSrcToDstDir(s_srcDir, s_dstDir, _CheckFileExt);
 }
 
 void Daemonise ()
 {
-    INFO("Starting daemonisation...");
+    syslog(LOG_INFO, "Starting daemonisation...");
 
     Fork();
     CreateSession();
     Fork();
+    syslog(LOG_INFO, "Successfully forked and created new session...");
 
     SetRootAsWorkingDirectory();
     // Grant all permissions for all files and directories created by the daemon
@@ -224,15 +228,18 @@ void Daemonise ()
 
     RedirectStdIO();
     if (!CheckPidFile(s_pidFilePath)) {
-        LOG_ERROR_AND_EXIT("Error! Pid file %s doesn't exist.", s_pidFilePath.c_str());
+        syslog(LOG_ERR, "Error! Pid files %s doesn't exist.", s_pidFilePath.c_str());
+        exit(SIGTERM);
     }
 
     _HandleSignals();
+
+    syslog(LOG_INFO, "Daemonisation finished successfully.");
 }
 
 void DaemonWorkLoop ()
 {
-    INFO("Starting working...");
+    syslog(LOG_INFO, "Starting working...");
     while (true) {
         _DoJob();
         sleep(s_sleepInterval);

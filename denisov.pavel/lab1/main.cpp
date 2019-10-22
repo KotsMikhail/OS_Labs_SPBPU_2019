@@ -1,5 +1,6 @@
 #include <iostream>
 #include <unistd.h>
+#include <syslog.h>
 
 #include "bk_files_copy_daemon.h"
 
@@ -16,6 +17,7 @@ int main(int argc, char **argv)
         return -1;
     }
 
+    openlog("bk_files_copier_daemon", LOG_NOWAIT | LOG_PID, LOG_LOCAL0);
     Daemonise();
     DaemonWorkLoop();
 

@@ -6,7 +6,6 @@ set(SOURCES
     main.cpp
     daemon_utils.cpp
     daemon_utils.h
-    common.h
     bk_files_copy_daemon.cpp
     bk_files_copy_daemon.h)
 
