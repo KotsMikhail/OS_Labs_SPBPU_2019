@@ -27,15 +27,17 @@ bool need_work = true;
 
 #define ABS(x) ((x) > 0 ? (x) : -(x))
 
-void process_config_file() {
+void process_config_file() 
+{
     std::ifstream cfg_file(cfg_path);
-    if (!cfg_file.is_open() || cfg_file.eof()) {
+    if (!cfg_file.is_open() || cfg_file.eof()) 
+    {
         syslog(LOG_ERR, "Could not open config file or it is empty");
         exit(EXIT_FAILURE);
     }
 
     time_t rawtime;
-    struct tm * timeinfo;
+    struct tm *timeinfo;
     time(&rawtime);
     timeinfo = localtime(&rawtime);
     //std::cout << timeinfo->tm_sec << std::endl;
@@ -57,14 +59,16 @@ void process_config_file() {
             msg_flag = "-m";
         }
 
-
+        
 
         struct tm t;
         memset(&t, 0, sizeof t);  
-        if (3 != sscanf(msg_date.c_str(),"%d.%d.%d", &t.tm_mday, &t.tm_mon, &t.tm_year)) {
+        if (3 != sscanf(msg_date.c_str(),"%d.%d.%d", &t.tm_mday, &t.tm_mon, &t.tm_year)) 
+        {
             exit(EXIT_FAILURE);
         }
-        if (3 != sscanf(msg_time.c_str(),"%d:%d:%d", &t.tm_hour, &t.tm_min, &t.tm_sec)) {
+        if (3 != sscanf(msg_time.c_str(),"%d:%d:%d", &t.tm_hour, &t.tm_min, &t.tm_sec)) 
+        {
             //printf("fail");
             exit(EXIT_FAILURE);
         }
@@ -72,44 +76,45 @@ void process_config_file() {
         t.tm_year -= 1900;
         t.tm_mon--;
             
-        if (mktime(&t) < 0) {
+        if (mktime(&t) < 0) 
+        {
             exit(EXIT_FAILURE);
         }
         //printf("DOW(%s):%d (0=Sunday, 1=Monday, ...) AND %d %d\n", msg_date.c_str(), t.tm_wday, t.tm_hour, t.tm_min);
 
 
 
-    if (msg_flag.compare("-m") == 0)
+        if (msg_flag.compare("-m") == 0)
         {
-        //system("gnome-terminal -e 'echo \"sas\"'");//(std::string("gnome-terminal -- 'grep -o \"") + msg_text + std::string("\" ~/.conf'")).c_str());
+            //system("gnome-terminal -e 'echo \"sas\"'");//(std::string("gnome-terminal -- 'grep -o \"") + msg_text + std::string("\" ~/.conf'")).c_str());
             //system("gnome-terminal  echo sas");
             
             //system("xterm -e echo sas");
             //std::cout << "sas1" << std::endl;
             if (ABS(timeinfo->tm_sec - t.tm_sec) <= interval)
             {
-                system(std::string(("gnome-terminal --working-directory='/home' -- echo ") +msg_text).c_str());//output msg_text
+                system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + msg_text + std::string("; read line\"")).c_str());//output msg_text
             }
         }
         else if (msg_flag.compare("-h") == 0)
         {
             if (timeinfo->tm_min == t.tm_min && ABS(timeinfo->tm_sec - t.tm_sec) <= interval) 
             {
-                system(std::string(("gnome-terminal --working-directory='/home' -- echo ") +msg_text).c_str());//output msg_text
+                system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + msg_text + std::string("; read line\"")).c_str());//output msg_text
             }
         }
         else if (msg_flag.compare("-d") == 0)
         {
             if (timeinfo->tm_hour == t.tm_hour && timeinfo->tm_min == t.tm_min && ABS(timeinfo->tm_sec - t.tm_sec) <= interval) 
             {
-                system(std::string(("gnome-terminal --working-directory='/home' -- echo ") +msg_text).c_str());//output msg_text
+                system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + msg_text + std::string("; read line\"")).c_str());//output msg_text
             }
         }
         else if (msg_flag.compare("-w") == 0)
         {
             if (timeinfo->tm_wday == t.tm_wday && timeinfo->tm_hour == t.tm_hour && timeinfo->tm_min == t.tm_min && ABS(timeinfo->tm_sec - t.tm_sec) <= interval)
             {
-                system(std::string(("gnome-terminal --working-directory='/home' -- echo ") +msg_text).c_str());
+                system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + msg_text + std::string("; read line\"")).c_str());//output msg_text
             }
         }
 
@@ -119,23 +124,27 @@ void process_config_file() {
     cfg_file.close();
 }
 
-void kill_prev_daemon() {
-    std::cout << "kill prev" << std::endl;
+void kill_prev_daemon() 
+{
+    //std::cout << "kill prev" << std::endl;
     std::ifstream ipidFile(PID_FILE);
     if (ipidFile.is_open() && !ipidFile.eof())
     {
         pid_t prev;
         ipidFile >> prev;
-        if (prev > 0) {
+        if (prev > 0) 
+        {
             kill(prev, SIGTERM);
         }
     }
     ipidFile.close();
 }
 
-void set_pid_file() {
+void set_pid_file() 
+{
     std::ofstream pid_file(PID_FILE);
-    if (!pid_file) {
+    if (!pid_file) 
+    {
         syslog(LOG_ERR, "Could not open pid file");
         exit(EXIT_FAILURE);
     }
@@ -173,7 +182,8 @@ int main(int argc,char **argv)
     else if (pid > 0)
         exit(EXIT_SUCCESS);
 
-    if (argc < 2) {
+    if (argc < 2) 
+    {
         printf("Wrong numbers of arguments. Expected: 2. Got: %d", argc);
         exit(EXIT_FAILURE);
     }
@@ -222,7 +232,8 @@ int main(int argc,char **argv)
     
     while (true)
     {
-         if(need_work) {
+         if(need_work)
+         {
              //std::cout << "work" << std::endl;
              process_config_file();
          }
