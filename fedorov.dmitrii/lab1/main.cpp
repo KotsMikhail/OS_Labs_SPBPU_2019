@@ -19,22 +19,21 @@ using namespace std;
 
 
 const string PID_FILENAME = "pid_info.txt"; 
-const string PROC_DIR     = "/proc";
+const string PROC_DIR = "/proc";
 
-int          UPDATE_FREQUENCY;
+int UPDATE_FREQUENCY;
 
-string       CONFIG_FILE;
-string       WORK_DIR;
+string CONFIG_FILE;
+string WORK_DIR;
 
-string       SRC_DIR;
-string       DST_DIR;
+string SRC_DIR;
+string DST_DIR;
 
-bool         NEED_WORK = true;
-int          WAIT_OF_KILLING_TIME = 1;
+bool NEED_WORK = true;
+int WAIT_OF_KILLING_TIME = 1;
 
 
-void SafeChdir (const string& absPath)
-{
+void SafeChdir (const string& absPath) {
    if (chdir(absPath.c_str()) < 0) {
       syslog(LOG_USER, "Error during chdir: code %i, arg %s", errno, absPath.c_str());
       exit(EXIT_FAILURE);
@@ -42,8 +41,7 @@ void SafeChdir (const string& absPath)
 }
 
 
-void CreateDirectory (const string& absPath, const string& name)
-{
+void CreateDirectory (const string& absPath, const string& name) {
    string currentPath(get_current_dir_name()); 
 
    SafeChdir(absPath);
@@ -59,8 +57,7 @@ void CreateDirectory (const string& absPath, const string& name)
 }
 
 
-int UnlinkCB (const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf) 
-{
+int UnlinkCB (const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf) {
    int rv;
 
    if (ftwbuf->level == 0) {
@@ -78,15 +75,13 @@ int UnlinkCB (const char* fpath, const struct stat* sb, int typeflag, struct FTW
 }
 
 
-void ClearDirectory (const string& absPath) 
-{
+void ClearDirectory (const string& absPath) {
    nftw(absPath.c_str(), UnlinkCB, 64, FTW_DEPTH | FTW_PHYS); 
 }
 
 
-vector<string> GetContentList (const string& absPath)
-{
-   DIR*           dir;
+vector<string> GetContentList (const string& absPath) {
+   DIR* dir;
    struct dirent* ent;
    vector<string> res;
 
@@ -105,8 +100,7 @@ vector<string> GetContentList (const string& absPath)
 }
 
 
-void CopyFile (const string& absPathSrc, const string& absPathDst)
-{
+void CopyFile (const string& absPathSrc, const string& absPathDst) {
    ifstream src(absPathSrc.c_str(), ios::binary);
 
    if (!src.good()) {
@@ -119,15 +113,13 @@ void CopyFile (const string& absPathSrc, const string& absPathDst)
 }
 
 
-bool IsPngFormat (const string& filename)
-{
+bool IsPngFormat (const string& filename) {
    int last = filename.size() - 1;
    return (filename.size() > 4 && filename[last] == 'g' && filename[last - 1] == 'n' && filename[last - 2] == 'p' && filename[last - 3] == '.');
 }
 
 
-void DoDaemonWork (void) 
-{
+void DoDaemonWork (void) {
    ClearDirectory(DST_DIR);
    CreateDirectory(DST_DIR, "IMG");
    CreateDirectory(DST_DIR, "OTHERS");
@@ -149,8 +141,7 @@ void DoDaemonWork (void)
 }
 
 
-bool IsExistDir (const string& absPath)
-{
+bool IsExistDir (const string& absPath) {
    DIR* dir = opendir(absPath.c_str());
    if (dir) {
       closedir(dir);
@@ -160,26 +151,44 @@ bool IsExistDir (const string& absPath)
 }
 
 
-bool LoadConfig ()
-{
-   string line;
+bool SubmitNewParams (const string& newSrc, const string& newDst, int newFreq) {
+   if (newFreq <= 0 || !IsExistDir(newSrc) || !IsExistDir(newDst)) {
+      return false;
+   }
 
+   SRC_DIR = newSrc;
+   DST_DIR = newDst;
+   UPDATE_FREQUENCY = newFreq;
+
+   return true;
+}
+
+
+bool LoadConfig (void) {
+   string line;
+   string newSrc;
+   string newDst;
+   int newFreq;
+  
    fstream in(CONFIG_FILE.c_str());
    if (in.is_open()) {
       getline(in, line);
-      SRC_DIR = line;
+      newSrc = line;
       getline(in, line);
-      DST_DIR = line;
+      newDst = line;
       getline(in, line);
-      UPDATE_FREQUENCY = atoi(line.c_str());
+      newFreq = atoi(line.c_str());
+      
+      if (!SubmitNewParams(newSrc, newDst, newFreq)) {
+         return false;
+      }
       return true;
    } 
    return false;
 }
 
 
-void InitPidFile (void) 
-{
+void InitPidFile (void) {
    string pidFilePath = WORK_DIR + "/" + PID_FILENAME;
    ofstream f(pidFilePath.c_str());
    syslog(LOG_USER, "pid file created: %s, pid is %i", pidFilePath.c_str(), getpid());  
@@ -188,8 +197,7 @@ void InitPidFile (void)
 }
 
 
-string ReadPidFile (void) 
-{
+string ReadPidFile (void) {
    string pidFilePath = WORK_DIR + "/" + PID_FILENAME;
    fstream f(pidFilePath.c_str());
    if (f.good()) {
@@ -202,9 +210,8 @@ string ReadPidFile (void)
 }
 
 
-void KillIfOpened (void)
-{
-   DIR*   dir;
+void KillIfOpened (void) {
+   DIR* dir;
    string pid = ReadPidFile();
    string pidFolder = (PROC_DIR + "/" + pid);
    
@@ -223,25 +230,27 @@ void KillIfOpened (void)
 }
 
 
-void WorkProc (void) 
-{
+void WorkProc (void) {
    while (true) {
       if (NEED_WORK) {
-	 DoDaemonWork();
+         DoDaemonWork();
       }
       sleep(UPDATE_FREQUENCY);
    }
 }
 
 
-void OnSignalRecieve(int sig)
-{
+void OnSignalRecieve (int sig) {
    switch (sig) {
       case SIGHUP:
       { 
          NEED_WORK = false;
          syslog(LOG_USER, "Reload daemon's config by signal");
-         LoadConfig();
+
+         if (!LoadConfig()) {
+            syslog(LOG_USER, "Bad config file!");         
+         }
+
          NEED_WORK = true;
 	 break;
       }
@@ -259,17 +268,7 @@ void OnSignalRecieve(int sig)
 }
 
 
-bool CheckConfigParams (void)
-{
-   if (UPDATE_FREQUENCY <= 0 || !IsExistDir(SRC_DIR) || !IsExistDir(DST_DIR)) {
-      return false;
-   }
-   return true;
-}
-
-
-void InitDaemon (void)
-{    
+void InitDaemon (void) {    
    openlog("daemon_lab", 0, LOG_USER);
  
    umask(0);
@@ -287,12 +286,6 @@ void InitDaemon (void)
       return;
    }
 
-   SafeChdir("/");
-   if (!CheckConfigParams()) {
-      syslog(LOG_USER, "Bad config params, stop executing");
-      exit(EXIT_FAILURE);
-   } 
-
    KillIfOpened();
    InitPidFile();
 		
@@ -307,8 +300,7 @@ void InitDaemon (void)
 }
 
 
-int main (int argc, char** argv) 
-{
+int main (int argc, char** argv) {
    if (argc != 2) {
       cout << "Bad argument to launch daemon: needed config file name" << endl;
       return -1;
@@ -318,6 +310,7 @@ int main (int argc, char** argv)
    WORK_DIR = string(get_current_dir_name());
    CONFIG_FILE = WORK_DIR + "/" + configFileName;
    
+   SafeChdir("/"); 
    if (!LoadConfig()) {
       cout << "Bad config file" << endl;
       return -1;
