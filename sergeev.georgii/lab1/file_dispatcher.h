@@ -15,36 +15,52 @@ enum Order{
 class FileDispatcher
 {
 public:
-
-    FileDispatcher(const std::string &young_dir, const std::string &old_dir, int period)
+    static FileDispatcher *get_instance()
     {
-        this->young_dir = young_dir;
-        this->old_dir = old_dir;
-        this->interval = period;
+        if (instance == nullptr){
+            instance = new FileDispatcher();
+        }
+        return instance;
+    }
+
+    static void destroy()
+    {
+        delete instance;
     }
 
     void process_directories(const std::string& src_dir, const std::string& dst_dir, Order order);
 
-    int get_interval() {  return interval;  }
+    void process();
 
     std::string get_young_dir() { return young_dir; }
 
     std::string get_old_dir() { return old_dir; }
 
-    void update(const std::string &y, const std::string &o, int i)
+    std::string get_config_file_path() { return config_file_path; }
+
+    void set_config_file_path(std::string path) { config_file_path = path; }
+
+    void update(const std::string &y, const std::string &o)
     {
         this->young_dir = y;
         this->old_dir = o;
-        this->interval = i;
-        syslog(LOG_NOTICE, "Daemon period updated to %i", interval);
+        //syslog(LOG_NOTICE, "Daemon period updated to %i", interval);
     }
 
 private:
+    static FileDispatcher *instance;
     std::string young_dir;
     std::string old_dir;
-    int interval;
+    std::string config_file_path;
     const int DEADLINE = 600;
     int move_file(const std::string& path_src, const std::string& path_dst);
+    FileDispatcher()
+    {
+        this->young_dir = "";
+        this->old_dir = "";
+    }
+    FileDispatcher(FileDispatcher const&) = delete;
+    FileDispatcher& operator=(FileDispatcher const&) = delete;
 };
 
 

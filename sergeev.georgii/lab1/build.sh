@@ -9,4 +9,4 @@ fi
 
 chmod 666 "$pid_file"
 
-g++ -Wall -Werror -o lab1_daemon file_dispatcher.h file_dispatcher.cpp main.cpp
+g++ -std=c++11 -Wall -Werror -o lab1_daemon Daemon.h Daemon.cpp file_dispatcher.h file_dispatcher.cpp main.cpp

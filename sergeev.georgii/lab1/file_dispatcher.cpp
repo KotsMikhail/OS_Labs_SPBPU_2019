@@ -1,5 +1,6 @@
-//
-// Created by nero on 10.10.2019.
+//                        return;
+
+// Created by nero on 24.10.2019.
 //
 
 #include <syslog.h>
@@ -12,13 +13,15 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+FileDispatcher * FileDispatcher::instance = nullptr;
+
 void FileDispatcher::process_directories(const std::string &src_dir, const std::string &dst_dir, Order order)
 {
     DIR *dir;
     struct dirent *entry_ptr = nullptr;
     time_t creation_time, cur_time;
     time(&cur_time);
-    if ((dir = opendir(src_dir.c_str())) != nullptr) 
+    if ((dir = opendir(src_dir.c_str())) != nullptr)
     {
         entry_ptr = readdir(dir);
         while (entry_ptr != nullptr)
@@ -58,7 +61,8 @@ void FileDispatcher::process_directories(const std::string &src_dir, const std::
                     if (move_file(src_path, dst_path) != EXIT_SUCCESS || remove(src_path.c_str()) != 0)
                     {
                         syslog(LOG_ERR, "Could not move file");
-                        return;
+                        destroy();
+                        exit(EXIT_FAILURE);
                     }
                 }
             }
@@ -70,6 +74,8 @@ void FileDispatcher::process_directories(const std::string &src_dir, const std::
     else
     {
         syslog(LOG_ERR, "Could not process files in directory");
+        destroy();
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -91,3 +97,17 @@ int FileDispatcher::move_file(const std::string &src, const std::string &dst)
     //syslog(LOG_NOTICE, "File %s successfully moved to %s", src.c_str(), dst.c_str());
     return EXIT_SUCCESS;
 }
+
+void FileDispatcher::process() {
+    std::string young_dir = get_young_dir();
+    std::string old_dir = get_old_dir();
+    if (young_dir.compare(old_dir) == 0)
+    {
+        syslog(LOG_ERR, "Directories are equal");
+        destroy();
+        exit(EXIT_FAILURE);
+    }
+    process_directories(old_dir, young_dir, OLD_TO_YOUNG);
+    process_directories(young_dir, old_dir, YOUNG_TO_OLD);
+}
+
