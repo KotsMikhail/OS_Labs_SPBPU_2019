@@ -9,7 +9,8 @@
 #include <iostream>
 #include <vector>
 
-class ConfigHolder {
+class ConfigHolder
+{
 public:
     std::vector<std::string> get(const std::string& conf_elem_name);
     static int init(const std::string& config_file_name);

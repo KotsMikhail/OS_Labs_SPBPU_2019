@@ -13,7 +13,8 @@
 ConfigHolder *ConfigHolder::m_inst = nullptr;
 char *ConfigHolder::m_config_file_name = nullptr;
 
-std::vector<std::string> ConfigHolder::get(const std::string& conf_elem_name){
+std::vector<std::string> ConfigHolder::get(const std::string& conf_elem_name)
+{
     if (!m_inst)
         throw std::exception();
     auto it = m_config_params_map.find(conf_elem_name);
@@ -23,24 +24,29 @@ std::vector<std::string> ConfigHolder::get(const std::string& conf_elem_name){
         throw std::exception();
 }
 
-ConfigHolder::~ConfigHolder() {
+ConfigHolder::~ConfigHolder()
+{
     if (m_inst)
         m_config_params_map.clear();
 }
 
-void ConfigHolder::destroy() {
+void ConfigHolder::destroy()
+{
     delete m_inst;
 }
 
-ConfigHolder::ConfigHolder() {
+ConfigHolder::ConfigHolder()
+{
     std::fstream f(m_config_file_name);
-    if (!f.is_open()){
+    if (!f.is_open())
+    {
         syslog(LOG_LOCAL0, "can't open config file");
         return;
     }
 
     std::string cur_line;
-    while(getline(f, cur_line)){
+    while(getline(f, cur_line))
+    {
         std::istringstream ss(cur_line);
         std::string key, value;
         std::getline(ss, key, ':');
@@ -55,7 +61,8 @@ ConfigHolder::ConfigHolder() {
     f.close();
 }
 
-int ConfigHolder::init(const std::string& config_file_name){
+int ConfigHolder::init(const std::string& config_file_name)
+{
     delete m_inst;
 
     if (m_config_file_name == nullptr)
@@ -74,7 +81,8 @@ int ConfigHolder::init(const std::string& config_file_name){
     else
         return 1;
 }
-ConfigHolder* ConfigHolder::getInstance(){
+ConfigHolder* ConfigHolder::getInstance()
+{
     if (m_inst)
         return m_inst;
     else

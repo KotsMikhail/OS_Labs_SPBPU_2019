@@ -29,12 +29,14 @@ int close(int ret_code = 0)
 void signalHandler(int sig)
 {
     int rc = 0;
-    switch (sig){
+    switch (sig)
+    {
         case SIGHUP:
             syslog(LOG_LOCAL0, "reload config signal was accepted");
             //reread config file
             rc = ConfigHolder::init(cfgFile);
-            if (rc) {
+            if (rc)
+            {
                 syslog(LOG_LOCAL0, "can't reload conf file, try again");
                 break;
             }
@@ -58,7 +60,8 @@ void signalHandler(int sig)
     }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     if (argc < 2)
     {
         cout << "use config path: /lab1/path/to/inotify.cfg";

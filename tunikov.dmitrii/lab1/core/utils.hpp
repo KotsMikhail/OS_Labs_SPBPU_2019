@@ -10,8 +10,10 @@
 #include <iostream>
 #include <fstream>
 
-namespace utils {
-    namespace pidFile{
+namespace utils
+{
+    namespace pidFile
+    {
         static std::string getAbsolutePath(std::string path)
         {
             if (path.empty())
