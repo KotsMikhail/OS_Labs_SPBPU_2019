@@ -59,7 +59,7 @@ void signalHandler(int sig)
 }
 
 int main(int argc, char** argv) {
-    if (argc < 3)
+    if (argc < 2)
     {
         cout << "use config path: /lab1/path/to/inotify.cfg";
         return (EXIT_FAILURE);
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
         if (pid == 0)
         {
             //check daemon already exist
-            utils::pidFile::updatePidFile(argv[2]);
+            utils::pidFile::updatePidFile();
             cout << "Hello from child with pid = " << getpid() << " and ppid = " << getppid() << endl;
             //child
             umask(0);

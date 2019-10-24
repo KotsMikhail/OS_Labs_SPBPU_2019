@@ -17,9 +17,10 @@ public:
     static void destroy();
 private:
     ~ConfigHolder();
-    ConfigHolder(const std::string& config_file_name);
+    ConfigHolder();
     std::map<std::string, std::vector<std::string>> m_config_params_map;
     static ConfigHolder *m_inst;
+    static char* m_config_file_name;
 };
 
 

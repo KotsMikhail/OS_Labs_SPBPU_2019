@@ -12,19 +12,49 @@
 
 namespace utils {
     namespace pidFile{
+        static std::string getAbsolutePath(std::string path)
+        {
+            if (path.empty())
+            {
+                throw CommonException("can't get absolute path, path is empty");
+            }
+            if (path[0] == '/')
+            {
+                return path;
+            }
+
+            char *abs_path = realpath(path.c_str(), nullptr);
+            if (abs_path == nullptr)
+            {
+                throw CommonException("can't get absolute path: " + path);
+            }
+
+            std::string res = std::string(abs_path);
+            delete abs_path;
+            return res;
+        }
+
         static void createPidFile(const std::string& pid_file_name)
         {
             //open for output and clear old data
             ofstream pid_file(pid_file_name, std::ofstream::out | std::ofstream::trunc);
             if (!pid_file.is_open())
-                throw CommonException("can't open pid file");
+                throw CommonException("can't open pid file: " + pid_file_name);
 
             pid_file << getpid();
             pid_file.close();
         }
-        static void updatePidFile(const std::string& pid_file_name)
+        static void updatePidFile()
         {
-            ifstream pid_file(pid_file_name);
+            static std::string pid_file_name = "/var/run/inotify.pid";
+
+#ifdef PID_FILE_NAME
+    pid_file_name = PID_FILE_NAME;
+#endif
+            std::string pid_abs = utils::pidFile::getAbsolutePath(pid_file_name);
+            syslog(LOG_LOCAL0, "pid file location is %s", pid_abs.c_str());
+
+            ifstream pid_file(utils::pidFile::getAbsolutePath(pid_file_name));
             if (!pid_file)
             {
                 createPidFile(pid_file_name);

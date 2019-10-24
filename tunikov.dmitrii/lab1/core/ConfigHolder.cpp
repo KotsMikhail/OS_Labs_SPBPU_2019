@@ -11,6 +11,7 @@
 #include <vector>
 
 ConfigHolder *ConfigHolder::m_inst = nullptr;
+char *ConfigHolder::m_config_file_name = nullptr;
 
 std::vector<std::string> ConfigHolder::get(const std::string& conf_elem_name){
     if (!m_inst)
@@ -31,8 +32,8 @@ void ConfigHolder::destroy() {
     delete m_inst;
 }
 
-ConfigHolder::ConfigHolder(const std::string &config_file_name) {
-    std::fstream f(config_file_name);
+ConfigHolder::ConfigHolder() {
+    std::fstream f(m_config_file_name);
     if (!f.is_open()){
         syslog(LOG_LOCAL0, "can't open config file");
         return;
@@ -57,7 +58,17 @@ ConfigHolder::ConfigHolder(const std::string &config_file_name) {
 int ConfigHolder::init(const std::string& config_file_name){
     delete m_inst;
 
-    m_inst = new ConfigHolder(config_file_name);
+    if (m_config_file_name == nullptr)
+    {
+        m_config_file_name = realpath(config_file_name.c_str(), nullptr);
+        if (m_config_file_name == nullptr)
+        {
+            syslog(LOG_LOCAL0, "can't get absolute path to: %s", config_file_name.c_str());
+            return false;
+        }
+    }
+
+    m_inst = new ConfigHolder();
     if (m_inst)
         return 0;
     else

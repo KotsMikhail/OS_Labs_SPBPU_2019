@@ -1,4 +1,14 @@
-cmake -Wall -Werror ..
+#!/bin/bash
+PID_FILE_NAME=$1
+[[ -f pid_file_name ]] || sudo touch "$PID_FILE_NAME"
+if [[ $? -ne 0 ]]; then
+  echo "can't touch pid_file: $?"
+  exit $?
+fi
+
+sudo chmod 0666 "$PID_FILE_NAME"
+
+cmake -Wall -Werror -DPID_FILE_NAME="$PID_FILE_NAME" ..
 make
 CURRENT=$(dirname $0)
 rm $CURRENT/CMakeCache.txt $CURRENT/Makefile $CURRENT/cmake_install.cmake
