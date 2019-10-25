@@ -1,11 +1,16 @@
 #!/bin/bash
+
+if [ "$#" -ne 1 ]; then
+    echo "Please, make pid_file_name argument for script"
+    exit $?
+fi
+
 PID_FILE_NAME=$1
 [[ -f pid_file_name ]] || sudo touch "$PID_FILE_NAME"
 if [[ $? -ne 0 ]]; then
   echo "can't touch pid_file: $?"
   exit $?
 fi
-
 sudo chmod 0666 "$PID_FILE_NAME"
 
 cmake -Wall -Werror -DPID_FILE_NAME="$PID_FILE_NAME" ..
