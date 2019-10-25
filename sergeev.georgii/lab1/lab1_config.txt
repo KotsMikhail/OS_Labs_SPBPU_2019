@@ -1,0 +1,3 @@
+/home/nero/test/old
+/home/nero/test/old
+30
