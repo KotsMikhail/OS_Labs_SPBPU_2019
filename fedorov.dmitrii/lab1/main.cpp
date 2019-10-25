@@ -252,17 +252,17 @@ void OnSignalRecieve (int sig) {
          }
 
          NEED_WORK = true;
-	 break;
+         break;
       }
       case SIGTERM:
       {
          NEED_WORK = false;
- 	 string pidFilePath = WORK_DIR + "/" + PID_FILENAME;
+         string pidFilePath = WORK_DIR + "/" + PID_FILENAME;
          syslog(LOG_USER, "Terminate daemon by signal");
-	 unlink(pidFilePath.c_str());
+         unlink(pidFilePath.c_str());
          closelog();
-	 exit(SIGTERM);
-	 break;
+         exit(SIGTERM);
+         break;
       }
    }
 }
@@ -288,6 +288,10 @@ void InitDaemon (void) {
 
    KillIfOpened();
    InitPidFile();
+
+   ClearDirectory(DST_DIR);
+   CreateDirectory(DST_DIR, "IMG");
+   CreateDirectory(DST_DIR, "OTHERS");
 		
    close(STDIN_FILENO);
    close(STDOUT_FILENO);
