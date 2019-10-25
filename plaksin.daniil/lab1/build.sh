@@ -7,6 +7,6 @@ then
   sudo touch "$pid_location"
 fi
 
-sudo chmod 666 "$pid_location"
+chmod 666 "$pid_location"
 
-gcc -Wall -Werror daemon.cpp -o daemon_lab -lstdc++ -std=c++11
+g++ -Wall -Werror cfg_entry.h cfg_entry.cpp daemon.cpp -o daemon_lab -lstdc++ -std=c++11

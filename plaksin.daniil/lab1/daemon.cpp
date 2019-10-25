@@ -7,24 +7,16 @@
 #include <syslog.h>
 #include <sys/stat.h>
 #include <dirent.h>
-#include <ctime>
 #include <fcntl.h>
-#include <string>
 #include <memory.h>
 #include <list>
+#include "cfg_entry.h"
 
 #define PID_FILE "/var/run/daemon_lab.pid"
 #define ONE_MIN 60
 #define ONE_HOUR 3600
 
 std::string cfg_path;
-
-struct cfg_entry
-{
-    tm t;
-    std::string msg_text;
-    std::string msg_flag;
-};
 
 std::list<cfg_entry> cfg_data;
 
@@ -35,9 +27,13 @@ bool need_work = true;
 
 void read_config()
 {
+    std::string msg_text;
+    std::string msg_flag;
     std::string msg_date;
     std::string msg_time;
+
     std::ifstream cfg_file(cfg_path);
+
     if (!cfg_file.is_open() || cfg_file.eof()) 
     {
         syslog(LOG_ERR, "Could not open config file or it is empty");
@@ -45,14 +41,13 @@ void read_config()
     }
     //std::cout << timeinfo->tm_sec << std::endl;
     cfg_data.clear();
-    struct cfg_entry entry;
-    while (cfg_file >> msg_date >> msg_time >> entry.msg_flag)
+    while (cfg_file >> msg_date >> msg_time >> msg_flag)
     {
         
         //std::cout << "process line" << std::endl;
-        if (entry.msg_flag.compare("-h") == 0 || entry.msg_flag.compare("-d") == 0 || entry.msg_flag.compare("-w") == 0 || entry.msg_flag.compare("-m") == 0)
+        if (msg_flag.compare("-h") == 0 || msg_flag.compare("-d") == 0 || msg_flag.compare("-w") == 0 || msg_flag.compare("-m") == 0)
         {
-            if (!(cfg_file >> entry.msg_text))
+            if (!(cfg_file >> msg_text))
             {
         std::cout << "fail 1" << std::endl;
                 syslog(LOG_ERR, "Wrong config format");
@@ -61,8 +56,8 @@ void read_config()
         }
         else
         {
-            entry.msg_text = entry.msg_flag;
-            entry.msg_flag = "-m";
+            msg_text = msg_flag;
+            msg_flag = "-m";
         }
         struct tm t;
         memset(&t, 0, sizeof t);  
@@ -88,7 +83,7 @@ void read_config()
             syslog(LOG_ERR, "Wrong config format");
             exit(EXIT_FAILURE);
         }
-        entry.t = t;
+        cfg_entry entry(msg_text, msg_flag, t);
         cfg_data.push_back(entry);
         //printf("DOW(%s):%d (0=Sunday, 1=Monday, ...) AND %d %d\n", msg_date.c_str(), t.tm_wday, t.tm_hour, t.tm_min);
     }
@@ -106,37 +101,37 @@ void process_config_file()
 
     for (std::list<cfg_entry>::iterator it = cfg_data.begin(); it != cfg_data.end(); it++)
     {
-        if (it->msg_flag.compare("-m") == 0)
+        if (it->get_entry_flag().compare("-m") == 0)
         {
             //system("gnome-terminal -e 'echo \"sas\"'");//(std::string("gnome-terminal -- 'grep -o \"") + msg_text + std::string("\" ~/.conf'")).c_str());
             //system("gnome-terminal  echo sas");
             
             //system("xterm -e echo sas");
             //std::cout << "sas1" << std::endl;
-            if (ABS(timeinfo->tm_sec - it->t.tm_sec) <= interval)
+            if (ABS(timeinfo->tm_sec - it->get_entry_time().tm_sec) <= interval)
             {
-                system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + it->msg_text + std::string("; read line\"")).c_str());//output msg_text
+                system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + it->get_entry_text() + std::string("; read line\"")).c_str());//output msg_text
             }
         }
-        else if (it->msg_flag.compare("-h") == 0)
+        else if (it->get_entry_flag().compare("-h") == 0)
         {
-            if (timeinfo->tm_min == it->t.tm_min && ABS(timeinfo->tm_sec - it->t.tm_sec) <= interval) 
+            if (timeinfo->tm_min == it->get_entry_time().tm_min && ABS(timeinfo->tm_sec - it->get_entry_time().tm_sec) <= interval) 
             {
-                system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + it->msg_text + std::string("; read line\"")).c_str());//output msg_text
+                system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + it->get_entry_text() + std::string("; read line\"")).c_str());//output msg_text
             }
         }
-        else if (it->msg_flag.compare("-d") == 0)
+        else if (it->get_entry_flag().compare("-d") == 0)
         {
-            if (timeinfo->tm_hour == it->t.tm_hour && timeinfo->tm_min == it->t.tm_min && ABS(timeinfo->tm_sec - it->t.tm_sec) <= interval) 
+            if (timeinfo->tm_hour == it->get_entry_time().tm_hour && timeinfo->tm_min == it->get_entry_time().tm_min && ABS(timeinfo->tm_sec - it->get_entry_time().tm_sec) <= interval) 
             {
-                system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + it->msg_text + std::string("; read line\"")).c_str());//output msg_text
+                system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + it->get_entry_text() + std::string("; read line\"")).c_str());//output msg_text
             }
         }
-        else if (it->msg_flag.compare("-w") == 0)
+        else if (it->get_entry_flag().compare("-w") == 0)
         {
-            if (timeinfo->tm_wday == it->t.tm_wday && timeinfo->tm_hour == it->t.tm_hour && timeinfo->tm_min == it->t.tm_min && ABS(timeinfo->tm_sec - it->t.tm_sec) <= interval)
+            if (timeinfo->tm_wday == it->get_entry_time().tm_wday && timeinfo->tm_hour == it->get_entry_time().tm_hour && timeinfo->tm_min == it->get_entry_time().tm_min && ABS(timeinfo->tm_sec - it->get_entry_time().tm_sec) <= interval)
             {
-                system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + it->msg_text + std::string("; read line\"")).c_str());//output msg_text
+                system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + it->get_entry_text() + std::string("; read line\"")).c_str());//output msg_text
             }
         }
 
@@ -205,7 +200,7 @@ int main(int argc,char **argv)
 
     if (argc < 2)
     {
-        printf("Wrong numbers of arguments. Expected: 2. Got: %d", argc);
+        printf("Wrong numbers of arguments. Expected: 2. Got: %d\n", argc);
         exit(EXIT_FAILURE);
     }
 
