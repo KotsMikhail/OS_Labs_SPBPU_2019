@@ -30,7 +30,6 @@ void ReadConfig() {
         syslog(LOG_ERR, "Incorrect config data!");
         exit(EXIT_FAILURE);
     }
-    syslog(LOG_NOTICE, "%s %s %i", folder1.c_str(), folder2.c_str(), timeInterval);
     configFile.close();
 }
 
@@ -175,7 +174,7 @@ int main(int argc, char **argv) {
         printf("Wrong numbers of arguments. Expected 2 arguments");
         exit(EXIT_FAILURE);
     }
-    configFilePath = argv[1];
+    configFilePath = realpath(argv[1], nullptr);
     openlog("Lab1_daemon", LOG_PID, LOG_USER);
     syslog(LOG_NOTICE, "Log opened");
     ReadConfig();
