@@ -47,7 +47,7 @@ void CreateDirectory (const string& absPath, const string& name) {
    SafeChdir(absPath);
 
    int mkdirErr = mkdir(name.c_str(), S_IRWXU);
-   if (mkdirErr) {
+   if (mkdirErr && errno != EEXIST) {
       syslog(LOG_USER, "Something goes wrong while creating directory (CreatingDirectory), stop executing");
       exit(EXIT_FAILURE);
    }   
@@ -120,9 +120,8 @@ bool IsPngFormat (const string& filename) {
 
 
 void DoDaemonWork (void) {
-   ClearDirectory(DST_DIR);
-   CreateDirectory(DST_DIR, "IMG");
-   CreateDirectory(DST_DIR, "OTHERS");
+   ClearDirectory(DST_DIR + "/IMG");
+   ClearDirectory(DST_DIR + "/OTHERS");
    
    vector<string> srcContent = GetContentList(SRC_DIR);
    for (unsigned i = 0; i < srcContent.size(); i++) {
@@ -288,7 +287,12 @@ void InitDaemon (void) {
 
    KillIfOpened();
    InitPidFile();
-		
+
+   CreateDirectory(DST_DIR, "IMG");
+   CreateDirectory(DST_DIR, "OTHERS");
+   ClearDirectory(DST_DIR + "/IMG");
+   ClearDirectory(DST_DIR + "/OTHERS");
+
    close(STDIN_FILENO);
    close(STDOUT_FILENO);
    close(STDERR_FILENO);
