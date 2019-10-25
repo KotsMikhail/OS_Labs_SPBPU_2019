@@ -288,10 +288,6 @@ void InitDaemon (void) {
 
    KillIfOpened();
    InitPidFile();
-
-   ClearDirectory(DST_DIR);
-   CreateDirectory(DST_DIR, "IMG");
-   CreateDirectory(DST_DIR, "OTHERS");
 		
    close(STDIN_FILENO);
    close(STDOUT_FILENO);
