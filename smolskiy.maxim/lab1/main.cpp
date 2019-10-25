@@ -72,6 +72,6 @@ int main(int argc, char **argv)
     while (true)
     {
         Daemon::DeleteAllSubfolders();
-        sleep(cfg.interval);
+        sleep(cfg.GetInterval());
     }
 }

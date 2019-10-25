@@ -7,6 +7,16 @@
 
 using namespace std;
 
+const string& Config::GetAbsoluteFolderPath()
+{
+    return absfldrPath;
+}
+
+int Config::GetInterval()
+{
+    return interval;
+}
+
 void Config::ReadConfig()
 {
     ifstream cfgFile(absPath);

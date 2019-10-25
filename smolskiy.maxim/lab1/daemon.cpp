@@ -82,7 +82,7 @@ void DeleteFolder(string absFldrPath)
 void Daemon::DeleteAllSubfolders()
 {
     Config &cfg = Config::GetInstance();
-    DIR *dir = opendir(cfg.absfldrPath.c_str());
+    DIR *dir = opendir(cfg.GetAbsoluteFolderPath().c_str());
 
     if (dir == nullptr)
     {
@@ -97,7 +97,7 @@ void Daemon::DeleteAllSubfolders()
         {
             string subfldrName = entry->d_name;
             if (subfldrName != "." && subfldrName != "..")
-                DeleteFolder(cfg.absfldrPath + "/" + subfldrName);
+                DeleteFolder(cfg.GetAbsoluteFolderPath() + "/" + subfldrName);
         }
     }
 
