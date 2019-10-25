@@ -23,8 +23,7 @@ int update_freq;
 bool is_need_work;
 
 
-int UnlinkCB (const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf) 
-{
+int UnlinkCB (const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf) {
   int rv;
 
   if (ftwbuf->level == 0) {
@@ -41,8 +40,7 @@ int UnlinkCB (const char* fpath, const struct stat* sb, int typeflag, struct FTW
 }
 
 
-void CreateDirectory (const std::string& absPath, const std::string& name)
-{
+void CreateDirectory (const std::string& absPath, const std::string& name){
    std::string currentPath(get_current_dir_name()); 
    int error;
    error = chdir(absPath.c_str());
@@ -75,22 +73,28 @@ void CreateDaemon(const std::string configFileName){
 void LoadConfigFile(){
   std::ifstream cfg_file(config_path.c_str());
   if (!cfg_file.is_open() || cfg_file.eof()) {
-    syslog(LOG_ERR, "Could not open config file or it is empty");
+    syslog(LOG_ERR, "Could not open config file \"%s\" or it is empty", config_path.c_str());
     exit(EXIT_FAILURE);
   }
   cfg_file >> src_dir >> dst_dir >> update_freq;
   cfg_file.close();
+  if(src_dir == dst_dir){
+    syslog(LOG_ERR, "destination and source folders can not be the same (%s)", src_dir.c_str());
+    exit(EXIT_FAILURE);
+  }
+ if(update_freq <= 0){
+    syslog(LOG_ERR, "frequency time must be greater then zero (current:%i)", update_freq);
+    exit(EXIT_FAILURE);
+  }
   //std::cout << "src_dir\t" << src_dir << "\n";
   //std::cout << "dst_dir\t" << dst_dir << "\n";
   //std::cout << "update_freq\t" << update_freq << "\n";
 }
 
 
-void signalHandler(int signal)
-{
+void signalHandler(int signal){
   switch (signal) {
-    case SIGHUP:
-    { 
+    case SIGHUP:{ 
       is_need_work = false;
       syslog(LOG_USER, "Reload daemon's config by signal");
       //std::cout << "Reload daemon's config by signal\n";
@@ -98,8 +102,7 @@ void signalHandler(int signal)
       is_need_work = true;
       break;
     }
-    case SIGTERM:
-    {
+    case SIGTERM:{
       is_need_work = false;
       syslog(LOG_USER, "Terminate daemon by signal");
       //std::cout << "Terminate daemon by signal \n";
@@ -112,8 +115,7 @@ void signalHandler(int signal)
 }
 
 
-void InitPidFile () 
-{
+void InitPidFile () {
    std::ofstream f(pid_file_path.c_str());
    syslog(LOG_USER, "pid file created: %s, pid is %i", pid_file_path.c_str(), getpid());  
    //std::cout << "pid file created: " << pid_file_path.c_str() << ", pid is " << getpid() << std::endl;
@@ -121,8 +123,7 @@ void InitPidFile ()
 }
 
 
-std::string ReadPidFile () 
-{
+std::string ReadPidFile () {
    std::fstream f(pid_file_path.c_str());
    if (f.good()) {
       std::string line;
@@ -159,8 +160,7 @@ void Init(){
   umask(0);
   error = setsid();
 
-  if(error == -1)
-  {
+  if(error == -1){
     syslog(LOG_USER, "Could not creat a new session");
     exit(EXIT_FAILURE);
   }
@@ -192,14 +192,12 @@ void Init(){
 }
 
 
-void ClearDirectory (const std::string& absPath) 
-{
+void ClearDirectory (const std::string& absPath) {
   nftw(absPath.c_str(), UnlinkCB, 64, FTW_DEPTH | FTW_PHYS); 
 }
 
 
-void CopyFile (const std::string& absPathSrc, const std::string& absPathDst)
-{
+void CopyFile (const std::string& absPathSrc, const std::string& absPathDst){
   std::ifstream src(absPathSrc.c_str(), std::ios::binary);
   if (!src.good()) {
     //std::cout << "Copy file goes bad: src = " << absPathSrc << "\tdst = " << absPathDst << std::endl;
@@ -225,8 +223,7 @@ bool CompareExtantion(const std::string fileName, const std::string extantion){
 } 
 
 
-std::vector<std::string> GetContentList (const std::string& absPath)
-{
+std::vector<std::string> GetContentList (const std::string& absPath){
   DIR*           dir;
   struct dirent* ent;
   std::vector<std::string> res;
@@ -304,4 +301,3 @@ int main (int argc, char** argv){
   Work();
   return 0;
 }
-
