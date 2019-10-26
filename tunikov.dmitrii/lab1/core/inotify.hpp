@@ -42,12 +42,13 @@ private:
 
     void removeWatchers()
     {
-        for (auto& watch_dir : watchers)
+        auto itr = watchers.begin();
+        while (itr != watchers.end())
         {
-            int wd = inotify_rm_watch(fd, watch_dir.first);
+            int wd = inotify_rm_watch(fd, itr->first);
             if (wd == -1)
                 throw CommonException("can't delete watcher for inotify");
-            watchers.erase(watch_dir.first);
+            watchers.erase(itr++);
         }
     }
 
@@ -77,7 +78,6 @@ public:
         }
         catch (CommonException& e)
         {
-            delete[] buf;
             delete obj;
             throw CommonException(e);
         }
