@@ -13,7 +13,7 @@ if [[ $? -ne 0 ]]; then
 fi
 sudo chmod 0666 "$PID_FILE_NAME"
 
-cmake -Wall -Werror -DPID_FILE_NAME="$PID_FILE_NAME" ..
+cmake -Wall -Werror -DPID_FILE_NAME="$PID_FILE_NAME" .
 make
 CURRENT=$(dirname $0)
 rm $CURRENT/CMakeCache.txt $CURRENT/Makefile $CURRENT/cmake_install.cmake
