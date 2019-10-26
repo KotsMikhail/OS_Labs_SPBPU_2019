@@ -16,6 +16,8 @@ public:
     static int init(const std::string& config_file_name);
     static ConfigHolder* getInstance();
     static void destroy();
+    ConfigHolder(ConfigHolder &c) = delete;
+    void operator=(ConfigHolder &c) = delete;
 private:
     ~ConfigHolder();
     ConfigHolder();

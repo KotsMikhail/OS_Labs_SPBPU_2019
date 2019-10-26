@@ -54,9 +54,7 @@ namespace utils
     pid_file_name = PID_FILE_NAME;
 #endif
             std::string pid_abs = utils::pidFile::getAbsolutePath(pid_file_name);
-            syslog(LOG_LOCAL0, "pid file location is %s", pid_abs.c_str());
-
-            ifstream pid_file(utils::pidFile::getAbsolutePath(pid_file_name));
+            ifstream pid_file(pid_abs);
             if (!pid_file)
             {
                 createPidFile(pid_file_name);

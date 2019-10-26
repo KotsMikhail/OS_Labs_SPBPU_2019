@@ -14,10 +14,10 @@
 #include <utility>
 
 using namespace std;
-#define MAX_EVENTS 1024
-#define LEN_NAME 16
-#define EVENT_SIZE  ( sizeof (struct inotify_event) )
-#define BUF_LEN     ( MAX_EVENTS * ( EVENT_SIZE + LEN_NAME ))
+static const int MAX_EVENTS = 1024;
+static const int LEN_NAME =  16;
+static const int EVENT_SIZE =  (sizeof (struct inotify_event));
+static const int BUF_LEN = (MAX_EVENTS * (EVENT_SIZE + LEN_NAME));
 
 class inotifier
 {
@@ -56,6 +56,18 @@ private:
     {
     }
 
+    void logEvent(const char* event_name, const char* place_name, const char* file_name, const char* watch_dir_name, uint32_t* cookie = nullptr)
+    {
+        if (cookie != nullptr)
+        {
+            syslog(LOG_LOCAL0, "action: %s, with %s %s into %s, cookie: %u", event_name, place_name, file_name, watch_dir_name, *cookie);
+        }
+        else
+        {
+            syslog(LOG_LOCAL0, "action: %s, with %s %s into %s", event_name, place_name, file_name, watch_dir_name);
+        }
+    }
+
 public:
     ~inotifier()
     {
@@ -84,14 +96,6 @@ public:
         return obj;
     }
 
-    void printWatchDirs()
-    {
-        std::string wds = "";
-        for (auto& wd : watchers)
-            wds += wd.second + "; ";
-        syslog(LOG_LOCAL0, "new watch dirs: %s", wds.c_str());
-    }
-
     void reloadNotifier()
     {
         removeWatchers();
@@ -100,59 +104,75 @@ public:
 
     int runNotifier()
     {
-        syslog(LOG_LOCAL0, "start watching direcrories");
         while (true)
         {
-            int offset = 0;
             int len = read(fd, buf, BUF_LEN);
-            if (len == -1)
+            if (len <= 0)
             {
-                throw CommonException("can't read buff from fd");
+                throw CommonException("can't read len to buffer from FD");
             }
-
-            auto *event = (inotify_event *) &buf[offset];
+            int offset = 0;
             while (offset < len)
             {
-                if (event->len)
-                {
-                    if (event->mask & IN_CREATE)
-                    {
-                        if (event->mask & IN_ISDIR)
-                            syslog(LOG_LOCAL0, "The directory %s was Created into watch_dir %s\n", event->name,
-                                   watchers.find(event->wd)->second.c_str());
-                        else {
-                            syslog(LOG_LOCAL0, "The file %s was Created into watch_dir %s\n", event->name,
-                                   watchers.find(event->wd)->second.c_str());
-                        }
-                    }
-
-                    else if (event->mask & IN_MODIFY)
-                    {
-                        if (event->mask & IN_ISDIR)
-                            syslog(LOG_LOCAL0, "The directory %s was modified into watch_dir %s\n", event->name,
-                                   watchers.find(event->wd)->second.c_str());
-                        else
-                            syslog(LOG_LOCAL0, "The file %s was modified into watch_dir %s\n", event->name,
-                                   watchers.find(event->wd)->second.c_str());
-                    }
-
-                    else if (event->mask & IN_DELETE)
-                    {
-                        if (event->mask & IN_ISDIR)
-                            syslog(LOG_LOCAL0, "The directory %s was deleted into watch_dir %s\n", event->name,
-                                   watchers.find(event->wd)->second.c_str());
-                        else
-                            syslog(LOG_LOCAL0, "The file %s was deleted into watch_dir %s\n", event->name,
-                                   watchers.find(event->wd)->second.c_str());
-                    } else{
-                        syslog(LOG_LOCAL0, "unknown change %s\n", event->name);
-                    }
-
-
-                    offset += EVENT_SIZE * event->len;
-                }
+                auto *event = (inotify_event *) &buf[offset];
+                char place_name[10];
+                if (event->mask & IN_ISDIR)
+                    sprintf(place_name, "directory");
                 else
-                    break;
+                    sprintf(place_name, "file");
+
+                uint32_t cookie = event->cookie;
+                const char *dir_name = nullptr;
+                auto it = watchers.find(event->wd);
+                if (it != watchers.end())
+                    dir_name = it->second.c_str();
+
+                switch (event->mask & (IN_ALL_EVENTS | IN_IGNORED))
+                {
+                    case IN_OPEN:
+                        logEvent("OPEN", place_name, event->name, dir_name);
+                        break;
+                    case IN_CREATE:
+                        logEvent("CREATE", place_name, event->name, dir_name);
+                        break;
+                    case IN_MODIFY:
+                        logEvent("MODIFY", place_name, event->name, dir_name);
+                        break;
+                    case IN_DELETE:
+                        logEvent("DELETE", place_name, event->name, dir_name);
+                        break;
+                    case IN_ACCESS:
+                        logEvent("ACCESS", place_name, event->name, dir_name);
+                        break;
+                    case IN_ATTRIB:
+                        logEvent("ATTRIB", place_name, event->name, dir_name);
+                        break;
+                    case IN_CLOSE_WRITE:
+                        logEvent("CLOSE_WRITE", place_name, event->name, dir_name);
+                        break;
+                    case IN_CLOSE_NOWRITE:
+                        logEvent("CLOSE_NOWRITE", place_name, event->name, dir_name);
+                        break;
+                    case IN_MOVED_FROM:
+                        logEvent("MOVED_FROM", place_name, event->name, dir_name, &cookie);
+                        break;
+                    case IN_MOVED_TO:
+                        logEvent("MOVED_TO", place_name, event->name, dir_name, &cookie);
+                        break;
+                    case IN_DELETE_SELF:
+                        logEvent("DELETE_SELF", place_name, event->name, dir_name);
+                        break;
+                    case IN_MOVE_SELF:
+                        logEvent("MOVE_SELF", place_name, event->name, dir_name);
+                        break;
+                    case IN_IGNORED:
+                        syslog(LOG_NOTICE, "IGNORED");
+                        break;
+                    default:
+                        syslog(LOG_NOTICE, "UNKNOWN EVENT for file %s in %s", event->name, dir_name);
+                        break;
+                }
+                offset += EVENT_SIZE + event->len;
             }
         }
     }

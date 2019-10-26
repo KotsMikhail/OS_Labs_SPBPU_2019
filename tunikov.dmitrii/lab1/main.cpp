@@ -9,11 +9,6 @@
 #include "core/utils.hpp"
 
 using namespace std;
-#define MAX_EVENTS 1024
-#define LEN_NAME 16
-#define EVENT_SIZE  ( sizeof (struct inotify_event) )
-#define BUF_LEN     ( MAX_EVENTS * ( EVENT_SIZE + LEN_NAME ))
-
 static std::string cfgFile = "inotify.cfg";
 
 static inotifier* inotifier;
@@ -33,7 +28,6 @@ void signalHandler(int sig)
     switch (sig)
     {
         case SIGHUP:
-            syslog(LOG_LOCAL0, "reload config signal was accepted");
             //reread config file
             rc = ConfigHolder::init(cfgFile);
             if (rc)
@@ -44,8 +38,6 @@ void signalHandler(int sig)
 
             try {
                 inotifier->reloadNotifier();
-                inotifier->printWatchDirs();
-                syslog(LOG_LOCAL0, "config was successfully reloaded");
             }
             catch (CommonException& e)
             {
@@ -54,8 +46,6 @@ void signalHandler(int sig)
 
             break;
         case SIGTERM:
-            //print to syslog
-            syslog (LOG_LOCAL0, "Program terminated");;
             close();
             break;
     }
@@ -81,7 +71,6 @@ int main(int argc, char** argv)
         return (EXIT_FAILURE);
     }
 
-    syslog(LOG_LOCAL0, "Starting daemon...");
     int pid = fork();
     if (pid == -1)
     {
@@ -108,6 +97,7 @@ int main(int argc, char** argv)
         {
             //check daemon already exist
             utils::pidFile::updatePidFile();
+            syslog(LOG_LOCAL0, "Starting daemon...");
             cout << "Hello from child with pid = " << getpid() << " and ppid = " << getppid() << endl;
             //child
             umask(0);
@@ -124,12 +114,9 @@ int main(int argc, char** argv)
                 close(1);
             }
         }
-        //parent exit
-        syslog(LOG_LOCAL0, "parent exit...");
     }
     else //it is parent
     {
-        cout << "parent here";
         return EXIT_SUCCESS;
     }
 
