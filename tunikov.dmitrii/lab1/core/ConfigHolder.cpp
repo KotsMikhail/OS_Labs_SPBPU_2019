@@ -22,7 +22,7 @@ std::vector<std::string> ConfigHolder::get(const std::string& conf_elem_name)
     if (it != m_config_params_map.cend())
         return it->second;
     else
-        throw CommonException("wrong config param name");
+        throw CommonException("wrong config file structure");
 }
 
 ConfigHolder::~ConfigHolder()
