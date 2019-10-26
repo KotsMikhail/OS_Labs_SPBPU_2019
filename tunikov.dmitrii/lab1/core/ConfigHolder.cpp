@@ -3,6 +3,7 @@
 //
 
 #include "ConfigHolder.h"
+#include "Exception.hpp"
 #include <fstream>
 #include <sys/syslog.h>
 #include <string>
@@ -16,12 +17,12 @@ char *ConfigHolder::m_config_file_name = nullptr;
 std::vector<std::string> ConfigHolder::get(const std::string& conf_elem_name)
 {
     if (!m_inst)
-        throw std::exception();
+        throw CommonException("config not initialized");
     auto it = m_config_params_map.find(conf_elem_name);
     if (it != m_config_params_map.cend())
         return it->second;
     else
-        throw std::exception();
+        throw CommonException("wrong config param name");
 }
 
 ConfigHolder::~ConfigHolder()

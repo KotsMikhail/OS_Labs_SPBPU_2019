@@ -29,6 +29,7 @@ private:
     void addWatchers()
     {
         ConfigHolder *ch = ConfigHolder::getInstance();
+        if (ch->get())
         for (auto &watch_dir : ch->get("watch_directories"))
         {
             int wd = inotify_add_watch(fd, watch_dir.c_str(), IN_CREATE | IN_MODIFY | IN_DELETE);
