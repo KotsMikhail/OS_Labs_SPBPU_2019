@@ -20,6 +20,7 @@ static inotifier* inotifier;
 
 int close(int ret_code = 0)
 {
+    syslog(LOG_LOCAL0, "program termianted..");
     delete inotifier;
     closelog();
     ConfigHolder::destroy();
@@ -68,6 +69,10 @@ int main(int argc, char** argv)
         return (EXIT_FAILURE);
     }
 
+
+    /* Open the log file */
+    openlog ("inotify ", LOG_PID | LOG_NDELAY, LOG_LOCAL0);
+
     //init conf file
     cfgFile = argv[1];
     if (ConfigHolder::init(cfgFile))
@@ -76,10 +81,7 @@ int main(int argc, char** argv)
         return (EXIT_FAILURE);
     }
 
-    /* Open the log file */
-    openlog ("inotify ", LOG_PID | LOG_NDELAY, LOG_LOCAL0);
     syslog(LOG_LOCAL0, "Starting daemon...");
-
     int pid = fork();
     if (pid == -1)
     {
