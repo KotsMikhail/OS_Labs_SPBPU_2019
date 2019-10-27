@@ -10,9 +10,9 @@
 #include <dirent.h>
 #include <signal.h>
 
-#define PID_FILENAME "pid_info.txt"
-#define PROC_DIR "/proc"
-#define WAIT_OF_KILLING_TIME 1
+std::string PID_FILENAME = "pid_info.txt";
+std::string PROC_DIR = "/proc";
+int WAIT_OF_KILLING_TIME = 1;
 
 std::string work_dir;
 std::string config_path;
@@ -22,6 +22,9 @@ std::string pid_file_path;
 int update_freq;
 bool is_need_work;
 
+void delete_pid_file(){
+    unlink(pid_file_path.c_str());
+}
 
 int UnlinkCB (const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf) {
   int rv;
@@ -31,12 +34,18 @@ int UnlinkCB (const char* fpath, const struct stat* sb, int typeflag, struct FTW
   }
   rv = remove(fpath);
   if (rv) {
-    perror(fpath);
-    syslog(LOG_USER, "Something goes wrong while deleating files \"%s\"", fpath);
+    //perror(fpath);
+    syslog(LOG_ERR, "Something goes wrong while deleating files \"%s\"", fpath);
     //std::cout << "Something goes wrong while deleating files \"" << fpath <<"\"\n";
+    delete_pid_file();
     exit(EXIT_FAILURE);
   }  
   return rv;
+}
+
+
+void ClearDirectory (const std::string& absPath) {
+  nftw(absPath.c_str(), UnlinkCB, 64, FTW_DEPTH | FTW_PHYS); 
 }
 
 
@@ -45,19 +54,20 @@ void CreateDirectory (const std::string& absPath, const std::string& name){
    int error;
    error = chdir(absPath.c_str());
    if (error) {
-      syslog(LOG_USER, "Could not change directory \"%s\"", absPath.c_str());
+      syslog(LOG_ERR, "Could not change directory \"%s\"", absPath.c_str());
       //std::cout << "Could not change directory \"" << absPath << "\"" << std::endl;
+      delete_pid_file();
       exit(EXIT_FAILURE);
    }  
    error = mkdir(name.c_str(), S_IRWXU);
    if (error) {
-      syslog(LOG_USER, "Could not create directory \"%s\"", absPath.c_str());
+      syslog(LOG_ERR, "Could not create directory \"%s\"", absPath.c_str());
       //std::cout << "Could not create directory \"" << absPath << "\"" << std::endl;
+      delete_pid_file();
       exit(EXIT_FAILURE);
    }     
    chdir(currentPath.c_str());
 }
-
 
 void CreateDaemon(const std::string configFileName){
   work_dir = std::string(get_current_dir_name());
@@ -106,9 +116,9 @@ void signalHandler(int signal){
       is_need_work = false;
       syslog(LOG_USER, "Terminate daemon by signal");
       //std::cout << "Terminate daemon by signal \n";
-      unlink(pid_file_path.c_str());
+      delete_pid_file();
       closelog();
-      exit(SIGTERM);
+      exit(EXIT_SUCCESS);
       break;
     } 
   }
@@ -145,30 +155,40 @@ void KillPrevDaemon() {
 
   syslog(LOG_USER, "Deamon already works - kill him");
   //std::cout << "Deamon already works - kill him\n";
-  if ((dir = opendir(pidFolder.c_str())) != NULL) {
+  if ((dir = opendir(pidFolder.c_str())) != nullptr) {
     kill(atoi(pid.c_str()), SIGTERM);  
   }
-  while ((dir = opendir(pidFolder.c_str())) != NULL) {
+  while ((dir = opendir(pidFolder.c_str())) != nullptr) {
     sleep(WAIT_OF_KILLING_TIME);
   }
 }
 
+
 void Init(){
   int error;
   //std::cout << "Init\n";
-  openlog("daemon_lab", 0, LOG_USER);
+
+  int pid = fork();
+  if (pid == -1) {
+    //std::cout << "Error: start daemon failed" << std::endl;
+    syslog(LOG_ERR, "Could not fork()");
+    exit(EXIT_FAILURE);
+  } else if (pid > 0) {
+    exit(EXIT_SUCCESS);
+  }
+
   umask(0);
   error = setsid();
 
   if(error == -1){
-    syslog(LOG_USER, "Could not creat a new session");
+    syslog(LOG_ERR, "Could not creat a new session");
     exit(EXIT_FAILURE);
   }
 
-  int pid = fork();
+  pid = fork();
   if (pid == -1) {
     //std::cout << "ECould not fork" << std::endl;
-    syslog(LOG_USER, "Could not fork()");
+    syslog(LOG_ERR, "Could not fork()");
     exit(EXIT_FAILURE);
   } else if (pid > 0) {
     exit(EXIT_SUCCESS);
@@ -176,7 +196,7 @@ void Init(){
 
   error = chdir("/");
   if (error < 0){
-    syslog(LOG_USER, "Could not change working directory to /");
+    syslog(LOG_ERR, "Could not change working directory to /");
     exit(EXIT_FAILURE);
   }
 
@@ -192,16 +212,11 @@ void Init(){
 }
 
 
-void ClearDirectory (const std::string& absPath) {
-  nftw(absPath.c_str(), UnlinkCB, 64, FTW_DEPTH | FTW_PHYS); 
-}
-
-
 void CopyFile (const std::string& absPathSrc, const std::string& absPathDst){
   std::ifstream src(absPathSrc.c_str(), std::ios::binary);
   if (!src.good()) {
     //std::cout << "Copy file goes bad: src = " << absPathSrc << "\tdst = " << absPathDst << std::endl;
-    syslog(LOG_USER, "Copy file goes bad src = %s\tdst = %s", absPathSrc.c_str(), absPathDst.c_str());
+    syslog(LOG_ERR, "Copy file goes bad src = %s\tdst = %s", absPathSrc.c_str(), absPathDst.c_str());
     return;
   }   
   std::ofstream dst(absPathDst.c_str(), std::ios::binary);
@@ -209,7 +224,7 @@ void CopyFile (const std::string& absPathSrc, const std::string& absPathDst){
 }
 
 
-bool CompareExtantion(const std::string fileName, const std::string extantion){
+bool CompareExtention(const std::string fileName, const std::string extantion){
   if(fileName.size() <= extantion.size()){
     return false;
   }
@@ -227,8 +242,8 @@ std::vector<std::string> GetContentList (const std::string& absPath){
   DIR*           dir;
   struct dirent* ent;
   std::vector<std::string> res;
-  if ((dir = opendir(absPath.c_str())) != NULL) {
-    while ((ent = readdir(dir)) != NULL) {
+  if ((dir = opendir(absPath.c_str())) != nullptr) {
+    while ((ent = readdir(dir)) != nullptr) {
       if (ent->d_type == DT_DIR) {
         continue;
       }
@@ -237,7 +252,7 @@ std::vector<std::string> GetContentList (const std::string& absPath){
     }
     closedir(dir);
   } else {
-  return std::vector<std::string>();
+    return std::vector<std::string>();
   }
   return res;
 }
@@ -256,7 +271,7 @@ void DoWork(){
   for(unsigned int i = 0; i < srcContent.size(); i++){
     filename = srcContent[i];
     srcPath = src_dir + "/" + filename;
-    if(CompareExtantion(filename, ".png")){
+    if(CompareExtention(filename, ".png")){
       dstPath = dst_dir + "/IMG/" + filename;
     } else {
       dstPath = dst_dir + "/OTHERS/" + filename;
@@ -278,21 +293,12 @@ void Work(){
 }
 
 
-
 int main (int argc, char** argv){
   if (argc != 2) {
     std::cout << "Bad arguments ( args != 2 )" << std::endl;
     return -1;
   }
-
-  int pid = fork();
-  if (pid == -1) {
-    //std::cout << "Error: start daemon failed" << std::endl;
-    exit(EXIT_FAILURE);
-  } else if (pid > 0) {
-    exit(EXIT_SUCCESS);
-  }
-
+  openlog("daemon_lab", 0, LOG_USER);
   std::string cfgFileName(argv[1]); 
 
   CreateDaemon(cfgFileName);
