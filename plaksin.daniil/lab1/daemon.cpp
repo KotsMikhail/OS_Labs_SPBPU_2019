@@ -14,20 +14,16 @@
 #include <vector>
 #include <sstream>
 #include <iterator>
+#include <cmath>
 #include "cfg_entry.h"
 
 #define PID_FILE "/var/run/daemon_lab.pid"
-#define ONE_MIN 60
-#define ONE_HOUR 3600
 
 std::string cfg_path;
 
 std::list<cfg_entry> cfg_data;
 
-int interval = 10;
 bool need_work = true;
-
-#define ABS(x) ((x) > 0 ? (x) : -(x))
 
 void hardcore_date_time_validate(std::string date, std::string time)
 {
@@ -86,7 +82,7 @@ void read_config()
         //std::cout << "process line" << std::endl;
         if (msg_flag.find('-') != std::string::npos && msg_flag.length() == 2 && !(msg_flag.compare("-h") == 0 || msg_flag.compare("-d") == 0 || msg_flag.compare("-w") == 0 || msg_flag.compare("-m") == 0))
         {
-            //std::cout << "fail 0" << std::endl;
+            std::cout << "fail 0" << std::endl;
             syslog(LOG_ERR, "Wrong flag");
             exit(EXIT_FAILURE);
         }
@@ -143,7 +139,7 @@ void read_config()
     cfg_file.close();
 }
 
-void process_config_file() 
+void process_config_file(int interval) 
 {
     time_t rawtime;
     struct tm *timeinfo;
@@ -170,28 +166,28 @@ void process_config_file()
             
             //system("xterm -e echo sas");
             //std::cout << "sas1" << std::endl;
-            if (ABS(timeinfo->tm_sec - tmp_t.tm_sec) <= interval)
+            if (std::abs(timeinfo->tm_sec - tmp_t.tm_sec) <= interval)
             {
                 system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + it->get_entry_text() + std::string("; read line\"")).c_str());//output msg_text
             }
         }
         else if (it->get_entry_flag().compare("-h") == 0)
         {
-            if (timeinfo->tm_min == tmp_t.tm_min && ABS(timeinfo->tm_sec - tmp_t.tm_sec) <= interval) 
+            if (timeinfo->tm_min == tmp_t.tm_min && std::abs(timeinfo->tm_sec - tmp_t.tm_sec) <= interval) 
             {
                 system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + it->get_entry_text() + std::string("; read line\"")).c_str());//output msg_text
             }
         }
         else if (it->get_entry_flag().compare("-d") == 0)
         {
-            if (timeinfo->tm_hour == tmp_t.tm_hour && timeinfo->tm_min == tmp_t.tm_min && ABS(timeinfo->tm_sec - tmp_t.tm_sec) <= interval) 
+            if (timeinfo->tm_hour == tmp_t.tm_hour && timeinfo->tm_min == tmp_t.tm_min && std::abs(timeinfo->tm_sec - tmp_t.tm_sec) <= interval) 
             {
                 system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + it->get_entry_text() + std::string("; read line\"")).c_str());//output msg_text
             }
         }
         else if (it->get_entry_flag().compare("-w") == 0)
         {
-            if (timeinfo->tm_wday == tmp_t.tm_wday && timeinfo->tm_hour == tmp_t.tm_hour && timeinfo->tm_min == tmp_t.tm_min && ABS(timeinfo->tm_sec - tmp_t.tm_sec) <= interval)
+            if (timeinfo->tm_wday == tmp_t.tm_wday && timeinfo->tm_hour == tmp_t.tm_hour && timeinfo->tm_min == tmp_t.tm_min && std::abs(timeinfo->tm_sec - tmp_t.tm_sec) <= interval)
             {
                 system(std::string(("gnome-terminal --working-directory='/home' -- sh -c \"echo ") + it->get_entry_text() + std::string("; read line\"")).c_str());//output msg_text
             }
@@ -250,6 +246,8 @@ void signal_handler(int sig)
 
 int main(int argc,char **argv)
 {
+    int interval = 10;
+
     pid_t pid = fork();
 
     if (pid == -1)
@@ -307,7 +305,7 @@ int main(int argc,char **argv)
          if(need_work)
          {
              //std::cout << "work" << std::endl;
-             process_config_file();
+             process_config_file(interval);
          }
         sleep(interval);
     }
