@@ -15,36 +15,41 @@ private:
   using string = std::string;
   using svector = std::vector<string>;
 
+  // constants
+  static const string LOG_TAG;
+  static const string INTERVAL_PARAM_NAME;
+  static const string DIR1_PARAM_NAME;
+  static const string DIR2_PARAM_NAME;
+
   // work related parameters
-  static uint timeInterval;
-  static string dir1Path;
-  static string dir2Path;
-  static string totalLogPath;
+  uint timeInterval = 45;
+  string dir1Path = "dir1";
+  string dir2Path = "dir2";
+  string totalLogPath;
 
   // daemon related parameters
-  static const string LOG_TAG;
-  static string workDir;
-  static string configFileName;
-  static string pidFileName;
+  string workDir;
+  string configFileName;
+  string pidFileName = "/var/run/lab1.pid";
+
+  string getAbsolutePath( const string &path );
+  void clear();
+  bool handlePidFile();
+  bool setPidFile();
+
+  void static signalHandle( int sigNum );
+  void terminate();
+
+  bool parseConfig();
+  void startWorkLoop();
+  void doWork();
+
+  svector findLogFiles( const string &curDir );
+  void saveLog( const string &logFilePath, std::ofstream &totalLog );
 
 public:
-  static bool start( const string &configFilename );
-
-private:
-  static string getAbsolutePath( const string &path );
-  static void clear();
-  static bool handlePidFile();
-  static bool setPidFile();
-
-  static void signalHandle( int sigNum );
-  static void terminate();
-
-  static bool parseConfig();
-  static void startWorkLoop();
-  static void doWork();
-
-  static svector findLogFiles( const string &curDir );
-  static void saveLog( const string &logFilePath, std::ofstream &totalLog );
+  static Daemon &getInstance();
+  bool start( const string &configFilename );
 };
 
 #endif //LAB1_DAEMON_H

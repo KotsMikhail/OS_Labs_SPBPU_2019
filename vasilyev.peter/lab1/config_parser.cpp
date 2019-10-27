@@ -4,17 +4,21 @@
 
 #include <vector>
 #include <fstream>
+#include <algorithm>
 
 #include "config_parser.h"
 
-std::map<std::string, ConfigParser::Parameter> const ConfigParser::nameToParameter = {
-  {"interval", Parameter::TIME_INTERVAL},
-  {"dir1", Parameter::DIR1_NAME},
-  {"dir2", Parameter::DIR2_NAME}
-};
-
-bool ConfigParser::parse( std::ifstream &input, std::map<Parameter, std::string> &output )
+ConfigParser &ConfigParser::getInstance()
 {
+  static ConfigParser instance;
+
+  return instance;
+} // end of 'ConfigParser::getInstance' function
+
+std::map<std::string, std::string> ConfigParser::parse( std::ifstream &input,
+                                                        const sset &parameterNames )
+{
+  std::map<std::string, std::string> output;
   int line_num = 0;
   std::string line;
 
@@ -52,30 +56,18 @@ bool ConfigParser::parse( std::ifstream &input, std::map<Parameter, std::string>
 
     // parse line
     if (words.size() != 2)
-    {
-      std::string error = "ERROR: line " + std::to_string(line_num) + ": '" + line +
-                          "' wrong number of words!";
-      output.insert(std::pair<Parameter, std::string>(Parameter::ERROR, error));
+      throw std::runtime_error("ERROR: line " + std::to_string(line_num) + ": '" + line +
+                               "' wrong number of words!");
 
-      return false;
-    }
-
-    if (nameToParameter.find(words[0]) == nameToParameter.end())
-    {
-      std::string error = "ERROR: line " + std::to_string(line_num) + ": '" + line +
-                          "' unknown parameter name!";
-      output.insert(std::pair<Parameter , std::string>(Parameter::ERROR, error));
-
-      return false;
-    }
+    // check if parameter name is acceptable and save
+    if(std::find(parameterNames.begin(), parameterNames.end(), words[0]) != parameterNames.end())
+      output.insert(std::pair<std::string, std::string>(words[0], words[1]));
     else
-    {
-      std::pair<Parameter, std::string> value(nameToParameter.at(words[0]), words[1]);
-      output.insert(value);
-    }
+      throw std::runtime_error("ERROR: line " + std::to_string(line_num) + ": '" + line +
+                               "' unknown parameter name!");
   }
 
-  return true;
+  return output;
 } // end of 'ConfigParser::parse' function
 
 // END OF 'config_parser.cpp' FILE

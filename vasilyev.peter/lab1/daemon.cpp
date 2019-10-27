@@ -15,19 +15,34 @@
 #include "config_parser.h"
 
 const std::string Daemon::LOG_TAG = "LAB1";
+const std::string Daemon::INTERVAL_PARAM_NAME = "interval";
+const std::string Daemon::DIR1_PARAM_NAME = "dir1";
+const std::string Daemon::DIR2_PARAM_NAME = "dir2";
 
-// default work parameter values
-unsigned int Daemon::timeInterval = 45;
-std::string Daemon::dir1Path = "dir1";
-std::string Daemon::dir2Path = "dir2";
-std::string Daemon::totalLogPath;
+Daemon &Daemon::getInstance()
+{
+  static Daemon instance;
 
-std::string Daemon::pidFileName = "/var/run/lab1.pid";
-std::string Daemon::workDir;
-std::string Daemon::configFileName;
+  return instance;
+} // end of 'Daemon::getInstance' function
 
 bool Daemon::start( const string &configFilename )
 {
+  // create child process
+  switch (fork())
+  {
+    case -1:
+      // fork failed
+      perror("Initial fork failed");
+      return false;
+    case 0:
+      // Inside child process
+      break;
+    default:
+      // Inside parent process
+      return true;
+  }
+
   // open system log
   openlog(LOG_TAG.c_str(), LOG_PID | LOG_NDELAY, LOG_USER);
 
@@ -46,7 +61,10 @@ bool Daemon::start( const string &configFilename )
 
   // parse config file
   if (!parseConfig())
+  {
+    clear();
     return false;
+  }
 
   // create session
   if (setsid() == -1)
@@ -172,14 +190,16 @@ bool Daemon::setPidFile()
 
 void Daemon::signalHandle( int sigNum )
 {
+  Daemon &instance = getInstance();
+
   switch (sigNum)
   {
   case SIGHUP:
-    if (!parseConfig())
-      terminate();
+    if (!instance.parseConfig())
+      instance.terminate();
     break;
   case SIGTERM:
-    terminate();
+    instance.terminate();
   }
 } // end of 'Daemon::signalHandle' function
 
@@ -187,7 +207,7 @@ void Daemon::terminate()
 {
   // handle terminate signal
   clear();
-  exit(SIGTERM);
+  exit(EXIT_SUCCESS);
 } // end of 'Daemon::terminate' function
 
 bool Daemon::parseConfig()
@@ -198,31 +218,29 @@ bool Daemon::parseConfig()
   if (!config_file.is_open())
   {
     syslog(LOG_ERR, "Couldn't open config file");
-    clear();
-
     return false;
   }
 
-  // Getting values from config
-  std::map<ConfigParser::Parameter, string> params;
-  bool success = ConfigParser::parse(config_file, params);
+  // Get values from config
+  string error_msg = "Config parsing error: %s";
+  ConfigParser::sset param_names = {INTERVAL_PARAM_NAME, DIR1_PARAM_NAME, DIR2_PARAM_NAME};
+  std::map<string, string> params;
+  try
+  {
+    params = ConfigParser::getInstance().parse(config_file, param_names);
+  }
+  catch (std::runtime_error &error)
+  {
+    syslog(LOG_ERR, error_msg.c_str(), error.what());
+    return false;
+  }
   config_file.close();
 
-  string error_msg = "Config parsing error: %s";
-
-  if (!success)
-  {
-    syslog(LOG_ERR, error_msg.c_str(), params.at(ConfigParser::Parameter::ERROR).c_str());
-    clear();
-
-    return false;
-  }
-
   // extract time interval value
-  if (params.find(ConfigParser::Parameter::TIME_INTERVAL) != params.end())
+  if (params.find(INTERVAL_PARAM_NAME) != params.end())
     try
     {
-      long value = std::stol(params.at(ConfigParser::Parameter::TIME_INTERVAL));
+      long value = std::stol(params.at(INTERVAL_PARAM_NAME));
       if (value < 0)
       {
         syslog(LOG_ERR, error_msg.c_str(), "negative time interval");
@@ -240,10 +258,10 @@ bool Daemon::parseConfig()
     }
 
   // extract work directories names
-  if (params.find(ConfigParser::Parameter::DIR1_NAME) != params.end())
-    dir1Path = params.at(ConfigParser::Parameter::DIR1_NAME);
-  if (params.find(ConfigParser::Parameter::DIR2_NAME) != params.end())
-    dir2Path = params.at(ConfigParser::Parameter::DIR2_NAME);
+  if (params.find(DIR1_PARAM_NAME) != params.end())
+    dir1Path = params.at(DIR1_PARAM_NAME);
+  if (params.find(DIR2_PARAM_NAME) != params.end())
+    dir2Path = params.at(DIR2_PARAM_NAME);
 
   // get work directories absolute paths
   dir1Path = getAbsolutePath(dir1Path);
@@ -357,24 +375,31 @@ void Daemon::saveLog( const string &logFilePath, std::ofstream &totalLog )
 {
   syslog(LOG_INFO, "Save .log file: %s", logFilePath.c_str());
 
-  // open .log file
-  std::ifstream log_file(logFilePath);
-  if (!log_file.is_open())
+  try
   {
-    syslog(LOG_ERR, "Couldn't open log file '%s'", logFilePath.c_str());
-    return;
+    // open .log file
+    std::ifstream log_file(logFilePath);
+    if (!log_file.is_open())
+    {
+      syslog(LOG_ERR, "Couldn't open log file '%s'", logFilePath.c_str());
+      return;
+    }
+
+    // read .log file contents
+    string contents;
+    log_file.seekg(0, std::ios::end);
+    contents.resize(log_file.tellg());
+    log_file.seekg(0, std::ios::beg);
+    log_file.read(&contents[0], contents.size());
+    log_file.close();
+
+    // save .log file contents
+    totalLog << logFilePath << "\n\n" << contents << "\n\n\n";
   }
-
-  // read .log file contents
-  string contents;
-  log_file.seekg(0, std::ios::end);
-  contents.resize(log_file.tellg());
-  log_file.seekg(0, std::ios::beg);
-  log_file.read(&contents[0], contents.size());
-  log_file.close();
-
-  // save .log file contents
-  totalLog << logFilePath << "\n\n" << contents << "\n\n\n";
+  catch (std::exception &exception)
+  {
+    syslog(LOG_ERR, "Error while saving .log file: %s", exception.what());
+  }
 } // end of 'Daemon::saveLog' function
 
 // END OF 'daemon.cpp' FILE

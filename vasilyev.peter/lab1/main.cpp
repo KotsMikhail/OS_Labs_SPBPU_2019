@@ -9,23 +9,16 @@
 
 int main( int argc, char **argv )
 {
-  // check CL arguments
+  // check CL arguments count
   if (argc != 2)
   {
     std::cout << "Usage: ./lab1 path/to/config.conf" << std::endl;
     return EXIT_FAILURE;
   }
 
-  // create child process
-  switch (fork())
-  {
-    case -1:
-      perror("Fork failed");
-      return EXIT_FAILURE;
-    case 0:
-      if (!Daemon::start(argv[1]))
-        return EXIT_FAILURE;
-  }
+  // start daemon
+  if (!Daemon::getInstance().start(argv[1]))
+    return EXIT_FAILURE;
 
   return EXIT_SUCCESS;
 }
