@@ -78,16 +78,25 @@ void read_config()
         syslog(LOG_ERR, "Could not open config file or it is empty");
         exit(EXIT_FAILURE);
     }
-    
+    //std::cout << timeinfo->tm_sec << std::endl;
     cfg_data.clear();
     while (cfg_file >> msg_date >> msg_time >> msg_flag)
     {
+        
+        //std::cout << "process line" << std::endl;
+        if (msg_flag.find('-') != std::string::npos && msg_flag.length() == 2 && !(msg_flag.compare("-h") == 0 || msg_flag.compare("-d") == 0 || msg_flag.compare("-w") == 0 || msg_flag.compare("-m") == 0))
+        {
+            //std::cout << "fail 0" << std::endl;
+            syslog(LOG_ERR, "Wrong flag");
+            exit(EXIT_FAILURE);
+        }
+
         if (msg_flag.compare("-h") == 0 || msg_flag.compare("-d") == 0 || msg_flag.compare("-w") == 0 || msg_flag.compare("-m") == 0)
         {
             if (!(cfg_file >> msg_text))
             {
                 //std::cout << "fail 1" << std::endl;
-                syslog(LOG_ERR, "Wrong config format");
+                syslog(LOG_ERR, "Wrong confog format");
                 exit(EXIT_FAILURE);
             }
         }
@@ -102,13 +111,13 @@ void read_config()
         if (3 != sscanf(msg_date.c_str(),"%d.%d.%d", &t.tm_mday, &t.tm_mon, &t.tm_year)) 
         {
             //std::cout << "fail 2" << std::endl;
-            syslog(LOG_ERR, "Wrong config format");
+            syslog(LOG_ERR, "Wrong date format");
             exit(EXIT_FAILURE);
         }
         if (3 != sscanf(msg_time.c_str(),"%d:%d:%d", &t.tm_hour, &t.tm_min, &t.tm_sec)) 
         {
             //std::cout << "fail 3" << std::endl;
-            syslog(LOG_ERR, "Wrong config format");
+            syslog(LOG_ERR, "Wrong time format");
             exit(EXIT_FAILURE);
         }
 
@@ -120,12 +129,15 @@ void read_config()
         if (mktime(&t) < 0) 
         {
             //std::cout << "fail 4" << std::endl;
-            syslog(LOG_ERR, "Wrong config format");
+            syslog(LOG_ERR, "Wrong date-time format");
             exit(EXIT_FAILURE);
         }
 
+        
+
         cfg_entry entry(msg_text, msg_flag, t);
         cfg_data.push_back(entry);
+        //printf("pepz: %d %d %d %d %d %d\n", t.tm_mday, t.tm_mon, t.tm_year, t.tm_hour, t.tm_min, t.tm_sec);
     }
 
     cfg_file.close();
