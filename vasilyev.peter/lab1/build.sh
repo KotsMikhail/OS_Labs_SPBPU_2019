@@ -1,5 +1,9 @@
 #!/bin/bash
-PID_FILE=$1
+PID_FILE="/var/run/lab1.pid"
+if [ ! -z "$1" ]
+  then
+    PID_FILE=$1
+fi
 [[ -f PID_FILE ]] || sudo touch "$PID_FILE"
 if [[ $? -ne 0 ]]; then
   echo "touch pid file failed: $?"

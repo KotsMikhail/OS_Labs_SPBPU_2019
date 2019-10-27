@@ -222,7 +222,14 @@ bool Daemon::parseConfig()
   if (params.find(ConfigParser::Parameter::TIME_INTERVAL) != params.end())
     try
     {
-      timeInterval = static_cast<uint>(std::stol(params.at(ConfigParser::Parameter::TIME_INTERVAL)));
+      long value = std::stol(params.at(ConfigParser::Parameter::TIME_INTERVAL));
+      if (value < 0)
+      {
+        syslog(LOG_ERR, error_msg.c_str(), "negative time interval");
+        return false;
+      }
+
+      timeInterval = static_cast<uint>(value);
     }
     catch (std::exception &e)
     {
@@ -304,7 +311,7 @@ void Daemon::doWork()
 
 Daemon::svector Daemon::findLogFiles( const string &curDir )
 {
-  syslog(LOG_INFO, "Current search dir: %s", curDir.c_str());
+  //syslog(LOG_INFO, "Current search dir: %s", curDir.c_str());
 
   // open dir
   DIR *dir = opendir(curDir.c_str());
@@ -348,6 +355,8 @@ Daemon::svector Daemon::findLogFiles( const string &curDir )
 
 void Daemon::saveLog( const string &logFilePath, std::ofstream &totalLog )
 {
+  syslog(LOG_INFO, "Save .log file: %s", logFilePath.c_str());
+
   // open .log file
   std::ifstream log_file(logFilePath);
   if (!log_file.is_open())
