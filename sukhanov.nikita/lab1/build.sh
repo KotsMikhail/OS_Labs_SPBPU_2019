@@ -9,4 +9,4 @@ fi
 
 sudo chmod ugo+rw $pid_path
 
-g++ -Wall -Werror -o daemon_lab1_sl daemon_lab1.cpp -std=c++11
+g++ -Wall -Werror -o daemon_lab1 Utils.h Utils.cpp Daemon.h Daemon.cpp lab1_main.cpp -std=c++11
