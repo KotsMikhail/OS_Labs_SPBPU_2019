@@ -33,21 +33,26 @@ private:
   string pidFileName = "/var/run/lab1.pid";
 
   string getAbsolutePath( const string &path );
-  void clear();
+  static void clear();
   bool handlePidFile();
   bool setPidFile();
 
-  void static signalHandle( int sigNum );
-  void terminate();
+  static void signalHandle( int sigNum );
+  static void terminate();
 
-  bool parseConfig();
+  void parseConfig();
   void startWorkLoop();
   void doWork();
 
-  svector findLogFiles( const string &curDir );
-  void saveLog( const string &logFilePath, std::ofstream &totalLog );
+  static svector findLogFiles( const string &curDir );
+  static void saveLog( const string &logFilePath, std::ofstream &totalLog );
+
+  Daemon() = default;
 
 public:
+  Daemon( const Daemon &configParser ) = delete;
+  Daemon &operator=( const Daemon &configParser ) = delete;
+
   static Daemon &getInstance();
   bool start( const string &configFilename );
 };

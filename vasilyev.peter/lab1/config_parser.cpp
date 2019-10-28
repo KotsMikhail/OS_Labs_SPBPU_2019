@@ -8,15 +8,7 @@
 
 #include "config_parser.h"
 
-ConfigParser &ConfigParser::getInstance()
-{
-  static ConfigParser instance;
-
-  return instance;
-} // end of 'ConfigParser::getInstance' function
-
-std::map<std::string, std::string> ConfigParser::parse( std::ifstream &input,
-                                                        const sset &parameterNames )
+ConfigParser::ssmap ConfigParser::parse( std::ifstream &input, const sset &parameterNames )
 {
   std::map<std::string, std::string> output;
   int line_num = 0;

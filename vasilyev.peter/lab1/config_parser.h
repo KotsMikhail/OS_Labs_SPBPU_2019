@@ -10,11 +10,17 @@
 
 class ConfigParser
 {
-public:
-  using sset = std::unordered_set<std::string>;
+private:
+  ConfigParser() = default;
 
-  static ConfigParser &getInstance();
-  std::map<std::string, std::string> parse( std::ifstream &input, const sset &parameterNames );
+public:
+  ConfigParser( const ConfigParser &configParser ) = delete;
+  ConfigParser &operator=( const ConfigParser &configParser ) = delete;
+
+  using sset = std::unordered_set<std::string>;
+  using ssmap = std::map<std::string, std::string>;
+
+  static ssmap parse( std::ifstream &input, const sset &parameterNames );
 };
 
 #endif //LAB1_CONFIG_PARSER_H

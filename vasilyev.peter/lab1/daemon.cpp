@@ -59,55 +59,59 @@ bool Daemon::start( const string &configFilename )
   signal(SIGTERM, signalHandle);
   signal(SIGHUP, signalHandle);
 
-  // parse config file
-  if (!parseConfig())
+  try
   {
+    // parse config file
+    parseConfig();
+
+    // create session
+    if (setsid() == -1)
+    {
+      syslog(LOG_ERR, "'setsid' returned error: %d", errno);
+      terminate();
+    }
+
+    // create child process for background work handling
+    switch (fork())
+    {
+      case -1:
+        syslog(LOG_ERR, "Work process fork failed");
+        terminate();
+      case 0:
+        syslog(LOG_INFO, "Created child work process");
+
+        // set permissions
+        umask(0);
+
+        // change work directory to root
+        if (chdir("/") == -1)
+        {
+          syslog(LOG_ERR, "'chdir' returned error: %d", errno);
+          terminate();
+        }
+
+        // close file streams
+        if (close(STDIN_FILENO) == -1 ||
+            close(STDOUT_FILENO) == -1 ||
+            close(STDERR_FILENO) == -1)
+        {
+          syslog(LOG_ERR, "'close' returned error: %d", errno);
+          terminate();
+        }
+
+        // start work handle loop
+        startWorkLoop();
+    }
+  }
+  catch (std::exception &exception)
+  {
+    syslog(LOG_ERR, "%s", exception.what());
     clear();
     return false;
   }
 
-  // create session
-  if (setsid() == -1)
-  {
-    syslog(LOG_ERR, "'setsid' returned error: %d", errno);
-    terminate();
-  }
-
-  // create child process for background work handling
-  switch (fork())
-  {
-  case -1:
-    syslog(LOG_ERR, "Work process fork failed");
-    terminate();
-  case 0:
-    syslog(LOG_INFO, "Created child work process");
-
-    // set permissions
-    umask(0);
-
-    // change work directory to root
-    if (chdir("/") == -1)
-    {
-      syslog(LOG_ERR, "'chdir' returned error: %d", errno);
-      terminate();
-    }
-
-    // close file streams
-    if (close(STDIN_FILENO) == -1 ||
-        close(STDOUT_FILENO) == -1 ||
-        close(STDERR_FILENO) == -1)
-    {
-      syslog(LOG_ERR, "'close' returned error: %d", errno);
-      terminate();
-    }
-
-    // start work handle loop
-    startWorkLoop();
-  }
-
   syslog(LOG_INFO, "Exit parent process");
   clear();
-
   return true;
 } // end of 'Daemon::start' function
 
@@ -194,12 +198,21 @@ void Daemon::signalHandle( int sigNum )
 
   switch (sigNum)
   {
-  case SIGHUP:
-    if (!instance.parseConfig())
-      instance.terminate();
-    break;
-  case SIGTERM:
-    instance.terminate();
+    case SIGHUP:
+      try
+      {
+        instance.parseConfig();
+      }
+      catch (std::exception &exception)
+      {
+        syslog(LOG_ERR, "%s", exception.what());
+        terminate();
+      }
+      break;
+    case SIGTERM:
+      terminate();
+    default:
+      syslog(LOG_ERR, "Unknown signal: %d", sigNum);
   }
 } // end of 'Daemon::signalHandle' function
 
@@ -210,50 +223,27 @@ void Daemon::terminate()
   exit(EXIT_SUCCESS);
 } // end of 'Daemon::terminate' function
 
-bool Daemon::parseConfig()
+void Daemon::parseConfig()
 {
   syslog(LOG_INFO, "Open config");
 
   std::ifstream config_file(configFileName);
   if (!config_file.is_open())
-  {
-    syslog(LOG_ERR, "Couldn't open config file");
-    return false;
-  }
+    throw std::runtime_error("Couldn't open config file");
 
   // Get values from config
-  string error_msg = "Config parsing error: %s";
   ConfigParser::sset param_names = {INTERVAL_PARAM_NAME, DIR1_PARAM_NAME, DIR2_PARAM_NAME};
   std::map<string, string> params;
-  try
-  {
-    params = ConfigParser::getInstance().parse(config_file, param_names);
-  }
-  catch (std::runtime_error &error)
-  {
-    syslog(LOG_ERR, error_msg.c_str(), error.what());
-    return false;
-  }
-  config_file.close();
+  params = ConfigParser::parse(config_file, param_names);
 
   // extract time interval value
   if (params.find(INTERVAL_PARAM_NAME) != params.end())
-    try
-    {
-      long value = std::stol(params.at(INTERVAL_PARAM_NAME));
-      if (value < 0)
-      {
-        syslog(LOG_ERR, error_msg.c_str(), "negative time interval");
-        return false;
-      }
-
-      timeInterval = static_cast<uint>(value);
-    }
-    catch (std::exception &e)
-    {
-      syslog(LOG_ERR, error_msg.c_str(), e.what());
-      return false;
-    }
+  {
+    long value = std::stol(params.at(INTERVAL_PARAM_NAME));
+    if (value < 0)
+      throw std::runtime_error("Config parsing error: negative time interval!");
+    timeInterval = static_cast<uint>(value);
+  }
 
   // extract work directories names
   if (params.find(DIR1_PARAM_NAME) != params.end())
@@ -265,27 +255,22 @@ bool Daemon::parseConfig()
   dir1Path = getAbsolutePath(dir1Path);
   dir2Path = getAbsolutePath(dir2Path);
   if (dir1Path.empty() || dir2Path.empty())
-  {
-    syslog(LOG_ERR, "Wrong directory name!");
-    return false;
-  }
+    throw std::runtime_error("Config parsing error: wrong directory name!");
 
   // set up total.log path
   totalLogPath = dir2Path + "/total.log";
 
   syslog(LOG_INFO, "time interval: %d, dir1: %s, dir2: %s",
          timeInterval, dir1Path.c_str(), dir2Path.c_str());
-
-  return true;
 } // end of 'Daemon::parseConfig' function
 
 void Daemon::startWorkLoop()
 {
   // get pid file name
-  #ifdef PID_FILE
-    pidFileName = PID_FILE;
-    syslog(LOG_INFO, "Used pid file name: %s", pidFileName.c_str());
-  #endif
+#ifdef PID_FILE
+  pidFileName = PID_FILE;
+  syslog(LOG_INFO, "Used pid file name: %s", pidFileName.c_str());
+#endif
   getAbsolutePath(pidFileName);
 
   // handle pid file
@@ -357,10 +342,10 @@ Daemon::svector Daemon::findLogFiles( const string &curDir )
       string file_path = curDir + "/" + entry->d_name;
 
       // check if .log file
-      string ext = file_path.substr(file_path.find_last_of(".") + 1);
+      string ext = file_path.substr(file_path.find_last_of('.') + 1);
 
       // save .log file name
-      if (ext.compare("log") == 0)
+      if (ext == "log")
         output.push_back(file_path);
     }
 
