@@ -17,13 +17,13 @@
 #include <cmath>
 #include "cfg_entry.h"
 
-#define PID_FILE "/var/run/daemon_lab.pid"
+static const char* PID_FILE = "/var/run/daemon_lab.pid";
 
 std::string cfg_path;
 
 std::list<cfg_entry> cfg_data;
 
-bool need_work = true;
+
 
 void hardcore_date_time_validate(std::string date, std::string time)
 {
@@ -228,10 +228,8 @@ void signal_handler(int sig)
     switch(sig)
     {
         case SIGHUP:
-            need_work = false;
             read_config();
             syslog(LOG_NOTICE, "Hangup Signal Catched");
-            need_work = true;
             break;
         case SIGTERM:
             syslog(LOG_NOTICE, "Terminate Signal Catched");
@@ -302,11 +300,9 @@ int main(int argc,char **argv)
     read_config();
     while (true)
     {
-         if(need_work)
-         {
-             //std::cout << "work" << std::endl;
-             process_config_file(interval);
-         }
+        //std::cout << "work" << std::endl;
+        process_config_file(interval);
+         
         sleep(interval);
     }
 }
