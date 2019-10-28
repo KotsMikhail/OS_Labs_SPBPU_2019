@@ -252,8 +252,6 @@ bool Daemon::parseConfig()
     catch (std::exception &e)
     {
       syslog(LOG_ERR, error_msg.c_str(), e.what());
-      clear();
-
       return false;
     }
 
@@ -268,7 +266,7 @@ bool Daemon::parseConfig()
   dir2Path = getAbsolutePath(dir2Path);
   if (dir1Path.empty() || dir2Path.empty())
   {
-    clear();
+    syslog(LOG_ERR, "Wrong directory name!");
     return false;
   }
 
