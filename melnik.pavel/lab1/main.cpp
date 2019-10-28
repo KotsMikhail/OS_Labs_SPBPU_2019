@@ -90,6 +90,7 @@ pid_t fullFork() {
     sid = setsid();
     if (sid < 0) {
     /* Журналируем любой сбой */
+        syslog (LOG_NOTICE, "Cannot set new sid");
         exit(EXIT_FAILURE);
     }
 
