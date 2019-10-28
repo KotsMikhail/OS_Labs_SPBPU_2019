@@ -25,14 +25,13 @@
 #include <string.h>
 #include <sstream>
 #include <glob.h>
-
-#define MAXLEVEL  1
-
 using namespace std;
+
+static const int MAXLEVEL = 1;
+static const string pidFilePath = "/var/run/mydaemon";
 
 string dirPath;
 int interval = -1;
-string pidFilePath = "/var/run/mydaemon";
 string realConfigPath;
 
 bool checkFileExist (const std::string& name) {
@@ -55,6 +54,11 @@ void readConfigFile() {
     if(dirPath.length() == 0 || interval == -1) {
         cout << "Couldn't read parametrs from config file";
         syslog (LOG_NOTICE, "Couldn't read parametrs from config file");
+        exit(EXIT_FAILURE);
+    }
+    if(interval < 0) {
+        cout << "Interval cannot be negative";
+        syslog (LOG_NOTICE, "Negative inteval entered");
         exit(EXIT_FAILURE);
     }
     configFile.close();
@@ -98,6 +102,7 @@ pid_t fullFork() {
     /* Изменяем текущий рабочий каталог */
     if ((chdir("/")) < 0) {
     /* Журналируем любой сбой */
+        syslog (LOG_NOTICE, "Cannot change directory");
         exit(EXIT_FAILURE);
     }
 
@@ -112,8 +117,7 @@ pid_t fullFork() {
 void slot(int signal) {
     if (signal == SIGHUP) {
         readConfigFile();
-    }
-   else if (signal == SIGTERM) {
+    } else if (signal == SIGTERM) {
         syslog (LOG_NOTICE, "End executing because of SIGTERM");
         closelog();
         exit(EXIT_SUCCESS);
