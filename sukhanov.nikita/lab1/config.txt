@@ -1,0 +1,3 @@
+/home/ubuntu_user/lab1/from
+/home/ubuntu_user/lab1/to
+60
