@@ -63,7 +63,14 @@ void readConfigFile() {
     }
     configFile.close();
 
-    dirPath = realpath(dirPath.c_str(), NULL);
+    char *fileName = realpath(dirPath.c_str(), NULL);
+    if (fileName == NULL) {
+        cout << "Wrong path in config file";
+        syslog (LOG_NOTICE, "Wrong path in config file");
+        exit(EXIT_FAILURE);
+    } else {
+        dirPath = fileName;
+    }
 }
 
 pid_t fullFork() {
@@ -207,7 +214,14 @@ int main(int argc, char **argv)
 
     string configPath = argv[1];
 
-    realConfigPath = realpath(configPath.c_str(), NULL);
+    char *fileName = realpath(configPath.c_str(), NULL);
+    if (fileName == NULL) {
+        cout << "Wrong path in config file";
+        syslog (LOG_NOTICE, "Wrong path in config file");
+        exit(EXIT_FAILURE);
+    } else {
+        configPath = fileName;
+    }
 
     readConfigFile();
 
