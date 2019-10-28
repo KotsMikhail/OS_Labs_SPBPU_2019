@@ -358,31 +358,24 @@ void Daemon::saveLog( const string &logFilePath, std::ofstream &totalLog )
 {
   syslog(LOG_INFO, "Save .log file: %s", logFilePath.c_str());
 
-  try
+  // open .log file
+  std::ifstream log_file(logFilePath);
+  if (!log_file.is_open())
   {
-    // open .log file
-    std::ifstream log_file(logFilePath);
-    if (!log_file.is_open())
-    {
-      syslog(LOG_ERR, "Couldn't open log file '%s'", logFilePath.c_str());
-      return;
-    }
-
-    // read .log file contents
-    string contents;
-    log_file.seekg(0, std::ios::end);
-    contents.resize(log_file.tellg());
-    log_file.seekg(0, std::ios::beg);
-    log_file.read(&contents[0], contents.size());
-    log_file.close();
-
-    // save .log file contents
-    totalLog << logFilePath << "\n\n" << contents << "\n\n\n";
+    syslog(LOG_ERR, "Couldn't open log file '%s'", logFilePath.c_str());
+    return;
   }
-  catch (std::exception &exception)
-  {
-    syslog(LOG_ERR, "Error while saving .log file: %s", exception.what());
-  }
+
+  // read .log file contents
+  string contents;
+  log_file.seekg(0, std::ios::end);
+  contents.resize(log_file.tellg());
+  log_file.seekg(0, std::ios::beg);
+  log_file.read(&contents[0], contents.size());
+  log_file.close();
+
+  // save .log file contents
+  totalLog << logFilePath << "\n\n" << contents << "\n\n\n";
 } // end of 'Daemon::saveLog' function
 
 // END OF 'daemon.cpp' FILE
