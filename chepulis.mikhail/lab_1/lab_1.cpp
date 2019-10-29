@@ -224,13 +224,13 @@ void CopyFile (const std::string& absPathSrc, const std::string& absPathDst){
 }
 
 
-bool CompareExtention(const std::string fileName, const std::string extantion){
-  if(fileName.size() <= extantion.size()){
+bool CompareExtention(const std::string fileName, const std::string extention){
+  if(fileName.size() <= extention.size()){
     return false;
   }
-  int startInd = fileName.size() - extantion.size();
-  for(unsigned int i = 0; i < extantion.size(); i++){
-    if(fileName[startInd + i] != extantion[i]){
+  int startInd = fileName.size() - extention.size();
+  for(unsigned int i = 0; i < extention.size(); i++){
+    if(fileName[startInd + i] != extention[i]){
       return false;
     }
   }
