@@ -30,8 +30,7 @@ void ReadConfigFile() {
 	if (ifs.is_open()) {
 		ifs >> dir1 >> dir2;
 		ifs.close();
-	}
-	else {
+	} else {
 		syslog(LOG_ERR, "Could not open config file");
 		exit(EXIT_FAILURE);
 	}
@@ -69,13 +68,11 @@ void KillDaemon() {
 		if (pid == -1) {
 			syslog(LOG_ERR, "Error pid and could not kill daemon");
 			exit(EXIT_FAILURE);
-		}
-		else if (pid > 0) {
+		} else if (pid > 0) {
 			kill(pid, SIGTERM);
 			ifs.close();
 		}
-	}
-	else {
+	} else {
 		syslog(LOG_ERR, "Could not open pid file and kill daemon");
 		exit(EXIT_FAILURE);
 	}
@@ -87,8 +84,7 @@ void SetPidFile() {
 	if (ofs.is_open) {
 		ofs << getpid();
 		ofs.close();
-	}
-	else {
+	} else {
 		syslog(LOG_ERR, "Could not set pid file");
 		exit(EXIT_FAILURE);
 	}
@@ -123,13 +119,11 @@ void WriteAll(std::ofstream& ofs, std::string& path) {
 					WriteAll(ofs, curr_path);
 					num_space -= 4;
 				}
-			}
-			else {
+			} else {
 				ofs << PrintSpace() << ent->d_name << std::endl;
 			}
 		}
-	}
-	else {
+	} else {
 		syslog(LOG_ERR, "Could not open dir %s", path.c_str());
 		exit(EXIT_FAILURE);
 	}
@@ -165,8 +159,7 @@ int main(int argc, char** argv)
 
 	if (pid == -1) {
 		exit(EXIT_FAILURE);
-	}
-	else if (pid > 0) {
+	} else if (pid > 0) {
 		exit(EXIT_SUCCESS);
 	}
 
@@ -187,7 +180,7 @@ int main(int argc, char** argv)
 
 	if (pid == -1) {
 		exit(EXIT_FAILURE);
-	} if (pid > 0) {
+	} else if (pid > 0) {
 		exit(EXIT_SUCCESS);
 	}
 
