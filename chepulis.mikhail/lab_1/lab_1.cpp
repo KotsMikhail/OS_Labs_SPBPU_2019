@@ -224,13 +224,13 @@ void CopyFile (const std::string& absPathSrc, const std::string& absPathDst){
 }
 
 
-bool CompareExtention(const std::string fileName, const std::string extention){
-  if(fileName.size() <= extention.size()){
+bool CompareExtension(const std::string fileName, const std::string extension){
+  if(fileName.size() <= extension.size()){
     return false;
   }
-  int startInd = fileName.size() - extention.size();
-  for(unsigned int i = 0; i < extention.size(); i++){
-    if(fileName[startInd + i] != extention[i]){
+  int startInd = fileName.size() - extension.size();
+  for(unsigned int i = 0; i < extension.size(); i++){
+    if(fileName[startInd + i] != extension[i]){
       return false;
     }
   }
@@ -271,7 +271,7 @@ void DoWork(){
   for(unsigned int i = 0; i < srcContent.size(); i++){
     filename = srcContent[i];
     srcPath = src_dir + "/" + filename;
-    if(CompareExtention(filename, ".png")){
+    if(CompareExtension(filename, ".png")){
       dstPath = dst_dir + "/IMG/" + filename;
     } else {
       dstPath = dst_dir + "/OTHERS/" + filename;
