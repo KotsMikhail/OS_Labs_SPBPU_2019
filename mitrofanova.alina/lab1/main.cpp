@@ -21,14 +21,14 @@ std::string dir1;
 std::string dir2;
 std::string hist_file = "hist.log";
 std::string pid_file = "/var/run/lab1_daemon.pid";
-int interval = 30;
+int interval;
 int num_space = 0;
 
 void ReadConfigFile() {
 	std::ifstream ifs(config_file);
 
 	if (ifs.is_open()) {
-		ifs >> dir1 >> dir2;
+		ifs >> dir1 >> dir2 >> interval;
 		ifs.close();
 	} else {
 		syslog(LOG_ERR, "Could not open config file");
@@ -81,7 +81,7 @@ void KillDaemon() {
 void SetPidFile() {
 	std::ofstream ofs(pid_file);
 
-	if (ofs.is_open) {
+	if (ofs.is_open()) {
 		ofs << getpid();
 		ofs.close();
 	} else {
@@ -135,7 +135,8 @@ void DoProtocol(std::string& dir1, std::string& dir2) {
 
 	std::ofstream ofs(hist_file, std::ios_base::out | std::ios_base::app); // open file for writing and append
 	if (!ofs.is_open()) {
-		syslog(LOG_INFO, "Don't open file");
+		syslog(LOG_ERR, "Could not open hist.log");
+		exit(EXIT_FAILURE);		
 	}
 
 	ofs << CurrentTime() << std::endl;
