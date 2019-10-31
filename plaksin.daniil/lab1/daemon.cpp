@@ -1,31 +1,10 @@
-#include <iostream>
-#include <fstream>
-#include <cstdio>
-#include <csignal>
-#include <unistd.h>
-#include <cstdlib>
-#include <syslog.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <fcntl.h>
-#include <memory.h>
-#include <list>
-#include <algorithm>
-#include <vector>
-#include <sstream>
-#include <iterator>
-#include <cmath>
-#include "cfg_entry.h"
+#include "daemon.h"
 
-static const char* PID_FILE = "/var/run/daemon_lab.pid";
+const char* Daemon::PID_FILE = "/var/run/daemon_lab.pid";
+std::string Daemon::cfg_path = "";
+std::list<cfg_entry> Daemon::cfg_data = std::list<cfg_entry>();
 
-std::string cfg_path;
-
-std::list<cfg_entry> cfg_data;
-
-
-
-void hardcore_date_time_validate(std::string date, std::string time)
+void Daemon::hardcore_date_time_validate(std::string date, std::string time)
 {
     if (date.length() > 10 || date.length() < 5 || time.length() > 8 || time.length() < 5)
     {
@@ -60,7 +39,7 @@ void hardcore_date_time_validate(std::string date, std::string time)
     }
 }
 
-void read_config()
+void Daemon::read_config()
 {
     std::string msg_text;
     std::string msg_flag;
@@ -139,7 +118,7 @@ void read_config()
     cfg_file.close();
 }
 
-void process_config_file(int interval) 
+void Daemon::process_config_file(int interval) 
 {
     time_t rawtime;
     struct tm *timeinfo;
@@ -195,7 +174,7 @@ void process_config_file(int interval)
     }
 }
 
-void kill_prev_daemon() 
+void Daemon::kill_prev_daemon() 
 {
     //std::cout << "kill prev" << std::endl;
     std::ifstream ipidFile(PID_FILE);
@@ -211,7 +190,7 @@ void kill_prev_daemon()
     ipidFile.close();
 }
 
-void set_pid_file() 
+void Daemon::set_pid_file() 
 {
     std::ofstream pid_file(PID_FILE);
     if (!pid_file) 
@@ -223,7 +202,7 @@ void set_pid_file()
     pid_file.close();
 }
 
-void signal_handler(int sig)
+void Daemon::signal_handler(int sig)
 {
     switch(sig)
     {
@@ -239,70 +218,5 @@ void signal_handler(int sig)
         default:
             syslog(LOG_NOTICE, "Unknown Signal Catched");
             break;
-    }
-}
-
-int main(int argc,char **argv)
-{
-    int interval = 10;
-
-    pid_t pid = fork();
-
-    if (pid == -1)
-        exit(EXIT_FAILURE);
-    else if (pid > 0)
-        exit(EXIT_SUCCESS);
-
-    if (argc < 2)
-    {
-        printf("Wrong numbers of arguments. Expected: 2. Got: %d\n", argc);
-        exit(EXIT_FAILURE);
-    }
-
-    cfg_path = argv[1];
-
-    openlog("daemon_lab", LOG_NOWAIT | LOG_PID, LOG_USER);
-
-    umask(0);
-
-    if (setsid() < 0)
-    {
-        syslog(LOG_ERR, "Could not generate session ID for child process");
-        exit(EXIT_FAILURE);
-    }
-
-    pid = fork();
-    if (pid == -1)
-        exit(EXIT_FAILURE);
-    else if (pid > 0)
-        exit(EXIT_SUCCESS);
-
-    cfg_path = realpath(cfg_path.c_str(), nullptr);
-
-    if ((chdir("/")) < 0)
-    {
-        syslog(LOG_ERR, "Could not change working directory to /");
-        exit(EXIT_FAILURE);
-    }
-
-    syslog(LOG_NOTICE, "Successfully started daemon_lab");
-    //std::cout << "pid: " << pid << std::endl;
-    close(STDIN_FILENO);
-    //close(STDOUT_FILENO);
-    close(STDERR_FILENO);
-
-    signal(SIGHUP, signal_handler);
-    signal(SIGTERM, signal_handler);
-
-    kill_prev_daemon();
-
-    set_pid_file();
-    read_config();
-    while (true)
-    {
-        //std::cout << "work" << std::endl;
-        process_config_file(interval);
-         
-        sleep(interval);
     }
 }

@@ -9,4 +9,4 @@ fi
 
 chmod 666 "$pid_location"
 
-g++ -Wall -Werror cfg_entry.h cfg_entry.cpp daemon.cpp -o daemon_lab -lstdc++ -std=c++11
+g++ -Wall -Werror -o daemon_lab -lstdc++ -std=c++11 cfg_entry.h cfg_entry.cpp daemon.h daemon.cpp main.cpp

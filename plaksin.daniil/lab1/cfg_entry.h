@@ -1,3 +1,6 @@
+#ifndef CFG_ENTRY_H
+#define CFG_ENTRY_H
+
 #include <string>
 #include <ctime>
 
@@ -14,3 +17,5 @@ public:
     std::string get_entry_flag();
     tm get_entry_time();
 };
+
+#endif //CFG_ENTRY_H
