@@ -105,15 +105,12 @@ void LoadConfigFile(){
 void signalHandler(int signal){
   switch (signal) {
     case SIGHUP:{ 
-      is_need_work = false;
       syslog(LOG_USER, "Reload daemon's config by signal");
       //std::cout << "Reload daemon's config by signal\n";
       LoadConfigFile();
-      is_need_work = true;
       break;
     }
     case SIGTERM:{
-      is_need_work = false;
       syslog(LOG_USER, "Terminate daemon by signal");
       //std::cout << "Terminate daemon by signal \n";
       delete_pid_file();
@@ -285,9 +282,7 @@ void DoWork(){
 void Work(){
   //std::cout << "Work\n";
   while(true){
-    if (is_need_work) {
-      DoWork();
-    }
+    DoWork();
     sleep(update_freq);   
   }
 }
