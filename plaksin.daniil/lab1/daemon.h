@@ -32,7 +32,7 @@ public:
     static void process_config_file(int interval);
     static std::string cfg_path; 
 
-protected:
+private:
     static const char* PID_FILE;
     static std::list<cfg_entry> cfg_data;
 };
