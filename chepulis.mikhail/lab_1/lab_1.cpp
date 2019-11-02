@@ -20,7 +20,6 @@ std::string src_dir;
 std::string dst_dir;
 std::string pid_file_path;
 int update_freq;
-bool is_need_work;
 
 void delete_pid_file(){
     unlink(pid_file_path.c_str());
@@ -73,7 +72,6 @@ void CreateDaemon(const std::string configFileName){
   work_dir = std::string(get_current_dir_name());
   config_path = work_dir + "/" + configFileName;
   pid_file_path = work_dir +"/" + PID_FILENAME;
-  is_need_work = true;
   //std::cout << "WORK_DIR\t" << work_dir << "\n";
   //std::cout << "CONFIG_FILE\t" << config_path << "\n";
   //std::cout << "PID_FILE\t" << pid_file_path << "\n";
