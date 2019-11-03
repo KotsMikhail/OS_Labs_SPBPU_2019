@@ -1,8 +1,17 @@
 #include "daemon.h"
 
-const char* Daemon::PID_FILE = "/var/run/daemon_lab.pid";
-std::string Daemon::cfg_path = "";
-std::list<cfg_entry> Daemon::cfg_data = std::list<cfg_entry>();
+Daemon* Daemon::inst = 0;
+
+Daemon* Daemon::get_instance() {
+    static Daemon instance;
+    inst = &instance;
+    return &instance;
+}
+
+Daemon::Daemon()
+{
+    PID_FILE = "/var/run/daemon_lab.pid";
+}
 
 void Daemon::hardcore_date_time_validate(std::string date, std::string time)
 {
@@ -207,12 +216,12 @@ void Daemon::signal_handler(int sig)
     switch(sig)
     {
         case SIGHUP:
-            read_config();
+            inst->read_config();
             syslog(LOG_NOTICE, "Hangup Signal Catched");
             break;
         case SIGTERM:
             syslog(LOG_NOTICE, "Terminate Signal Catched");
-            unlink(PID_FILE);
+            unlink(inst->PID_FILE);
             exit(0);
             break;
         default:
