@@ -16,8 +16,8 @@ int main(int argc,char **argv)
         printf("Wrong numbers of arguments. Expected: 2. Got: %d\n", argc);
         exit(EXIT_FAILURE);
     }
-    Daemon* daemon = Daemon::get_instance();
-    daemon->cfg_path = argv[1];
+    
+    Daemon::get_instance().cfg_path = argv[1];
 
     openlog("daemon_lab", LOG_NOWAIT | LOG_PID, LOG_USER);
 
@@ -35,7 +35,7 @@ int main(int argc,char **argv)
     else if (pid > 0)
         exit(EXIT_SUCCESS);
     
-    daemon->cfg_path = realpath(daemon->cfg_path.c_str(), nullptr);
+    Daemon::get_instance().cfg_path = realpath(Daemon::get_instance().cfg_path.c_str(), nullptr);
 
     if ((chdir("/")) < 0)
     {
@@ -52,14 +52,14 @@ int main(int argc,char **argv)
     signal(SIGHUP, Daemon::signal_handler);
     signal(SIGTERM, Daemon::signal_handler);
 
-    daemon->kill_prev_daemon();
+    Daemon::get_instance().kill_prev_daemon();
 
-    daemon->set_pid_file();
-    daemon->read_config();
+    Daemon::get_instance().set_pid_file();
+    Daemon::get_instance().read_config();
     while (true)
     {
         //std::cout << "work" << std::endl;
-        daemon->process_config_file(interval);
+        Daemon::get_instance().process_config_file(interval);
         
         sleep(interval);
     }

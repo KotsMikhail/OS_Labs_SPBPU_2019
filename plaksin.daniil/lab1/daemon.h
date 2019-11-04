@@ -32,7 +32,7 @@ public:
     void process_config_file(int interval);
     std::string cfg_path;
 
-    static Daemon* get_instance();
+    static Daemon& get_instance();
 
 private:
     Daemon();

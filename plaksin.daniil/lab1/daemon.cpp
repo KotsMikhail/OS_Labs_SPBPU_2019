@@ -1,11 +1,10 @@
 #include "daemon.h"
 
-Daemon* Daemon::inst = 0;
 
-Daemon* Daemon::get_instance() {
+Daemon& Daemon::get_instance() 
+{
     static Daemon instance;
-    inst = &instance;
-    return &instance;
+    return instance;
 }
 
 Daemon::Daemon()
@@ -216,12 +215,12 @@ void Daemon::signal_handler(int sig)
     switch(sig)
     {
         case SIGHUP:
-            inst->read_config();
+            Daemon::get_instance().read_config();
             syslog(LOG_NOTICE, "Hangup Signal Catched");
             break;
         case SIGTERM:
             syslog(LOG_NOTICE, "Terminate Signal Catched");
-            unlink(inst->PID_FILE);
+            unlink(Daemon::get_instance().PID_FILE);
             exit(0);
             break;
         default:
