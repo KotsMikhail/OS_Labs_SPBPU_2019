@@ -215,13 +215,13 @@ void Daemon::signal_handler(int sig)
     switch(sig)
     {
         case SIGHUP:
-            Daemon::get_instance().read_config();
+            get_instance().read_config();
             syslog(LOG_NOTICE, "Hangup Signal Catched");
             break;
         case SIGTERM:
             syslog(LOG_NOTICE, "Terminate Signal Catched");
-            unlink(Daemon::get_instance().PID_FILE);
-            exit(0);
+            unlink(get_instance().PID_FILE);
+            exit(EXIT_SUCCESS);
             break;
         default:
             syslog(LOG_NOTICE, "Unknown Signal Catched");

@@ -38,7 +38,6 @@ private:
     Daemon();
     Daemon(Daemon const&) = delete;
     Daemon& operator= (Daemon const&) = delete;
-    static Daemon* inst;
     const char* PID_FILE;
     std::list<cfg_entry> cfg_data;
 };
