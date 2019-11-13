@@ -193,6 +193,7 @@ int main(int argc, char** argv)
 	}
 
 	ReadConfigFile();
+	config_file = realpath(config_file.c_str(), nullptr);
 
 	// change the current working directory
 	if ((chdir("/")) < 0) {
