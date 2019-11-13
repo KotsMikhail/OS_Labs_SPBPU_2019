@@ -21,7 +21,7 @@ std::string dir1;
 std::string dir2;
 std::string hist_file = "hist.log";
 const std::string pid_file = "/var/run/lab1_daemon.pid";
-int interval;
+int interval = 0;
 int num_space = 0;
 
 void ReadConfigFile() {
@@ -29,6 +29,10 @@ void ReadConfigFile() {
 
 	if (ifs.is_open()) {
 		ifs >> dir1 >> dir2 >> interval;
+		if (interval < 1) {
+			syslog(LOG_ERR, "Wrong interval in config file");
+			exit(EXIT_FAILURE);
+		}
 		ifs.close();
 	} else {
 		syslog(LOG_ERR, "Could not open config file");
