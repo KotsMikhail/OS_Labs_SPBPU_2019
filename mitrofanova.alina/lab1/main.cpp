@@ -91,11 +91,14 @@ void SetPidFile() {
 }
 
 char* CurrentTime() {
-	char* buffer = (char*)malloc(80);
+	const int size = 80;
+	char* buffer = (char*)malloc(size);
 	time_t seconds = time(NULL);
 	tm* timeinfo = localtime(&seconds);
 	char format[] = "%d %B, %H:%M:%S ";
-	strftime(buffer, 80, format, timeinfo);
+	
+	strftime(buffer, size, format, timeinfo);
+	
 	return buffer;
 }
 
