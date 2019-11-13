@@ -20,7 +20,7 @@ std::string config_file;
 std::string dir1;
 std::string dir2;
 std::string hist_file = "hist.log";
-std::string pid_file = "/var/run/lab1_daemon.pid";
+const std::string pid_file = "/var/run/lab1_daemon.pid";
 int interval;
 int num_space = 0;
 
