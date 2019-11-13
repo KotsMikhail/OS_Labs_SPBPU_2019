@@ -70,7 +70,7 @@ void KillDaemon() {
 	if (ifs.is_open()) {
 		ifs >> pid;
 		if (pid == -1) {
-			syslog(LOG_ERR, "Error pid and could not kill daemon");
+			syslog(LOG_ERR, "Could not kill daemon");
 			exit(EXIT_FAILURE);
 		} else if (pid > 0) {
 			kill(pid, SIGTERM);
