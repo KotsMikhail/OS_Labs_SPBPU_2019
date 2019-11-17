@@ -9,8 +9,10 @@ class Wolf
 public:
   static Wolf GetInstance();
   void Start();
+  ~Wolf();
 private:
   Conn connection;
+  bool client_attached;
 
   Wolf();
   static void SignalHandler(int signum, siginfo_t* info, void *ptr);

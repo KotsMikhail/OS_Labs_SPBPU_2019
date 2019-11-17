@@ -4,7 +4,7 @@ function makeWithPostfix {
     make
     rm CMakeCache.txt Makefile cmake_install.cmake
     rm -r CMakeFiles/
-    cp host_${1} ../
+    cp client_${1} ../
 }
 makeWithPostfix "seg"
 #makeWithPostfix "mq"
