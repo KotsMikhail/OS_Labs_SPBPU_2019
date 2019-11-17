@@ -1,0 +1,10 @@
+#include <iostream>
+#include "wolf.h"
+
+int main()
+{
+  std::cout << "Starting wolf..." << std::endl;
+  Wolf wolf = Wolf::GetInstance();
+  wolf.Start();
+  return 0;
+}
