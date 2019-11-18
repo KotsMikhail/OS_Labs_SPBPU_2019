@@ -2,21 +2,21 @@
 
 #include <iostream>
 #include <cstring>
-#include <signal.h>
+#include <csignal>
 #include <zconf.h>
 #include <fcntl.h>
-
-#define SEM_NAME "LAB2"
+#include <random>
 
 int Wolf::last_err = 0;
+ClientInfo Wolf::client_info(0);
 
 Wolf& Wolf::GetInstance()
 {
-  static Wolf inst = Wolf();
-  return inst;
+  static Wolf instance;
+  return instance;
 }
 
-Wolf::Wolf() : connection(getpid(), true), client_info(0)
+Wolf::Wolf() : connection(getpid(), true), current_number(0)
 {
   last_err = 0;
   struct sigaction act;
@@ -40,25 +40,27 @@ Wolf::Wolf() : connection(getpid(), true), client_info(0)
 Wolf::~Wolf()
 {
   std::cout << "~Wolf()" << std::endl;
-  sem_unlink("LAB2");
+  sem_unlink(SEM_NAME);
 }
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 void Wolf::Start()
 {
+  struct timespec ts;
+  ts.tv_sec = 5;
+  ts.tv_nsec = 0;
   std::cout << "Waiting for client..." << std::endl;
   pause();
   std::cout << "Client attached!" << std::endl;
   sem_wait(semaphore);
-  current_number = rand() % 100 + 1;
+  current_number = GetRand();
   Memory msg(ALIVE, current_number);
   connection.Write(&msg, sizeof(msg));
   sem_post(semaphore);
   while (true)
   {
-    sleep(5);
-    std::cout << "Client attached = " << client_info.attached << " with pid = " << client_info.pid << std::endl;
+    sleep(1);
     if (!client_info.attached)
     {
       std::cout << "Waiting for client..." << std::endl;
@@ -66,16 +68,21 @@ void Wolf::Start()
     }
     else
     {
-      sem_wait(semaphore);
+      if (sem_timedwait(semaphore, &ts) == -1)
+      {
+        kill(client_info.pid, SIGTERM);
+        client_info = ClientInfo(0);
+        continue;
+      }
       if (connection.Read(&msg, 0))
       {
-        std::cout << "Number: " << msg.number << std::endl;
-        std::cout << "Status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
+        std::cout << "Wolf current number: " << current_number << std::endl;
+        std::cout << "Goat current number: " << msg.number << std::endl;
+        std::cout << "Goat current status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
         msg = CountStep(msg);
-        if (client_info.attached)
-        {
-          connection.Write(&msg, sizeof(msg));
-        }
+        std::cout << "Wolf new number: " << current_number << std::endl;
+        std::cout << "Goat new status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
+        connection.Write(&msg, sizeof(msg));
       }
       sem_post(semaphore);
     }
@@ -86,13 +93,11 @@ void Wolf::Start()
 Memory Wolf::CountStep(Memory& answer)
 {
   Memory msg;
-  if (answer.status == ALIVE && abs(current_number - answer.number) <= 70)
+  if ((answer.status == ALIVE && abs(current_number - answer.number) <= 70) ||
+      (answer.status == DEAD && abs(current_number - answer.number) <= 20))
   {
     msg.status = ALIVE;
-  }
-  else if (answer.status == DEAD && abs(current_number - answer.number) <= 20)
-  {
-    msg.status = ALIVE;
+    client_info.deads_num = 0;
   }
   else
   {
@@ -102,21 +107,37 @@ Memory Wolf::CountStep(Memory& answer)
     {
       kill(client_info.pid, SIGTERM);
       client_info = ClientInfo(0);
+      // This is new data for new clients
+      msg.status = ALIVE;
     }
   }
-  current_number = rand() % 100 + 1;
+  current_number = GetRand();
   msg.number = current_number;
   return msg;
+}
+
+int Wolf::GetRand()
+{
+  std::random_device rd;
+  std::mt19937 mt(rd());
+  std::uniform_int_distribution<int> dist(1, 100);
+  return dist(mt);
 }
 
 void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr)
 {
   if (signum == SIGUSR1)
   {
-    std::cout << "Attaching client with pid = " << info->si_pid << std::endl;
-    Wolf::GetInstance().client_info = ClientInfo(info->si_pid);
-    std::cout << "Client attached = " << Wolf::GetInstance().client_info.attached
-      << " with pid = " << Wolf::GetInstance().client_info.pid << std::endl;
+    if (client_info.pid == info->si_pid)
+    {
+      // Client got semaphore timeouted -> detach client
+      client_info = ClientInfo(0);
+    }
+    else
+    {
+      std::cout << "Attaching client with pid = " << info->si_pid << std::endl;
+      client_info = ClientInfo(info->si_pid);
+    }
   }
   else if (signum == SIGTERM)
   {

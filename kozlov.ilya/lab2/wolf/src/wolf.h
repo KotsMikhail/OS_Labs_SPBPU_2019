@@ -18,11 +18,12 @@ public:
 private:
   Conn connection;
   sem_t* semaphore;
-  ClientInfo client_info;
+  static ClientInfo client_info;
   int current_number;
 
   Wolf();
   Memory CountStep(Memory& answer);
+  static int GetRand();
   static void SignalHandler(int signum, siginfo_t* info, void *ptr);
   // TODO
 };

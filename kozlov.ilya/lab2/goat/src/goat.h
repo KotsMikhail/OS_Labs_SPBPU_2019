@@ -16,9 +16,11 @@ public:
 private:
   Conn connection;
   sem_t* semaphore;
+  int host_pid;
 
   Goat(int host_pid);
-  // TODO
+  static int GetRand(int right);
+  static void SignalHandler(int signum);
 };
 
 

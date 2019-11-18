@@ -3,6 +3,8 @@
 
 #include "status.h"
 
+#define SEM_NAME "LAB2"
+
 struct Memory
 {
   Status status;

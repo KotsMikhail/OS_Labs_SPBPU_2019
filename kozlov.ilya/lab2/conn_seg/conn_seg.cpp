@@ -9,9 +9,11 @@
 #include <cstring>
 
 int shmid;
+bool need_to_rm;
 
 Conn::Conn(size_t id, bool create)
 {
+  need_to_rm = create;
   int shmflg = 0666;
   if (create)
   {
@@ -75,5 +77,8 @@ bool Conn::Write(void* buf, size_t count)
 Conn::~Conn()
 {
   std::cout << "Conn::~Conn()" << std::endl;
-  shmctl(shmid, IPC_RMID, nullptr);
+  if (need_to_rm)
+  {
+    shmctl(shmid, IPC_RMID, nullptr);
+  }
 }
