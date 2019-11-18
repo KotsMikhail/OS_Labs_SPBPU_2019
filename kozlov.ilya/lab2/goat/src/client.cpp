@@ -19,6 +19,9 @@ int main(int argc, char* argv[])
     return 1;
   }
   Goat goat = Goat::GetInstance(pid);
-  goat.Start();
+  if (Goat::last_err == 0)
+  {
+    goat.Start();
+  }
   return 0;
 }

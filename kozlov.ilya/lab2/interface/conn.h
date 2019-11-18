@@ -1,5 +1,5 @@
-#ifndef HOST_CONN_H
-#define HOST_CONN_H
+#ifndef CONN_H
+#define CONN_H
 
 #include <cstdlib>
 
@@ -12,4 +12,4 @@ public:
     ~Conn();
 };
 
-#endif //HOST_CONN_H
+#endif // CONN_H

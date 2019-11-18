@@ -5,6 +5,9 @@ int main()
 {
   std::cout << "Starting wolf..." << std::endl;
   Wolf wolf = Wolf::GetInstance();
-  wolf.Start();
+  if (Wolf::last_err == 0)
+  {
+    wolf.Start();
+  }
   return 0;
 }
