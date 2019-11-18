@@ -1,4 +1,5 @@
-#include "conn.h"
+#include <conn.h>
+#include <memory.h>
 
 #include <iostream>
 #include <sys/types.h>
@@ -8,12 +9,6 @@
 #include <cstring>
 
 int shmid;
-
-struct memory
-{
-  char message[100];
-  int size;
-};
 
 Conn::Conn(size_t id, bool create)
 {
@@ -27,7 +22,7 @@ Conn::Conn(size_t id, bool create)
   {
     std::cout << "Getting connection with id = " << id << std::endl;
   }
-  if ((shmid = shmget(id, sizeof(memory), shmflg)) == -1)
+  if ((shmid = shmget(id, sizeof(Memory), shmflg)) == -1)
   {
     std::cout << "ERROR: shmget failed" << std::endl;
   }
@@ -40,26 +35,18 @@ Conn::Conn(size_t id, bool create)
 bool Conn::Read(void* buf, size_t count)
 {
   std::cout << "Conn::Read()" << std::endl;
-  memory* shm_buf;
+  Memory* shm_buf;
   bool success = true;
-  shm_buf = (memory *)shmat(shmid, nullptr, 0);
-  if (shm_buf == (memory *)-1) {
+  shm_buf = (Memory *)shmat(shmid, nullptr, 0);
+  if (shm_buf == (Memory *)-1) {
     std::cout << "ERROR: shmat can't attach to memory";
     success = false;
   }
   else
   {
-    if (shm_buf->size == 0)
-    {
-      success = false;
-    }
-    else
-    {
-      std::cout << "shm_buf->message = " << shm_buf->message << std::endl;
-      strncpy((char*) buf, shm_buf->message, shm_buf->size);
-      ((char*) buf)[shm_buf->size] = '\0';
-      shmdt(shm_buf);
-    }
+    ((Memory *)buf)->status = shm_buf->status;
+    ((Memory *)buf)->number = shm_buf->number;
+    shmdt(shm_buf);
   }
   std::cout << "exit Conn::Read()" << std::endl;
   return success;
@@ -68,17 +55,17 @@ bool Conn::Read(void* buf, size_t count)
 bool Conn::Write(void* buf, size_t count)
 {
   std::cout << "Conn::Write()" << std::endl;
-  memory* shm_buf;
+  Memory* shm_buf;
   bool success = true;
-  shm_buf = (memory *)shmat(shmid, nullptr, 0);
-  if (shm_buf == (memory *)-1) {
+  shm_buf = (Memory *)shmat(shmid, nullptr, 0);
+  if (shm_buf == (Memory *)-1) {
     std::cout << "ERROR: shmat can't attach to memory";
     success = false;
   }
   else
   {
-    strncpy(shm_buf->message, (char *)buf, count);
-    shm_buf->size = count;
+    shm_buf->status = ((Memory *)buf)->status;
+    shm_buf->number = ((Memory *)buf)->number;
     shmdt(shm_buf);
   }
   std::cout << "exit Conn::Write()" << std::endl;

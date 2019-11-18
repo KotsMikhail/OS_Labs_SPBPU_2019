@@ -10,7 +10,7 @@ class Goat
 public:
   static int last_err;
 
-  static Goat GetInstance(int host_pid);
+  static Goat& GetInstance(int host_pid);
   void Start();
   ~Goat();
 private:

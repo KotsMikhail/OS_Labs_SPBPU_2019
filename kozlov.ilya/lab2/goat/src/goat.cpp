@@ -3,12 +3,13 @@
 #include <iostream>
 #include <zconf.h>
 #include <csignal>
+#include <memory.h>
 
 #define SEM_NAME "LAB2"
 
 int Goat::last_err = 0;
 
-Goat Goat::GetInstance(int host_pid)
+Goat& Goat::GetInstance(int host_pid)
 {
   static Goat inst = Goat(host_pid);
   return inst;
@@ -39,21 +40,24 @@ Goat::~Goat()
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 void Goat::Start()
 {
-  // TODO
-  std::string tmp = "Hello from Goat!";
-  sem_wait(semaphore);
-  connection.Write((void *)tmp.data(), tmp.size());
-  sem_post(semaphore);
   while (true)
   {
     sleep(5);
     sem_wait(semaphore);
-    char str[100];
-    if (connection.Read(str, 100))
+    Memory msg;
+    if (connection.Read(&msg, 0))
     {
-      std::cout << "Was read: " << str << std::endl;
-      std::string tmp = "Hello from Goat!";
-      connection.Write((void *)tmp.data(), tmp.size());
+      std::cout << "Number: " << msg.number << std::endl;
+      std::cout << "Status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
+      if (msg.status == ALIVE)
+      {
+        msg.number = rand() % 100 + 1;
+      }
+      else
+      {
+        msg.number = rand() % 50 + 1;
+      }
+      connection.Write((void *)&msg, sizeof(msg));
     }
     sem_post(semaphore);
   }
