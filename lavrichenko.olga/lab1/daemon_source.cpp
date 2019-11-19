@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <cstdio>
 #include <csignal>
 #include <cstdlib>
 #include <sys/stat.h>
@@ -13,10 +12,10 @@
 #include <unistd.h>
 #include <syslog.h>
 
-#define PID_LOGS "/var/run/daemon_lab_14.pid"
-#define EPS 0.5
+#define PID_LOGS "/var/run/first_lab.pid"
+#define EPS 1
 
-typedef enum {w = 604800, d = 86400, h = 3600, NONE = 0} EventType;
+typedef enum {w = 30, d = 86400, h = 3600, NONE = 0} EventType; // 604800
 
 void update_pid_log()
 {
@@ -311,5 +310,18 @@ int main(int argc, char** argv)
 		sleep(EPS);
 	}
 	
+/*
+	std::string config_path = realpath(argv[1], nullptr);
+	config_reader.setPath(config_path);
+	config_reader.read();
+	update_pid_log();
+
+	while (true)
+	{
+		reminder.exec();
+		sleep(EPS);
+	}
+
+*/
 	return 0;
 }
