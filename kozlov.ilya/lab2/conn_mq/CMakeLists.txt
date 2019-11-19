@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.10)
+project(conn_mq)
+include_directories(../interface)
+set(CMAKE_CXX_STANDARD 11)
+add_library(${PROJECT_NAME} SHARED conn_mq.cpp)
+target_link_libraries(${PROJECT_NAME} rt)

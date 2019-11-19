@@ -7,5 +7,5 @@ function makeWithPostfix {
     cp client_${1} ../
 }
 makeWithPostfix "seg"
-#makeWithPostfix "mq"
+makeWithPostfix "mq"
 #makeWithPostfix "fifo"
