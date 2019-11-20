@@ -22,6 +22,7 @@ private:
   Wolf();
   Memory CountStep(Memory& answer);
   void Terminate(int signum);
+  bool CheckIfSelfMessage(Memory& msg);
   static int GetRand();
   static void SignalHandler(int signum, siginfo_t* info, void *ptr);
   // TODO

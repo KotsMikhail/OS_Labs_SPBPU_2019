@@ -9,11 +9,12 @@
 #include <cstring>
 
 int shmid;
-bool need_to_rm;
+bool owner;
 
-Conn::Conn(size_t id, bool create)
+bool Conn::Open(size_t id, bool create)
 {
-  need_to_rm = create;
+  bool res = false;
+  owner = create;
   int shmflg = 0666;
   if (create)
   {
@@ -30,13 +31,14 @@ Conn::Conn(size_t id, bool create)
   }
   else
   {
+    res = true;
     std::cout << "shmget returned id = " << shmid << std::endl;
   }
+  return res;
 }
 
 bool Conn::Read(void* buf, size_t count)
 {
-  std::cout << "Conn::Read()" << std::endl;
   Memory* shm_buf;
   bool success = true;
   shm_buf = (Memory *)shmat(shmid, nullptr, 0);
@@ -46,17 +48,14 @@ bool Conn::Read(void* buf, size_t count)
   }
   else
   {
-    ((Memory *)buf)->status = shm_buf->status;
-    ((Memory *)buf)->number = shm_buf->number;
+    *((Memory *)buf) = *shm_buf;
     shmdt(shm_buf);
   }
-  std::cout << "exit Conn::Read()" << std::endl;
   return success;
 }
 
 bool Conn::Write(void* buf, size_t count)
 {
-  std::cout << "Conn::Write()" << std::endl;
   Memory* shm_buf;
   bool success = true;
   shm_buf = (Memory *)shmat(shmid, nullptr, 0);
@@ -66,19 +65,18 @@ bool Conn::Write(void* buf, size_t count)
   }
   else
   {
-    shm_buf->status = ((Memory *)buf)->status;
-    shm_buf->number = ((Memory *)buf)->number;
+    *shm_buf = *((Memory *)buf);
     shmdt(shm_buf);
   }
-  std::cout << "exit Conn::Write()" << std::endl;
   return success;
 }
 
-Conn::~Conn()
+bool Conn::Close()
 {
-  std::cout << "Conn::~Conn()" << std::endl;
-  if (need_to_rm)
+  bool res = true;
+  if (owner && shmctl(shmid, IPC_RMID, nullptr) < 0)
   {
-    shmctl(shmid, IPC_RMID, nullptr);
+    res = false;
   }
+  return res;
 }

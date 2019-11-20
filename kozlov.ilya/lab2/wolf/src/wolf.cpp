@@ -50,30 +50,30 @@ bool Wolf::OpenConnection()
 void Wolf::Start()
 {
   struct timespec ts;
-  ts.tv_sec = 5;
-  ts.tv_nsec = 0;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  ts.tv_sec += 5;
+  sem_wait(semaphore);
   std::cout << "Waiting for client..." << std::endl;
   pause();
-  while (!client_info.attached)
-  {
-    sleep(1);
-  }
   std::cout << "Client attached!" << std::endl;
-  sem_wait(semaphore);
   current_number = GetRand();
+  std::cout << "Wolf current number: " << current_number << std::endl;
   Memory msg(WOLF, ALIVE, current_number);
   connection.Write(&msg, sizeof(msg));
   sem_post(semaphore);
   while (true)
   {
-    // sleep(1);
     if (!client_info.attached)
     {
       std::cout << "Waiting for client..." << std::endl;
+      sem_wait(semaphore);
       pause();
+      sem_post(semaphore);
     }
     else
     {
+      clock_gettime(CLOCK_REALTIME, &ts);
+      ts.tv_sec += 5;
       if (sem_timedwait(semaphore, &ts) == -1)
       {
         kill(client_info.pid, SIGTERM);
@@ -82,19 +82,10 @@ void Wolf::Start()
       }
       if (connection.Read(&msg, 0))
       {
-        if (msg.owner == WOLF)
+        if (CheckIfSelfMessage(msg))
         {
-          client_info.skipped_msgs++;
-          std::cout << "Client wrote nothing " << client_info.skipped_msgs << "times, skipping..." << std::endl;
-          if (client_info.skipped_msgs >= MAX_SKIPPED_MSGS)
-          {
-            kill(client_info.pid, SIGTERM);
-            client_info = ClientInfo(0);
-          }
-          sem_post(semaphore);
           continue;
         }
-        client_info.skipped_msgs = 0;
         std::cout << "Wolf current number: " << current_number << std::endl;
         std::cout << "Goat current number: " << msg.number << std::endl;
         std::cout << "Goat current status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
@@ -108,6 +99,37 @@ void Wolf::Start()
   }
 }
 #pragma clang diagnostic pop
+
+bool Wolf::CheckIfSelfMessage(Memory& msg)
+{
+  static struct timespec skip_start;
+  bool res = false;
+  if (msg.owner == WOLF)
+  {
+    res = true;
+    client_info.skipped_msgs++;
+    if (client_info.skipped_msgs == 1)
+    {
+      clock_gettime(CLOCK_REALTIME, &skip_start);
+    }
+    else
+    {
+      struct timespec cur_time;
+      clock_gettime(CLOCK_REALTIME, &cur_time);
+      if (cur_time.tv_sec - skip_start.tv_sec >= TIMEOUT)
+      {
+        kill(client_info.pid, SIGTERM);
+        client_info = ClientInfo(0);
+      }
+    }
+    sem_post(semaphore);
+  }
+  else
+  {
+    client_info.skipped_msgs = 0;
+  }
+  return res;
+}
 
 Memory Wolf::CountStep(Memory& answer)
 {
@@ -154,7 +176,7 @@ void Wolf::Terminate(int signum)
 
 void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr)
 {
-  static Wolf& instance = Wolf::GetInstance();
+  static Wolf& instance = GetInstance();
   switch (signum)
   {
     case SIGUSR1:

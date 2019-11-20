@@ -4,6 +4,7 @@
 #include <conn.h>
 #include <bits/types/siginfo_t.h>
 #include <semaphore.h>
+#include <memory.h>
 
 class Goat
 {
@@ -18,6 +19,7 @@ private:
 
   Goat(int host_pid);
   void Terminate(int signum);
+  bool CheckIfSelfMessage(Memory& msg);
   static int GetRand(int right);
   static void SignalHandler(int signum);
 };

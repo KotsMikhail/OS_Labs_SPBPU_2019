@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
     std::cout << "ERROR: can't get int pid from argument" << std::endl;
     return 1;
   }
-  Goat goat = Goat::GetInstance(pid);
+  Goat& goat = Goat::GetInstance(pid);
   if (goat.OpenConnection())
   {
     goat.Start();

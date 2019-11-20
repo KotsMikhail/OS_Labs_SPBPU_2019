@@ -3,7 +3,6 @@
 #include <iostream>
 #include <zconf.h>
 #include <csignal>
-#include <memory.h>
 #include <random>
 #include <cstring>
 
@@ -61,12 +60,10 @@ void Goat::Terminate(int signum)
 void Goat::Start()
 {
   struct timespec ts;
-  ts.tv_sec = 5;
-  ts.tv_nsec = 0;
-  int skipped_msgs = 0;
   while (true)
   {
-    //sleep(1);
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_sec += TIMEOUT;
     if (sem_timedwait(semaphore, &ts) == -1)
     {
       Terminate(errno);
@@ -74,18 +71,10 @@ void Goat::Start()
     Memory msg;
     if (connection.Read(&msg, 0))
     {
-      if (msg.owner == GOAT)
+      if (CheckIfSelfMessage(msg))
       {
-        skipped_msgs++;
-        std::cout << "Host wrote nothing " << skipped_msgs << " times, skipping..." << std::endl;
-        if (skipped_msgs >= MAX_SKIPPED_MSGS)
-        {
-          Terminate(SIGTERM);
-        }
-        sem_post(semaphore);
         continue;
       }
-      skipped_msgs = 0;
       std::cout << "Wolf number: " << msg.number << std::endl;
       std::cout << "Status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
       if (msg.status == ALIVE)
@@ -104,6 +93,37 @@ void Goat::Start()
   }
 }
 #pragma clang diagnostic pop
+
+bool Goat::CheckIfSelfMessage(Memory& msg)
+{
+  static int skipped_msgs = 0;
+  static struct timespec skip_start;
+  bool res = false;
+  if (msg.owner == GOAT)
+  {
+    res = true;
+    skipped_msgs++;
+    if (skipped_msgs == 1)
+    {
+      clock_gettime(CLOCK_REALTIME, &skip_start);
+    }
+    else
+    {
+      struct timespec cur_time;
+      clock_gettime(CLOCK_REALTIME, &cur_time);
+      if (cur_time.tv_sec - skip_start.tv_sec >= TIMEOUT)
+      {
+        Terminate(SIGTERM);
+      }
+    }
+    sem_post(semaphore);
+  }
+  else
+  {
+    skipped_msgs = 0;
+  }
+  return res;
+}
 
 int Goat::GetRand(int right)
 {

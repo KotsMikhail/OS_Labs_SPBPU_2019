@@ -4,7 +4,7 @@
 #include "status.h"
 
 #define SEM_NAME "LAB2"
-#define MAX_SKIPPED_MSGS 5
+#define TIMEOUT 5
 
 struct Memory
 {

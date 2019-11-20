@@ -47,7 +47,6 @@ bool Conn::Open(size_t id, bool create)
 
 bool Conn::Read(void* buf, size_t count)
 {
-  std::cout << "Conn::Read()" << std::endl;
   Memory mq_buf;
   bool success = true;
   if (mq_receive(mqid, (char *)&mq_buf, QUEUE_MSGSIZE, nullptr) == -1)
@@ -59,13 +58,11 @@ bool Conn::Read(void* buf, size_t count)
   {
     *((Memory*) buf) = mq_buf;
   }
-  std::cout << "exit Conn::Read()" << std::endl;
   return success;
 }
 
 bool Conn::Write(void* buf, size_t count)
 {
-  std::cout << "Conn::Write()" << std::endl;
   Memory shm_buf;
   bool success = false;
   if (count <= QUEUE_MSGSIZE)
@@ -80,13 +77,11 @@ bool Conn::Write(void* buf, size_t count)
       success = true;
     }
   }
-  std::cout << "exit Conn::Write()" << std::endl;
   return success;
 }
 
 bool Conn::Close()
 {
-  std::cout << "Conn::Close()" << std::endl;
   bool res = false;
   if (mq_close(mqid) == 0)
   {
