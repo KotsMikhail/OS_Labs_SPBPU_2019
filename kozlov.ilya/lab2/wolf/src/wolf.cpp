@@ -7,8 +7,6 @@
 #include <fcntl.h>
 #include <random>
 
-//ClientInfo Wolf::client_info(0);
-
 Wolf& Wolf::GetInstance()
 {
   static Wolf instance;
@@ -50,8 +48,6 @@ bool Wolf::OpenConnection()
 void Wolf::Start()
 {
   struct timespec ts;
-  clock_gettime(CLOCK_REALTIME, &ts);
-  ts.tv_sec += 5;
   sem_wait(semaphore);
   std::cout << "Waiting for client..." << std::endl;
   pause();
@@ -73,7 +69,7 @@ void Wolf::Start()
     else
     {
       clock_gettime(CLOCK_REALTIME, &ts);
-      ts.tv_sec += 5;
+      ts.tv_sec += TIMEOUT;
       if (sem_timedwait(semaphore, &ts) == -1)
       {
         kill(client_info.pid, SIGTERM);
@@ -86,12 +82,14 @@ void Wolf::Start()
         {
           continue;
         }
+        std::cout << "---------------- ROUND ----------------" << std::endl;
         std::cout << "Wolf current number: " << current_number << std::endl;
         std::cout << "Goat current number: " << msg.number << std::endl;
         std::cout << "Goat current status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
         msg = CountStep(msg);
         std::cout << "Wolf new number: " << current_number << std::endl;
         std::cout << "Goat new status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
+        std::cout << "---------------- ROUND END ----------------" << std::endl;
         connection.Write(&msg, sizeof(msg));
       }
       sem_post(semaphore);
@@ -122,6 +120,9 @@ bool Wolf::CheckIfSelfMessage(Memory& msg)
         client_info = ClientInfo(0);
       }
     }
+#ifdef host_mq
+    connection.Write(&msg, sizeof(msg));
+#endif
     sem_post(semaphore);
   }
   else

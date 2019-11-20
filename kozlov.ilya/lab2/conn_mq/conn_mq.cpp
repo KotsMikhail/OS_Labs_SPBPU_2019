@@ -51,7 +51,7 @@ bool Conn::Read(void* buf, size_t count)
   bool success = true;
   if (mq_receive(mqid, (char *)&mq_buf, QUEUE_MSGSIZE, nullptr) == -1)
   {
-    std::cout << "ERROR: mq_recieve failed, errno = " << errno << std::endl;
+    std::cout << "ERROR: mq_recieve failed, errno = " << strerror(errno) << std::endl;
     success = false;
   }
   else
@@ -70,7 +70,7 @@ bool Conn::Write(void* buf, size_t count)
     shm_buf = *((Memory*) buf);
     if (mq_send(mqid, (char*) &shm_buf, count, 0) == -1)
     {
-      std::cout << "ERROR: mq_send failed, errno = " << errno << std::endl;
+      std::cout << "ERROR: mq_send failed, errno = " << strerror(errno) << std::endl;
     }
     else
     {

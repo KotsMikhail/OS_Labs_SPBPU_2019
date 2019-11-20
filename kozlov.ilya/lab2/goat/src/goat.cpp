@@ -75,6 +75,7 @@ void Goat::Start()
       {
         continue;
       }
+      std::cout << "---------------- ROUND ----------------" << std::endl;
       std::cout << "Wolf number: " << msg.number << std::endl;
       std::cout << "Status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
       if (msg.status == ALIVE)
@@ -86,6 +87,7 @@ void Goat::Start()
         msg.number = GetRand(50);
       }
       std::cout << "Goat number: " << msg.number << std::endl;
+      std::cout << "---------------- ROUND END ----------------" << std::endl;
       msg.owner = GOAT;
       connection.Write((void *)&msg, sizeof(msg));
     }
@@ -116,6 +118,9 @@ bool Goat::CheckIfSelfMessage(Memory& msg)
         Terminate(SIGTERM);
       }
     }
+#ifdef client_mq
+    connection.Write(&msg, sizeof(msg));
+#endif
     sem_post(semaphore);
   }
   else
