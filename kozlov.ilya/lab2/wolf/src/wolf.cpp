@@ -7,8 +7,7 @@
 #include <fcntl.h>
 #include <random>
 
-int Wolf::last_err = 0;
-ClientInfo Wolf::client_info(0);
+//ClientInfo Wolf::client_info(0);
 
 Wolf& Wolf::GetInstance()
 {
@@ -16,31 +15,34 @@ Wolf& Wolf::GetInstance()
   return instance;
 }
 
-Wolf::Wolf() : connection(getpid(), true), current_number(0)
+Wolf::Wolf() : client_info(0)
 {
-  last_err = 0;
   struct sigaction act;
   memset(&act, 0, sizeof(act));
   act.sa_sigaction = SignalHandler;
   act.sa_flags = SA_SIGINFO;
   sigaction(SIGTERM, &act, nullptr);
   sigaction(SIGUSR1, &act, nullptr);
-  semaphore = sem_open(SEM_NAME, O_CREAT, 0666, 1);
-  if (semaphore == SEM_FAILED)
-  {
-    std::cout << "ERROR: sem_open failed with error = " << errno << std::endl;
-    last_err = errno;
-  }
-  else
-  {
-    std::cout << "pid of created wolf is: " << getpid() << std::endl;
-  }
+  sigaction(SIGUSR2, &act, nullptr);
 }
 
-Wolf::~Wolf()
+bool Wolf::OpenConnection()
 {
-  std::cout << "~Wolf()" << std::endl;
-  sem_unlink(SEM_NAME);
+  bool res = false;
+  if (connection.Open(getpid(), true))
+  {
+    semaphore = sem_open(SEM_NAME, O_CREAT, 0666, 1);
+    if (semaphore == SEM_FAILED)
+    {
+      std::cout << "ERROR: sem_open failed with error = " << strerror(errno) << std::endl;
+    }
+    else
+    {
+      res = true;
+      std::cout << "pid of created wolf is: " << getpid() << std::endl;
+    }
+  }
+  return res;
 }
 
 #pragma clang diagnostic push
@@ -52,15 +54,19 @@ void Wolf::Start()
   ts.tv_nsec = 0;
   std::cout << "Waiting for client..." << std::endl;
   pause();
+  while (!client_info.attached)
+  {
+    sleep(1);
+  }
   std::cout << "Client attached!" << std::endl;
   sem_wait(semaphore);
   current_number = GetRand();
-  Memory msg(ALIVE, current_number);
+  Memory msg(WOLF, ALIVE, current_number);
   connection.Write(&msg, sizeof(msg));
   sem_post(semaphore);
   while (true)
   {
-    sleep(1);
+    // sleep(1);
     if (!client_info.attached)
     {
       std::cout << "Waiting for client..." << std::endl;
@@ -76,6 +82,19 @@ void Wolf::Start()
       }
       if (connection.Read(&msg, 0))
       {
+        if (msg.owner == WOLF)
+        {
+          client_info.skipped_msgs++;
+          std::cout << "Client wrote nothing " << client_info.skipped_msgs << "times, skipping..." << std::endl;
+          if (client_info.skipped_msgs >= MAX_SKIPPED_MSGS)
+          {
+            kill(client_info.pid, SIGTERM);
+            client_info = ClientInfo(0);
+          }
+          sem_post(semaphore);
+          continue;
+        }
+        client_info.skipped_msgs = 0;
         std::cout << "Wolf current number: " << current_number << std::endl;
         std::cout << "Goat current number: " << msg.number << std::endl;
         std::cout << "Goat current status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
@@ -96,7 +115,6 @@ Memory Wolf::CountStep(Memory& answer)
   if ((answer.status == ALIVE && abs(current_number - answer.number) <= 70) ||
       (answer.status == DEAD && abs(current_number - answer.number) <= 20))
   {
-    msg.status = ALIVE;
     client_info.deads_num = 0;
   }
   else
@@ -124,28 +142,51 @@ int Wolf::GetRand()
   return dist(mt);
 }
 
+void Wolf::Terminate(int signum)
+{
+  std::cout << "Wolf::Terminate()" << std::endl;
+  if (connection.Close() && sem_unlink(SEM_NAME) == 0)
+  {
+    exit(signum);
+  }
+  exit(errno);
+}
+
 void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr)
 {
-  if (signum == SIGUSR1)
+  static Wolf& instance = Wolf::GetInstance();
+  switch (signum)
   {
-    if (client_info.pid == info->si_pid)
+    case SIGUSR1:
     {
-      // Client got semaphore timeouted -> detach client
-      client_info = ClientInfo(0);
+      if (instance.client_info.attached)
+      {
+        std::cout << "This host can handle only one client!" << std::endl;
+      }
+      else
+      {
+        std::cout << "Attaching client with pid = " << info->si_pid << std::endl;
+        instance.client_info = ClientInfo(info->si_pid);
+      }
+      break;
     }
-    else
+    case SIGUSR2: // client failed
     {
-      std::cout << "Attaching client with pid = " << info->si_pid << std::endl;
-      client_info = ClientInfo(info->si_pid);
+      std::cout << "Client failed" << std::endl;
+      if (instance.client_info.pid == info->si_pid)
+      {
+        instance.client_info = ClientInfo(0);
+      }
+      break;
     }
-  }
-  else if (signum == SIGTERM)
-  {
-    exit(SIGTERM);
-  }
-  else
-  {
-    std::cout << "Unknown signal = " << signum << std::endl;
-    exit(signum);
+    default:
+    {
+      if (instance.client_info.attached)
+      {
+        kill(instance.client_info.pid, SIGTERM);
+        instance.client_info = ClientInfo(0);
+      }
+      instance.Terminate(signum);
+    }
   }
 }

@@ -10,19 +10,18 @@
 class Wolf
 {
 public:
-  static int last_err;
-
   static Wolf& GetInstance();
+  bool OpenConnection();
   void Start();
-  ~Wolf();
 private:
   Conn connection;
   sem_t* semaphore;
-  static ClientInfo client_info;
+  ClientInfo client_info;
   int current_number;
 
   Wolf();
   Memory CountStep(Memory& answer);
+  void Terminate(int signum);
   static int GetRand();
   static void SignalHandler(int signum, siginfo_t* info, void *ptr);
   // TODO

@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
     return 1;
   }
   Goat goat = Goat::GetInstance(pid);
-  if (Goat::last_err == 0)
+  if (goat.OpenConnection())
   {
     goat.Start();
   }

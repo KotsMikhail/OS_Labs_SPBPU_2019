@@ -8,17 +8,16 @@
 class Goat
 {
 public:
-  static int last_err;
-
   static Goat& GetInstance(int host_pid);
   void Start();
-  ~Goat();
+  bool OpenConnection();
 private:
   Conn connection;
   sem_t* semaphore;
   int host_pid;
 
   Goat(int host_pid);
+  void Terminate(int signum);
   static int GetRand(int right);
   static void SignalHandler(int signum);
 };

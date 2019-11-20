@@ -4,13 +4,15 @@
 #include "status.h"
 
 #define SEM_NAME "LAB2"
+#define MAX_SKIPPED_MSGS 5
 
 struct Memory
 {
+  Owner owner;
   Status status;
   int number;
 
-  Memory(Status st = ALIVE, int num = 0) : status(st), number(num)
+  Memory(Owner ow = WOLF, Status st = ALIVE, int num = 0) : owner(ow), status(st), number(num)
   {
   }
 };

@@ -5,7 +5,7 @@ int main()
 {
   std::cout << "Starting wolf..." << std::endl;
   Wolf wolf = Wolf::GetInstance();
-  if (Wolf::last_err == 0)
+  if (wolf.OpenConnection())
   {
     wolf.Start();
   }

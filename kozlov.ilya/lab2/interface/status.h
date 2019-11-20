@@ -7,4 +7,10 @@ enum Status
   DEAD
 };
 
+enum Owner
+{
+  WOLF,
+  GOAT
+};
+
 #endif // STATUS_H
