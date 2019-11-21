@@ -8,4 +8,4 @@ function makeWithPostfix {
 }
 makeWithPostfix "seg"
 makeWithPostfix "mq"
-#makeWithPostfix "fifo"
+makeWithPostfix "fifo"

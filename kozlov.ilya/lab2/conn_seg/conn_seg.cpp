@@ -25,9 +25,9 @@ bool Conn::Open(size_t id, bool create)
   {
     std::cout << "Getting connection with id = " << id << std::endl;
   }
-  if ((shmid = shmget(id, sizeof(Memory), shmflg)) == -1)
+  if ((shmid = shmget(id, sizeof(Message), shmflg)) == -1)
   {
-    std::cout << "ERROR: shmget failed" << std::endl;
+    std::cout << "ERROR: shmget failed, error = " << strerror(errno) << std::endl;
   }
   else
   {
@@ -39,16 +39,16 @@ bool Conn::Open(size_t id, bool create)
 
 bool Conn::Read(void* buf, size_t count)
 {
-  Memory* shm_buf;
+  Message* shm_buf;
   bool success = true;
-  shm_buf = (Memory *)shmat(shmid, nullptr, 0);
-  if (shm_buf == (Memory *)-1) {
-    std::cout << "ERROR: shmat can't attach to memory";
+  shm_buf = (Message *)shmat(shmid, nullptr, 0);
+  if (shm_buf == (Message *)-1) {
+    std::cout << "ERROR: shmat can't attach to memory" << std::endl;
     success = false;
   }
   else
   {
-    *((Memory *)buf) = *shm_buf;
+    *((Message *)buf) = *shm_buf;
     shmdt(shm_buf);
   }
   return success;
@@ -56,16 +56,17 @@ bool Conn::Read(void* buf, size_t count)
 
 bool Conn::Write(void* buf, size_t count)
 {
-  Memory* shm_buf;
+  Message* shm_buf;
   bool success = true;
-  shm_buf = (Memory *)shmat(shmid, nullptr, 0);
-  if (shm_buf == (Memory *)-1) {
-    std::cout << "ERROR: shmat can't attach to memory";
+  shm_buf = (Message *)shmat(shmid, nullptr, 0);
+  if (shm_buf == (Message *)-1)
+  {
+    std::cout << "ERROR: shmat can't attach to memory" << std::endl;
     success = false;
   }
   else
   {
-    *shm_buf = *((Memory *)buf);
+    *shm_buf = *((Message *)buf);
     shmdt(shm_buf);
   }
   return success;

@@ -62,14 +62,16 @@ void Goat::Start()
   struct timespec ts;
   while (true)
   {
+#ifndef client_fifo
     clock_gettime(CLOCK_REALTIME, &ts);
     ts.tv_sec += TIMEOUT;
     if (sem_timedwait(semaphore, &ts) == -1)
     {
       Terminate(errno);
     }
-    Memory msg;
-    if (connection.Read(&msg, 0))
+#endif
+    Message msg;
+    if (connection.Read(&msg))
     {
       if (CheckIfSelfMessage(msg))
       {
@@ -87,16 +89,17 @@ void Goat::Start()
         msg.number = GetRand(50);
       }
       std::cout << "Goat number: " << msg.number << std::endl;
-      std::cout << "---------------- ROUND END ----------------" << std::endl;
       msg.owner = GOAT;
       connection.Write((void *)&msg, sizeof(msg));
     }
+#ifndef client_fifo
     sem_post(semaphore);
+#endif
   }
 }
 #pragma clang diagnostic pop
 
-bool Goat::CheckIfSelfMessage(Memory& msg)
+bool Goat::CheckIfSelfMessage(Message& msg)
 {
   static int skipped_msgs = 0;
   static struct timespec skip_start;
@@ -121,7 +124,9 @@ bool Goat::CheckIfSelfMessage(Memory& msg)
 #ifdef client_mq
     connection.Write(&msg, sizeof(msg));
 #endif
+#ifndef client_fifo
     sem_post(semaphore);
+#endif
   }
   else
   {

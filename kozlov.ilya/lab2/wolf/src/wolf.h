@@ -20,9 +20,9 @@ private:
   int current_number;
 
   Wolf();
-  Memory CountStep(Memory& answer);
+  Message CountStep(Message& answer);
   void Terminate(int signum);
-  bool CheckIfSelfMessage(Memory& msg);
+  bool CheckIfSelfMessage(Message& msg);
   static int GetRand();
   static void SignalHandler(int signum, siginfo_t* info, void *ptr);
   // TODO
