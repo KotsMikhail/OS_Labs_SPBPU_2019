@@ -112,8 +112,6 @@ bool host_t::read_date(message_t &msg)
     std::string date, s;
     std::vector<uint32_t> date_vector;
     std::cin >> date;
-
-    std::cout << "date is " << date << std::endl;
     
     if (date.length() == 0)
         return false;
@@ -163,7 +161,6 @@ void host_t::run()
             sleep(1);
         else
         {
-            std::cout << 1 << std::endl;
             if (_client_info.is_attached && !read_date(msg))
                 continue;
             if (!_client_info.is_attached)
@@ -171,13 +168,11 @@ void host_t::run()
             _connection.conn_send(&msg, MESSAGE_SIZE);
             clock_gettime(CLOCK_REALTIME, &ts);
             ts.tv_sec += 5;
-            std::cout << 2 << std::endl;
             sem_post(_client_sem);
             while ((s = sem_timedwait(_host_sem, &ts)) == -1 && errno == EINTR)
                 continue;
             if (s == -1)
             {
-                std::cout << 3 << std::endl;
                 if (_client_info.is_attached)
                     kill(_client_info.pid, SIGTERM);
                 sem_post(_client_sem);

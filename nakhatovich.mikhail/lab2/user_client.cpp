@@ -110,16 +110,12 @@ void client_t::run()
     message_t msg;
     while (true)
     {
-        std::cout << 1 << std::endl;
         sem_wait(_client_sem);
-        std::cout << 2 << std::endl;
         if (_connection.conn_recv(&msg, MESSAGE_SIZE))
         {
-            std::cout << 3 << std::endl;
             calculate_temperature(msg);
             _connection.conn_send(&msg, MESSAGE_SIZE);
         }
-        std::cout << 4 << std::endl;
         sem_post(_host_sem);
     }
 }
