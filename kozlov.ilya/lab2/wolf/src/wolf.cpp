@@ -48,26 +48,38 @@ bool Wolf::OpenConnection()
 void Wolf::Start()
 {
   struct timespec ts;
+#ifndef host_fifo
   sem_wait(semaphore);
+#endif
   std::cout << "Waiting for client..." << std::endl;
   pause();
   std::cout << "Client attached!" << std::endl;
   current_number = GetRand();
   std::cout << "Wolf current number: " << current_number << std::endl;
-  Memory msg(WOLF, ALIVE, current_number);
+  Message msg(WOLF, ALIVE, current_number);
   connection.Write(&msg, sizeof(msg));
+#ifndef host_fifo
   sem_post(semaphore);
+#endif
   while (true)
   {
     if (!client_info.attached)
     {
       std::cout << "Waiting for client..." << std::endl;
+#ifndef host_fifo
       sem_wait(semaphore);
+#endif
       pause();
+      std::cout << "Wolf current number: " << current_number << std::endl;
+      msg = Message(WOLF, ALIVE, current_number);
+      connection.Write(&msg, sizeof(msg));
+#ifndef host_fifo
       sem_post(semaphore);
+#endif
     }
     else
     {
+#ifndef host_fifo
       clock_gettime(CLOCK_REALTIME, &ts);
       ts.tv_sec += TIMEOUT;
       if (sem_timedwait(semaphore, &ts) == -1)
@@ -76,7 +88,8 @@ void Wolf::Start()
         client_info = ClientInfo(0);
         continue;
       }
-      if (connection.Read(&msg, 0))
+#endif
+      if (connection.Read(&msg))
       {
         if (CheckIfSelfMessage(msg))
         {
@@ -87,18 +100,22 @@ void Wolf::Start()
         std::cout << "Goat current number: " << msg.number << std::endl;
         std::cout << "Goat current status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
         msg = CountStep(msg);
-        std::cout << "Wolf new number: " << current_number << std::endl;
-        std::cout << "Goat new status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
-        std::cout << "---------------- ROUND END ----------------" << std::endl;
-        connection.Write(&msg, sizeof(msg));
+        if (client_info.attached)
+        {
+          std::cout << "Wolf new number: " << current_number << std::endl;
+          std::cout << "Goat new status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
+          connection.Write(&msg, sizeof(msg));
+        }
       }
+#ifndef host_fifo
       sem_post(semaphore);
+#endif
     }
   }
 }
 #pragma clang diagnostic pop
 
-bool Wolf::CheckIfSelfMessage(Memory& msg)
+bool Wolf::CheckIfSelfMessage(Message& msg)
 {
   static struct timespec skip_start;
   bool res = false;
@@ -123,7 +140,9 @@ bool Wolf::CheckIfSelfMessage(Memory& msg)
 #ifdef host_mq
     connection.Write(&msg, sizeof(msg));
 #endif
+#ifndef host_fifo
     sem_post(semaphore);
+#endif
   }
   else
   {
@@ -132,9 +151,9 @@ bool Wolf::CheckIfSelfMessage(Memory& msg)
   return res;
 }
 
-Memory Wolf::CountStep(Memory& answer)
+Message Wolf::CountStep(Message& answer)
 {
-  Memory msg;
+  Message msg;
   if ((answer.status == ALIVE && abs(current_number - answer.number) <= 70) ||
       (answer.status == DEAD && abs(current_number - answer.number) <= 20))
   {

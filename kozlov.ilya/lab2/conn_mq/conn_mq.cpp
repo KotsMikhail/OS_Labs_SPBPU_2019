@@ -9,7 +9,7 @@
 
 #define QUEUE_NAME "/LAB2_QUEUE"
 #define QUEUE_MAXMSG  1 /* Maximum number of messages. */
-#define QUEUE_MSGSIZE sizeof(Memory) /* Length of message. */
+#define QUEUE_MSGSIZE sizeof(Message) /* Length of message. */
 #define QUEUE_ATTR_INITIALIZER ((struct mq_attr){0, QUEUE_MAXMSG, QUEUE_MSGSIZE, 0, {0}})
 
 mqd_t mqid;
@@ -47,7 +47,7 @@ bool Conn::Open(size_t id, bool create)
 
 bool Conn::Read(void* buf, size_t count)
 {
-  Memory mq_buf;
+  Message mq_buf;
   bool success = true;
   if (mq_receive(mqid, (char *)&mq_buf, QUEUE_MSGSIZE, nullptr) == -1)
   {
@@ -56,19 +56,17 @@ bool Conn::Read(void* buf, size_t count)
   }
   else
   {
-    *((Memory*) buf) = mq_buf;
+    *((Message*) buf) = mq_buf;
   }
   return success;
 }
 
 bool Conn::Write(void* buf, size_t count)
 {
-  Memory shm_buf;
   bool success = false;
   if (count <= QUEUE_MSGSIZE)
   {
-    shm_buf = *((Memory*) buf);
-    if (mq_send(mqid, (char*) &shm_buf, count, 0) == -1)
+    if (mq_send(mqid, (char*)buf, count, 0) == -1)
     {
       std::cout << "ERROR: mq_send failed, errno = " << strerror(errno) << std::endl;
     }

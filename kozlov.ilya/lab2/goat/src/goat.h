@@ -19,7 +19,7 @@ private:
 
   Goat(int host_pid);
   void Terminate(int signum);
-  bool CheckIfSelfMessage(Memory& msg);
+  bool CheckIfSelfMessage(Message& msg);
   static int GetRand(int right);
   static void SignalHandler(int signum);
 };

@@ -3,7 +3,7 @@ HOST_DIR = $(HOME_DIR)/wolf
 CLIENT_DIR = $(HOME_DIR)/goat
 CONN_SEG_DIR = $(HOME_DIR)/conn_seg
 CONN_MQ_DIR = $(HOME_DIR)/conn_mq
-#CONN_FIFO_DIR = $(HOME_DIR)/conn_fifo
+CONN_FIFO_DIR = $(HOME_DIR)/conn_fifo
 
 all: build_libs build_clients
 	cd $(HOST_DIR) && \
@@ -14,6 +14,8 @@ build_libs:
 	cd $(CONN_SEG_DIR) && \
 	./build.sh
 	cd $(CONN_MQ_DIR) && \
+	./build.sh
+	cd $(CONN_FIFO_DIR) && \
 	./build.sh
 
 build_clients:
