@@ -43,8 +43,6 @@ bool Wolf::OpenConnection()
   return res;
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
 void Wolf::Start()
 {
   struct timespec ts;
@@ -113,7 +111,6 @@ void Wolf::Start()
     }
   }
 }
-#pragma clang diagnostic pop
 
 bool Wolf::CheckIfSelfMessage(Message& msg)
 {

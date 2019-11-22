@@ -55,8 +55,6 @@ void Goat::Terminate(int signum)
   exit(errno);
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
 void Goat::Start()
 {
   struct timespec ts;
@@ -97,7 +95,6 @@ void Goat::Start()
 #endif
   }
 }
-#pragma clang diagnostic pop
 
 bool Goat::CheckIfSelfMessage(Message& msg)
 {
