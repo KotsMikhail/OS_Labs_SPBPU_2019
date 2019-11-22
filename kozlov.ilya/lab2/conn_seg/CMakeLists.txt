@@ -1,5 +1,0 @@
-cmake_minimum_required(VERSION 3.10)
-project(conn_seg)
-include_directories(../interface)
-set(CMAKE_CXX_STANDARD 11)
-add_library(${PROJECT_NAME} SHARED conn_seg.cpp)
