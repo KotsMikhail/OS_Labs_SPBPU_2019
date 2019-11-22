@@ -12,8 +12,9 @@
 
 #include "user_host.h"
 
-host_t::host_t() : _client_info(0)
+host_t::host_t()
 {
+    attach_client(0);
     struct sigaction act;
     memset(&act, 0, sizeof(act));
     act.sa_sigaction = signal_handler;
@@ -25,6 +26,12 @@ host_t::host_t() : _client_info(0)
 host_t::~host_t()
 {
     syslog(LOG_NOTICE, "host: destroyed.");
+}
+
+void host_t::attach_client(int client_pid)
+{
+    _client_pid = client_pid;
+    _is_client_attached = (client_pid != 0);
 }
 
 host_t & host_t::get_instance()
@@ -40,20 +47,20 @@ void host_t::signal_handler(int sig, siginfo_t *info, void *context)
     {
     case SIGUSR1:
         syslog(LOG_NOTICE, "host: SIGUSR1 signal catched.");
-        if (instance._client_info.pid == info->si_pid)
-            instance._client_info = client_info_t(0);
+        if (instance._client_pid == info->si_pid)
+            instance.attach_client(0);
         else 
         {
             syslog(LOG_NOTICE, "host: attaching client with pid %d.", info->si_pid);
-            if (instance._client_info.is_attached)
-                kill(instance._client_info.pid, SIGTERM);
-            instance._client_info = client_info_t(info->si_pid);
+            if (instance._is_client_attached)
+                kill(instance._client_pid, SIGTERM);
+            instance.attach_client(info->si_pid);
         }
         break;
     case SIGTERM:
         syslog(LOG_NOTICE, "host: terminate signal catched.");
-        if (instance._client_info.is_attached)
-            kill(instance._client_info.pid, SIGTERM);
+        if (instance._is_client_attached)
+            kill(instance._client_pid, SIGTERM);
         if (instance.close_connection())
         {
             closelog();
@@ -111,6 +118,7 @@ bool host_t::read_date(message_t &msg)
     int tmp;
     std::string date, s;
     std::vector<uint32_t> date_vector;
+    std::cin.clear();
     std::cin >> date;
     
     if (date.length() == 0)
@@ -131,7 +139,7 @@ bool host_t::read_date(message_t &msg)
         }
     }
 
-    if (!_client_info.is_attached)
+    if (!_is_client_attached)
         return false;
 
     if (date_vector.size() != 3 
@@ -157,13 +165,13 @@ void host_t::run()
     int s;
     while (true)
     {
-        if (!_client_info.is_attached)
+        if (!_is_client_attached)
             sleep(1);
         else
         {
-            if (_client_info.is_attached && !read_date(msg))
+            if (_is_client_attached && !read_date(msg))
                 continue;
-            if (!_client_info.is_attached)
+            if (!_is_client_attached)
                 continue;
             _connection.conn_send(&msg, MESSAGE_SIZE);
             clock_gettime(CLOCK_REALTIME, &ts);
@@ -173,10 +181,10 @@ void host_t::run()
                 continue;
             if (s == -1)
             {
-                if (_client_info.is_attached)
-                    kill(_client_info.pid, SIGTERM);
+                if (_is_client_attached)
+                    kill(_client_pid, SIGTERM);
                 sem_post(_client_sem);
-                _client_info = client_info_t(0);
+                attach_client(0);
             }
             else if (_connection.conn_recv(&msg, MESSAGE_SIZE))
             {

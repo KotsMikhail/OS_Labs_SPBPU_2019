@@ -5,7 +5,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <iostream>
 #include <random>
 #include <string>
 
@@ -84,13 +83,12 @@ bool client_t::close_connection()
     if (_host_sem != SEM_FAILED)
     {
         _host_sem = SEM_FAILED;
-        sem_unlink(SEM_HOST_NAME);
+        sem_close(_host_sem);
     }
     if (_client_sem != SEM_FAILED)
     {
-        sem_post(_client_sem);
         _client_sem = SEM_FAILED;
-        sem_unlink(SEM_CLIENT_NAME);
+        sem_close(_client_sem);
     }
     _connection.conn_close();
     return true;

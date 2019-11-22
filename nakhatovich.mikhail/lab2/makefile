@@ -9,7 +9,9 @@ all: set_log build_hc
 
 define build
 	g++ $(CFLAGS) ./host/* ./interfaces/* $(CONNPREFIX)$(1).cpp -o host_$(1) $(PFLAGS) ;
+	echo host_$(1) ;
 	g++ $(CFLAGS) ./client/* ./interfaces/* $(CONNPREFIX)$(1).cpp -o client_$(1) $(PFLAGS) ;
+	echo client_$(1) ;
 endef
 
 build_hc:

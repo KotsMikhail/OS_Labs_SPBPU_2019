@@ -6,7 +6,6 @@
 
 #include "connect.h"
 #include "message.h"
-#include "clinfo.h"
 
 class host_t
 {
@@ -25,10 +24,12 @@ private:
 
     bool read_date(message_t &msg);
     bool close_connection();
+    void attach_client(int client_pid);
     
     static void signal_handler(int sig, siginfo_t *info, void *context);
 
-    client_info_t _client_info;
+    int _client_pid;
+    bool _is_client_attached;
     sem_t *_host_sem, *_client_sem;
     conn_t _connection;
 };
