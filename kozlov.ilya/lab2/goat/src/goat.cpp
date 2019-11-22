@@ -16,6 +16,7 @@ Goat::Goat(int host_pid)
 {
   std::cout << "host Wolf pid is: " << host_pid << std::endl;
   this->host_pid = host_pid;
+  need_to_post = false;
   signal(SIGTERM, SignalHandler);
 }
 
@@ -47,8 +48,16 @@ void Goat::Terminate(int signum)
   {
     std::cout << "Failing with error = " << strerror(errno) << std::endl;
   }
-  if (connection.Close() && sem_post(semaphore) == 0 && sem_close(semaphore) == 0)
+  if (connection.Close())
   {
+    if (need_to_post && sem_post(semaphore) == -1)
+    {
+      exit(errno);
+    }
+    if (sem_close(semaphore) == -1)
+    {
+      exit(errno);
+    }
     exit(signum);
   }
   std::cout << "Terminating error: " << strerror(errno) << std::endl;
@@ -57,16 +66,17 @@ void Goat::Terminate(int signum)
 
 void Goat::Start()
 {
-  struct timespec ts;
   while (true)
   {
 #ifndef client_fifo
+    struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     ts.tv_sec += TIMEOUT;
     if (sem_timedwait(semaphore, &ts) == -1)
     {
       Terminate(errno);
     }
+    need_to_post = true;
 #endif
     Message msg;
     if (connection.Read(&msg))
@@ -92,6 +102,7 @@ void Goat::Start()
     }
 #ifndef client_fifo
     sem_post(semaphore);
+    need_to_post = false;
 #endif
   }
 }
@@ -123,6 +134,7 @@ bool Goat::CheckIfSelfMessage(Message& msg)
 #endif
 #ifndef client_fifo
     sem_post(semaphore);
+    need_to_post = false;
 #endif
   }
   else

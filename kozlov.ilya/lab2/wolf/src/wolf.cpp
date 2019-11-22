@@ -45,8 +45,8 @@ bool Wolf::OpenConnection()
 
 void Wolf::Start()
 {
-  struct timespec ts;
 #ifndef host_fifo
+  struct timespec ts;
   sem_wait(semaphore);
 #endif
   std::cout << "Waiting for client..." << std::endl;

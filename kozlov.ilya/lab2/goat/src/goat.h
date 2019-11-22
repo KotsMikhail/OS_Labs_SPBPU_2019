@@ -16,6 +16,7 @@ private:
   Conn connection;
   sem_t* semaphore;
   int host_pid;
+  bool need_to_post;
 
   Goat(int host_pid);
   void Terminate(int signum);
