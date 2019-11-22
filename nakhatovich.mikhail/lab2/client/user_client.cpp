@@ -12,7 +12,6 @@
 
 client_t::client_t(int host_pid) : _host_pid(host_pid)
 {
-    _host_pid = host_pid;
     struct sigaction act;
     memset(&act, 0, sizeof(act));
     act.sa_sigaction = signal_handler;
@@ -90,8 +89,7 @@ bool client_t::close_connection()
         _client_sem = SEM_FAILED;
         sem_close(_client_sem);
     }
-    _connection.conn_close();
-    return true;
+    return _connection.conn_close();
 }
 
 void client_t::calculate_temperature(message_t &msg)

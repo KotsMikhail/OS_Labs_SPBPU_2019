@@ -6,6 +6,7 @@
 #define SEM_HOST_NAME   "host_semaphore"
 #define SEM_CLIENT_NAME "client_semaphore"
 #define MESSAGE_SIZE    (sizeof(message_t))
+#define TIMEOUT         5
 
 struct message_t
 {

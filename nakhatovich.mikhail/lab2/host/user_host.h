@@ -25,6 +25,7 @@ private:
     bool read_date(message_t &msg);
     bool close_connection();
     void attach_client(int client_pid);
+    void terminate();
     
     static void signal_handler(int sig, siginfo_t *info, void *context);
 

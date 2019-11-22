@@ -40,6 +40,20 @@ host_t & host_t::get_instance()
     return instance;
 }
 
+void host_t::terminate()
+{
+    if (_is_client_attached)
+        kill(_client_pid, SIGTERM);
+    if (close_connection())
+    {
+        closelog();
+        exit(EXIT_SUCCESS);
+    }
+    syslog(LOG_ERR, "host: couldn't close connection.");
+    closelog();
+    exit(EXIT_FAILURE);
+}
+
 void host_t::signal_handler(int sig, siginfo_t *info, void *context)
 {
     host_t &instance = get_instance();
@@ -59,16 +73,7 @@ void host_t::signal_handler(int sig, siginfo_t *info, void *context)
         break;
     case SIGTERM:
         syslog(LOG_NOTICE, "host: terminate signal catched.");
-        if (instance._is_client_attached)
-            kill(instance._client_pid, SIGTERM);
-        if (instance.close_connection())
-        {
-            closelog();
-            exit(EXIT_SUCCESS);
-        }
-        syslog(LOG_NOTICE, "host: couldn't close connection.");
-        closelog();
-        exit(EXIT_FAILURE);
+        instance.terminate();
         break;
     }
 }
@@ -173,9 +178,18 @@ void host_t::run()
                 continue;
             if (!_is_client_attached)
                 continue;
+            #ifndef host_sock
             _connection.conn_send(&msg, MESSAGE_SIZE);
+            #else
+            if (!_connection.conn_send(&msg, MESSAGE_SIZE) && errno == EPIPE)
+            {
+                if (!_connection.conn_open(getpid(), true))
+                    terminate();
+                _connection.conn_send(&msg, MESSAGE_SIZE);
+            }
+            #endif
             clock_gettime(CLOCK_REALTIME, &ts);
-            ts.tv_sec += 5;
+            ts.tv_sec += TIMEOUT;
             sem_post(_client_sem);
             while ((s = sem_timedwait(_host_sem, &ts)) == -1 && errno == EINTR)
                 continue;
@@ -183,7 +197,6 @@ void host_t::run()
             {
                 if (_is_client_attached)
                     kill(_client_pid, SIGTERM);
-                sem_post(_client_sem);
                 attach_client(0);
             }
             else if (_connection.conn_recv(&msg, MESSAGE_SIZE))
