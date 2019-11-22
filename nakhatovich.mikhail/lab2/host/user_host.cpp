@@ -140,6 +140,7 @@ bool host_t::read_date(message_t &msg)
         catch (std::exception &e)
         {
             syslog(LOG_ERR, "host: couldn't get int from date.");
+            std::cout << "error: incorrect date." << std::endl;
             return false;
         }
     }
