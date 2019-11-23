@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <string>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "conn_fifo.h"
 
