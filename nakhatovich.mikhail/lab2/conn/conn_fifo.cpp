@@ -3,16 +3,28 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <new>
+
 #include "connect.h"
 #include "message.h"
 
 #define FIFO_PATH "/tmp/lab2_fifo"
 
-bool _need_to_rm = true, _is_open = false;
-int _fd = -1;
+conn_t::conn_t() : _need_to_rm(true), _is_open(false)
+{
+    _desc = new (std::nothrow) int(-1);
+}
+
+conn_t::~conn_t()
+{
+    delete _desc;
+}
 
 bool conn_t::conn_open(size_t id, bool create)
 {
+    if (_desc == nullptr)
+        return false;
+
     if (_is_open)
         return true;
         
@@ -30,9 +42,9 @@ bool conn_t::conn_open(size_t id, bool create)
     else
         syslog(LOG_NOTICE, "fifo: getting connection with id %lu.", id);
 
-    _fd = open(FIFO_PATH, O_RDWR);
+    *_desc = open(FIFO_PATH, O_RDWR);
 
-    _is_open = (_fd != -1);
+    _is_open = (*_desc != -1);
     if (_is_open)
         syslog(LOG_ERR, "fifo: opened connection with id %lu.", id);
     else
@@ -47,7 +59,7 @@ bool conn_t::conn_open(size_t id, bool create)
 
 bool conn_t::conn_close() 
 {
-    if (_is_open && !close(_fd) && (!_need_to_rm || (_need_to_rm && !unlink(FIFO_PATH)))) 
+    if (_is_open && !close(*_desc) && (!_need_to_rm || !unlink(FIFO_PATH)))
     {
         syslog(LOG_NOTICE, "fifo: closed.");
         _is_open = false;
@@ -62,7 +74,7 @@ bool conn_t::conn_recv(void *buf, size_t count)
         syslog(LOG_ERR, "fifo: couldn't read data.");
         return false;
     }
-    if (read(_fd, buf, count) == -1)
+    if (read(*_desc, buf, count) == -1)
     {
         syslog(LOG_ERR, "fifo: read failed.");
         return false;
@@ -78,7 +90,7 @@ bool conn_t::conn_send(void *buf, size_t count)
         syslog(LOG_ERR, "fifo: couldn't write data.");
         return false;
     }
-    if (write(_fd, buf, count) == -1) 
+    if (write(*_desc, buf, count) == -1) 
     {
         syslog(LOG_ERR, "fifo: write failed.");
         return false;
