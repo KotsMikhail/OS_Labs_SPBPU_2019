@@ -20,6 +20,7 @@ host_t::host_t()
     act.sa_sigaction = signal_handler;
     act.sa_flags = SA_SIGINFO;
     sigaction(SIGTERM, &act, nullptr);
+    sigaction(SIGINT, &act, nullptr);
     sigaction(SIGUSR1, &act, nullptr);
 };
 
@@ -73,6 +74,10 @@ void host_t::signal_handler(int sig, siginfo_t *info, void *context)
         break;
     case SIGTERM:
         syslog(LOG_NOTICE, "host: terminate signal catched.");
+        instance.terminate();
+        break;
+    case SIGINT:
+        syslog(LOG_NOTICE, "host: interrupt signal catched.");
         instance.terminate();
         break;
     }

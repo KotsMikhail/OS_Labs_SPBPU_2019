@@ -25,6 +25,7 @@ private:
 
     void calculate_temperature(message_t &msg);
     bool close_connection();
+    void terminate(int sig_pid);
    
     static void signal_handler(int sig, siginfo_t *info, void *context);
 

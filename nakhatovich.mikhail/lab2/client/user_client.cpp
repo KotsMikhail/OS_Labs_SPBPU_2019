@@ -17,6 +17,7 @@ client_t::client_t(int host_pid) : _host_pid(host_pid)
     act.sa_sigaction = signal_handler;
     act.sa_flags = SA_SIGINFO;
     sigaction(SIGTERM, &act, nullptr);
+    sigaction(SIGINT, &act, nullptr);
 };
 
 client_t::~client_t()
@@ -30,6 +31,20 @@ client_t & client_t::get_instance(int host_pid)
     return instance;
 }
 
+void client_t::terminate(int sig_pid)
+{
+    if (sig_pid != _host_pid)
+        kill(_host_pid, SIGUSR1);
+    if (close_connection())
+    {
+        closelog();
+        exit(EXIT_SUCCESS);
+    }
+    syslog(LOG_NOTICE, "client: couldn't close connection.");
+    closelog();
+    exit(EXIT_FAILURE);
+}
+
 void client_t::signal_handler(int sig, siginfo_t *info, void *context)
 {
     client_t &instance = get_instance(0);
@@ -37,16 +52,11 @@ void client_t::signal_handler(int sig, siginfo_t *info, void *context)
     {
     case SIGTERM:
         syslog(LOG_NOTICE, "client: terminate signal catched.");
-        if (info->si_pid != instance._host_pid)
-            kill(instance._host_pid, SIGUSR1);
-        if (instance.close_connection())
-        {
-            closelog();
-            exit(EXIT_SUCCESS);
-        }
-        syslog(LOG_NOTICE, "client: couldn't close connection.");
-        closelog();
-        exit(EXIT_FAILURE);
+        instance.terminate(info->si_pid);
+        break;
+    case SIGINT:
+        syslog(LOG_NOTICE, "client: interrupt signal catched.");
+        instance.terminate(info->si_pid);
         break;
     }
 }
