@@ -93,13 +93,8 @@ bool conn_t::conn_open(size_t id, bool create)
         syslog(LOG_ERR, "sock: connected.");
     }
 
-    _is_open = (_sd2 != -1);
-    if (_is_open)
-        syslog(LOG_ERR, "sock: opened connection with id %lu.", id);
-    else
-        syslog(LOG_ERR, "sock: couldn't open connection with id %lu.", id);
-    
-    return _is_open;
+    syslog(LOG_ERR, "sock: opened connection with id %lu.", id);
+    return (_is_open = true);
 }
 
 bool conn_t::conn_close() 

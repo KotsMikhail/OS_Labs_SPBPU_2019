@@ -5,8 +5,7 @@
 #include "connect.h"
 #include "message.h"
 
-#define MQ_NAME             "/lab2_mq"
-#define MQ_ATTR_INITIALIZER ((struct mq_attr){0, 1, MESSAGE_SIZE, 0, {0}})
+#define MQ_NAME "/lab2_mq"
 
 bool _need_to_rm = true, _is_open = false;
 mqd_t _mqdes = (mqd_t) -1;
@@ -21,7 +20,7 @@ bool conn_t::conn_open(size_t id, bool create)
     if (create)
     {
         syslog(LOG_NOTICE, "mq: creating connection with id %lu.", id); 
-        struct mq_attr attr = MQ_ATTR_INITIALIZER;
+        struct mq_attr attr = {0, 1, MESSAGE_SIZE, 0, {0}};
         _mqdes = mq_open(MQ_NAME, O_CREAT | O_RDWR, 0666, &attr);
     }
     else
@@ -34,7 +33,11 @@ bool conn_t::conn_open(size_t id, bool create)
     if (_is_open)
         syslog(LOG_ERR, "mq: opened connection with id %lu.", id);
     else
+    {
         syslog(LOG_ERR, "mq: couldn't open connection with id %lu.", id);
+        if (_need_to_rm)
+            mq_unlink(MQ_NAME);
+    }
     
     return _is_open;
 }
