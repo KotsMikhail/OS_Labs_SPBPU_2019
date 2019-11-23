@@ -41,8 +41,11 @@ int main(int argc, char* argv[])
     client_t &client = client_t::get_instance(host_pid);
     if (client.open_connection())
         client.run();
-
-    syslog(LOG_NOTICE, "client: stopped.");
-    closelog();
+    else
+    {
+        syslog(LOG_NOTICE, "client: stopped.");
+        closelog();
+    }
+    
     return EXIT_SUCCESS;
 }

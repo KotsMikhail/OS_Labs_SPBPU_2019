@@ -11,8 +11,11 @@ int main()
     host_t & host = host_t::get_instance();
     if (host.open_connection())
         host.run();
-
-    syslog(LOG_NOTICE, "host: stopped.");
-    closelog();
+    else
+    {
+        syslog(LOG_NOTICE, "host: stopped.");
+        closelog();
+    }
+    
     return EXIT_SUCCESS;
 }
