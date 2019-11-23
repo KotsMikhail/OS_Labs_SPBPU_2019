@@ -61,6 +61,7 @@ bool conn_t::conn_open(size_t id, bool create)
     {
         syslog(LOG_NOTICE, "sock: creating connection with id %lu.", id); 
         _desc[1] = -1;
+        unlink(SERVER_PATH);
         if ((_desc[0] = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
         {
             syslog(LOG_ERR, "sock: socket failed.");

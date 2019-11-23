@@ -33,6 +33,7 @@ bool conn_t::conn_open(size_t id, bool create)
     if (create)
     {
         syslog(LOG_NOTICE, "fifo: creating connection with id %lu.", id); 
+        unlink(FIFO_PATH);
         if (mkfifo(FIFO_PATH, 0666) == -1)
         {
             syslog(LOG_ERR, "fifo: mkfifo failed.");

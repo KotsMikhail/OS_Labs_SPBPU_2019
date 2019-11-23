@@ -32,6 +32,7 @@ bool conn_t::conn_open(size_t id, bool create)
     if (create)
     {
         syslog(LOG_NOTICE, "mq: creating connection with id %lu.", id); 
+        mq_unlink(MQ_NAME);
         struct mq_attr attr = {0, 1, MESSAGE_SIZE, 0, {0}};
         *_desc = mq_open(MQ_NAME, O_CREAT | O_RDWR, 0666, &attr);
     }
