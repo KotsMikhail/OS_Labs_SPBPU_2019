@@ -1,6 +1,6 @@
 CC=g++
 INCLUDEDIRS=-I../interface
-LDFLAGS=-shared
+LDFLAGS=-shared -lrt
 SOURCES=$(shell ls conn_*.cpp)
 OBJECTS=$(SOURCES:.cpp=.o)
 NAMES=$(OBJECTS:%.o=%)

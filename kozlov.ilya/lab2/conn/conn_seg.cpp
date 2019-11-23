@@ -7,6 +7,7 @@
 #include <sys/shm.h>
 #include <fcntl.h>
 #include <cstring>
+#include <error.h>
 
 int shmid;
 bool owner;

@@ -10,7 +10,7 @@ CLIENT_SRC=$(shell ls $(CLIENT_DIR)/**/*.cpp)
 CLIENT_OBJ_FULL=$(CLIENT_SRC:%.cpp=%.o)
 CLIENT_OBJ=$(foreach obj, $(CLIENT_OBJ_FULL), $(shell basename $(obj)))
 LIB_DIR=$(HOME)/conn
-LDFLAGS=-L$(LIB_DIR) -lrt -lpthread -Wl,-rpath=$(LIB_DIR)
+LDFLAGS=-L$(LIB_DIR) -lpthread -Wl,-rpath=$(LIB_DIR)
 LIB_SOURCES=$(shell cd $(LIB_DIR) && ls conn_*.cpp)
 POSTFIX=$(LIB_SOURCES:conn%.cpp=%)
 CFLAGS=-c -Wall -Werror -fPIC $(INCLUDEDIRS)

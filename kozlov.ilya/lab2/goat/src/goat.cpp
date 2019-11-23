@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <zconf.h>
-#include <csignal>
+#include <errno.h>
 #include <random>
 #include <cstring>
 

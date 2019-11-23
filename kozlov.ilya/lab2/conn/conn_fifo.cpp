@@ -8,6 +8,7 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <zconf.h>
+#include <error.h>
 
 #define FIFO_NAME "/tmp/lab2_pipe"
 

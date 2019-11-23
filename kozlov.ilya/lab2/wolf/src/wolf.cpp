@@ -2,10 +2,10 @@
 
 #include <iostream>
 #include <cstring>
-#include <csignal>
 #include <zconf.h>
 #include <fcntl.h>
 #include <random>
+#include <errno.h>
 
 Wolf& Wolf::GetInstance()
 {

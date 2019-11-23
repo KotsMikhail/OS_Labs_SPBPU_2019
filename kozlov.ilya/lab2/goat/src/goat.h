@@ -2,7 +2,7 @@
 #define GOAT_H
 
 #include <conn.h>
-#include <bits/types/siginfo_t.h>
+#include <csignal>
 #include <semaphore.h>
 #include <memory.h>
 

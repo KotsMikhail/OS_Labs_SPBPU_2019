@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <cstring>
 #include <mqueue.h>
+#include <error.h>
 
 #define QUEUE_NAME "/LAB2_QUEUE"
 #define QUEUE_MAXMSG  1 /* Maximum number of messages. */

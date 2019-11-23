@@ -1,7 +1,7 @@
 #ifndef WOLF_H
 #define WOLF_H
 
-#include <bits/types/siginfo_t.h>
+#include <csignal>
 #include <semaphore.h>
 #include <conn.h>
 #include <memory.h>
