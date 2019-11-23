@@ -33,5 +33,4 @@ private:
     conn_t _connection;
 };
 
-
 #endif // USER_CLIENT_H
