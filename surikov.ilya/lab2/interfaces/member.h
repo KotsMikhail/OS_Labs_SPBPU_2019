@@ -2,7 +2,6 @@
 #define OS_LABS_SPBPU_2019_MEMBER_H
 
 #include <conn.h>
-#include <bits/types/siginfo_t.h>
 #include <semaphore.h>
 #include <message.h>
 

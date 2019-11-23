@@ -1,7 +1,7 @@
 #ifndef OS_LABS_SPBPU_2019_WOLF_H
 #define OS_LABS_SPBPU_2019_WOLF_H
 
-#include <bits/types/siginfo_t.h>
+#include <csignal>
 #include <member.h>
 #include "client_info.h"
 
