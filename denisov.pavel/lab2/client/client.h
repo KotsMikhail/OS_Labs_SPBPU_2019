@@ -3,7 +3,7 @@
 
 #include <conn.h>
 #include <semaphore.h>
-#include <bits/types/siginfo_t.h>
+#include <csignal>
 
 class Client
 {

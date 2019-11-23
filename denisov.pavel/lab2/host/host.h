@@ -3,7 +3,7 @@
 
 #include <conn.h>
 #include <message.h>
-#include <bits/types/siginfo_t.h>
+#include <csignal>
 #include <semaphore.h>
 
 class Host
