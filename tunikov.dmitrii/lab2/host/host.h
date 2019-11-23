@@ -5,7 +5,8 @@
 #ifndef LAB2_HOST_H
 #define LAB2_HOST_H
 #include <semaphore.h>
-#include "../../interfaces/conn.h"
+#include <csignal>
+#include <conn.h>
 #include "client_data.h"
 
 class Host
@@ -13,16 +14,17 @@ class Host
 public:
     static Host& getInstance();
     void run();
+    bool openConnection();
 private:
-    sem_t* semaphore;
+    sem_t* semaphore{};
     Conn connection;
-    static ClientData client_data;
+    ClientData client_data;
     static void signalHandler(int sig, siginfo_t* info, void* ptr);
-
-    std::string getRandDate();
+    bool checkTimeout(Memory& mem);
+    static Date getRandDate();
+    static void close(int exit_code);
 
     Host();
-    ~Host();
 };
 
 #endif //LAB2_HOST_H

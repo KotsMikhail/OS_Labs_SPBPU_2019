@@ -7,15 +7,17 @@
 
 #include <cstdlib>
 
+#include "memory.h"
 #define SEM_NAME "host_client_sem"
+#define TIMEOUT 5
 
 class Conn
 {
 public:
-    Conn(size_t id , bool create);
-    bool Read(void *buf, size_t count);
-    bool Write(void *buf, size_t count);
-    ~Conn();
+    bool Open(size_t id, bool create);
+    bool Read(void *buf, size_t count = sizeof(Memory));
+    bool Write(void *buf, size_t count = sizeof(Memory));
+    bool Close();
 };
 
 #endif //LAB2_CONN_H
