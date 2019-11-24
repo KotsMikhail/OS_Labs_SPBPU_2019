@@ -132,11 +132,14 @@ void Host::run()
 #ifndef host_sock
             connection.Write(&msg);
 #else
-            if (!connection.Open(getpid(), true))
+            if (!connection.Write(&msg) && errno == EPIPE)
             {
-                close();
+                if (!connection.Open(getpid(), true))
+                {
+                    close();
+                }
+                connection.Write(&msg);
             }
-            connection.Write(&msg);
 #endif
 
             //post client semathore

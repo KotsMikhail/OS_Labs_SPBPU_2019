@@ -27,6 +27,7 @@ bool Conn::Open(size_t id, bool create)
     if (create)
     {
         std::cout << "Creating connection with id = " << id << std::endl;
+        unlink(FIFO_FILE_NAME);
     }
     else
     {
