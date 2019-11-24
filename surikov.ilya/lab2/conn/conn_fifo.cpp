@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <message.h>
+#include <cerrno>
 
 #define FIFO_NAME "/tmp/lab2_fifo"
 

@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include "../utils/utils.h"
 #include <unistd.h>
+#include <cerrno>
 
 
 void Wolf::Start()

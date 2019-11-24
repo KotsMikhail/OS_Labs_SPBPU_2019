@@ -7,6 +7,7 @@
 #include <cstring>
 #include <string>
 #include <mqueue.h>
+#include <cerrno>
 
 #define QUEUE_NAME "/LAB2_QUEUE"
 #define QUEUE_MAXMSG 1
