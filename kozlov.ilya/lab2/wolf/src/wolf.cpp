@@ -61,7 +61,10 @@ void Wolf::Start()
     {
       std::cout << "Waiting for client..." << std::endl;
       sem_wait(semaphore_client);
-      pause();
+      while (!client_info.attached)
+      {
+        pause();
+      }
       std::cout << "Wolf current number: " << current_number << std::endl;
       msg = Message(Status::ALIVE, current_number);
       connection.Write(&msg, sizeof(msg));
