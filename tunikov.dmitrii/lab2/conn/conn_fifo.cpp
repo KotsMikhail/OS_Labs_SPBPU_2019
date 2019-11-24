@@ -3,7 +3,7 @@
 //
 
 #include <conn.h>
-#include <memory.h>
+#include <message.h>
 
 #include <iostream>
 #include <sys/types.h>
@@ -13,15 +13,15 @@
 #include <sys/stat.h>
 #include <zconf.h>
 
-#define FIFO_FILE_NAME "/tmp/fifo_pipe"
+static const char* FIFO_FILE_NAME = "/tmp/fifo_pipe";
 
-int fd;
-bool owner;
+static int fd;
+static bool g_is_host;
 
 bool Conn::Open(size_t id, bool create)
 {
     bool res = false;
-    owner = create;
+    g_is_host = create;
     int fifoflg = 0777;
 
     if (create)
@@ -33,7 +33,7 @@ bool Conn::Open(size_t id, bool create)
         std::cout << "Getting connection with id = " << id << std::endl;
     }
 
-    if (owner && mkfifo(FIFO_FILE_NAME, fifoflg) == -1)
+    if (g_is_host && mkfifo(FIFO_FILE_NAME, fifoflg) == -1)
     {
         std::cout << "ERROR: mkfifo failed, error = " << strerror(errno) << std::endl;
     }
@@ -46,7 +46,7 @@ bool Conn::Open(size_t id, bool create)
 
 bool Conn::Read(void* buf, size_t count)
 {
-    Memory shm_buf;
+    Message shm_buf;
     bool success = false;
     if ((fd = open(FIFO_FILE_NAME, O_RDONLY)) == -1)
     {
@@ -60,7 +60,7 @@ bool Conn::Read(void* buf, size_t count)
         }
         else
         {
-            *((Memory*) buf) = shm_buf;
+            *((Message*) buf) = shm_buf;
             success = true;
         }
         close(fd);
@@ -93,7 +93,7 @@ bool Conn::Write(void* buf, size_t count)
 bool Conn::Close()
 {
     bool res = true;
-    if (owner && remove(FIFO_FILE_NAME) < 0)
+    if (g_is_host && remove(FIFO_FILE_NAME) < 0)
     {
         res = false;
     }

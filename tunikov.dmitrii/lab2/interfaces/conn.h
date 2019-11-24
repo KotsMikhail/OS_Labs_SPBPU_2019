@@ -6,17 +6,18 @@
 #define LAB2_CONN_H
 
 #include <cstdlib>
+#include "message.h"
 
-#include "memory.h"
-#define SEM_NAME "host_client_sem"
-#define TIMEOUT 5
+#define CLIENT_SEM_NAME "client_sem"
+#define HOST_SEM_NAME "host_sem"
+const int TIMEOUT = 5;
 
 class Conn
 {
 public:
     bool Open(size_t id, bool create);
-    bool Read(void *buf, size_t count = sizeof(Memory));
-    bool Write(void *buf, size_t count = sizeof(Memory));
+    bool Read(void *buf, size_t count = sizeof(Message));
+    bool Write(void *buf, size_t count = sizeof(Message));
     bool Close();
 };
 

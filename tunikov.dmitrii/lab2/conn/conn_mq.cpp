@@ -3,29 +3,28 @@
 //
 
 #include <conn.h>
-#include <memory.h>
+#include <message.h>
 #include <iostream>
-#include <sys/shm.h>
 #include <fcntl.h>
 #include <cstring>
 #include <mqueue.h>
 
-#define QUEUE_NAME "/LAB2_QUEUE"
-#define QUEUE_MAXMSG  1 /* Maximum number of messages. */
-#define QUEUE_MSGSIZE sizeof(Memory) /* Length of Memory. */
-#define QUEUE_ATTR_INITIALIZER ((struct mq_attr){0, QUEUE_MAXMSG, QUEUE_MSGSIZE, 0, {0}})
+const static char* QUEUE_NAME = "/mq_queue";
+const static int QUEUE_MAXMSG = 1;
+const static int QUEUE_MSGSIZE = sizeof(Message);
+const static mq_attr QUEUE_ATTR_INITIALIZER = ((struct mq_attr){0, QUEUE_MAXMSG, QUEUE_MSGSIZE, 0, {0}});
 
 mqd_t mqid;
-bool owner;
+bool g_is_host;
 
 bool Conn::Open(size_t id, bool create)
 {
     bool res = false;
-    owner = create;
+    g_is_host = create;
     int mqflg = O_RDWR;
     int mqperm = 0666;
 
-    if (owner)
+    if (g_is_host)
     {
         std::cout << "Creating connection with id = " << id << std::endl;
         mqflg |= O_CREAT;
@@ -52,7 +51,7 @@ bool Conn::Open(size_t id, bool create)
 
 bool Conn::Read(void* buf, size_t count)
 {
-    Memory mq_buf(HOST);
+    Message mq_buf;
     bool success = true;
     if (mq_receive(mqid, (char *)&mq_buf, QUEUE_MSGSIZE, nullptr) == -1)
     {
@@ -61,7 +60,7 @@ bool Conn::Read(void* buf, size_t count)
     }
     else
     {
-        *((Memory*) buf) = mq_buf;
+        *((Message*) buf) = mq_buf;
     }
     return success;
 }
@@ -88,11 +87,11 @@ bool Conn::Close()
     bool res = false;
     if (mq_close(mqid) == 0)
     {
-        if (!owner)
+        if (!g_is_host)
         {
             res = true;
         }
-        else if (owner && mq_unlink(QUEUE_NAME) == 0)
+        else if (g_is_host && mq_unlink(QUEUE_NAME) == 0)
         {
             res = true;
         }

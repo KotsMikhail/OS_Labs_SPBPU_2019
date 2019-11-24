@@ -9,6 +9,8 @@
 #include <csignal>
 #include <cstring>
 #include <semaphore.h>
+#include <random>
+#include <fcntl.h>
 
 int main(int argc, char* argv[])
 {
@@ -41,137 +43,104 @@ Client& Client::getInstance(int host_pid)
     return inst;
 }
 
-Client::Client(int host_pid) : skiped_messages(0)
+Client::Client(int host_pid_)
 {
-    std::cout << "host Wolf pid is: " << host_pid << std::endl;
-    this->host_pid = host_pid;
-    need_post = false;
-    signal(SIGTERM, signalHandler);
+    host_pid = host_pid_;
+    struct sigaction act;
+    memset(&act, 0, sizeof(act));
+    act.sa_sigaction = signalHandler;
+    act.sa_flags = SA_SIGINFO;
+    sigaction(SIGTERM, &act, nullptr);
 }
 
 bool Client::openConnection()
 {
-    bool res = false;
-    if (connection.Open(host_pid, false))
+    std::cout << "opening connection for client with pid: " << getpid() << std::endl;
+
+    client_semaphore = sem_open(CLIENT_SEM_NAME, O_CREAT, 0666, 1);
+    if (client_semaphore == SEM_FAILED)
     {
-        semaphore = sem_open(SEM_NAME, 0);
-        if (semaphore == SEM_FAILED)
-        {
-            std::cout << "ERROR: sem_open failed with error = " << strerror(errno) << std::endl;
-        }
-        else
-        {
-            res = true;
-            std::cout << "pid of created Client is: " << getpid() << std::endl;
-            kill(host_pid, SIGUSR1);
-        }
+        std::cout << "ERROR: can't open client semathore" << std::endl;
+        return false;
     }
-    return res;
+    host_semaphore = sem_open(HOST_SEM_NAME, O_CREAT, 0666, 1);
+    if (host_semaphore == SEM_FAILED)
+    {
+        std::cout << "ERROR: can't open host semathore" << std::endl;
+        sem_unlink(CLIENT_SEM_NAME);
+        return false;
+    }
+
+    if (!connection.Open(getpid(), false))
+    {
+        std::cout << "ERROR: fail open connection" << std::endl;
+        sem_unlink(CLIENT_SEM_NAME);
+        sem_unlink(HOST_SEM_NAME);
+        return false;
+    }
+
+    kill(host_pid, SIGUSR1);
+    std::cout << "client created with pid " << getpid() << std::endl;
+    return true;
 }
 
 void Client::close(int signum)
 {
     kill(host_pid, SIGUSR2);
     std::cout << "client terminating.." << std::endl;
-    if (errno != 0)
+    if (host_semaphore != SEM_FAILED)
     {
-        std::cout << "Failing, ERROR = " << strerror(errno) << std::endl;
+        if (sem_close(host_semaphore) == -1)
+        {
+            std::cout << "ERROR: fail to close host sem" << std::endl;
+            exit(errno);
+        }
     }
+    if (client_semaphore != SEM_FAILED)
+    {
+        if (sem_close(client_semaphore) == -1)
+        {
+            std::cout << "ERROR: fail to close client sem" << std::endl;
+            exit(errno);
+        }
+    }
+
     if (connection.Close())
     {
-        if (need_post && sem_post(semaphore) == -1)
-        {
-            exit(errno);
-        }
-        if (sem_close(semaphore) == -1)
-        {
-            exit(errno);
-        }
         exit(signum);
     }
+
     std::cout << "ERROR while terminating: " << strerror(errno) << std::endl;
     exit(errno);
 }
 
 void Client::run()
 {
+    Message msg;
     while (true)
     {
-#ifndef client_fifo
-        struct timespec ts{};
-        clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += TIMEOUT;
-        if (sem_timedwait(semaphore, &ts) == -1)
+        sem_wait(client_semaphore);
+        if (connection.Read(&msg))
         {
-            close(errno);
+            std::cout << "client read date: " << msg.m_date.m_day << "." << msg.m_date.m_month << "." << msg.m_date.m_year << std::endl;
+            msg.m_temperature = getRandTemp(msg.m_date);
+            std::cout << "temp value: " << msg.m_temperature << std::endl;
+            connection.Write(&msg);
         }
-        need_post = true;
-#endif
-        Memory mem;
-        if (connection.Read(&mem))
-        {
-            if (checkTimeout(mem))
-            {
-                continue;
-            }
-            std::cout << "---------------------------------------" << std::endl;
-            mem.m_date.printDate("client read date");
-            int temp = getRandTemp(mem.m_date);
-            std::cout << "client send message: " << temp << std::endl;
-            mem.m_owner = CLIENT;
-            mem.m_temperature = temp;
-            connection.Write((void *)&mem, sizeof(mem));
-        }
-#ifndef client_fifo
-        sem_post(semaphore);
-        need_post = false;
-#endif
+        sem_post(host_semaphore);
     }
 }
 
 int Client::getRandTemp(const Date& date)
 {
-    srand(std::hash<std::string>{}(std::to_string(date.m_day) + std::to_string(date.m_day) + std::to_string(date.m_day)));
-    return rand();
+    unsigned long str_date = std::stoul(std::to_string(date.m_day) + std::to_string(date.m_month) + std::to_string(date.m_year));
+    std::minstd_rand mt(str_date);
+    std::uniform_int_distribution<int> temp(-100, 100);
+    return temp(mt);
 }
 
-void Client::signalHandler(int signum)
+void Client::signalHandler(int sig, siginfo_t *info, void *context)
 {
-    Client& client = Client::getInstance(30);
-    client.close(signum);
-}
-
-bool Client::checkTimeout(Memory &mem) {
-    static struct timespec skip_start;
-    bool res = false;
-    if (mem.m_owner == CLIENT)
-    {
-        res = true;
-        skiped_messages++;
-        if (skiped_messages == 1)
-        {
-            clock_gettime(CLOCK_REALTIME, &skip_start);
-        }
-        else
-        {
-            struct timespec cur_time{};
-            clock_gettime(CLOCK_REALTIME, &cur_time);
-            if (cur_time.tv_sec - skip_start.tv_sec >= TIMEOUT)
-            {
-                close(SIGTERM);
-            }
-        }
-#ifdef client_mq
-        connection.Write(&mem, sizeof(mem));
-#endif
-#ifndef client_fifo
-        sem_post(semaphore);
-        need_post = false;
-#endif
-    }
-    else
-    {
-        skiped_messages = 0;
-    }
-    return res;
+    Client& client = Client::getInstance(0);
+    client.close(sig);
 }

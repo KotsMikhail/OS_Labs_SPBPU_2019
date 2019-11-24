@@ -7,6 +7,8 @@
 
 #include <semaphore.h>
 #include <conn.h>
+#include <csignal>
+
 class Client
 {
 public:
@@ -15,16 +17,14 @@ public:
     bool openConnection();
 private:
     Conn connection;
-    int skiped_messages;
-    sem_t* semaphore{};
+    sem_t* host_semaphore{};
+    sem_t* client_semaphore{};
     int host_pid;
-    bool need_post;
 
     explicit Client(int host_pid);
     void close(int signum);
-    bool checkTimeout(Memory& msg);
     static int getRandTemp(const Date& date);
-    static void signalHandler(int signum);
+    static void signalHandler(int sig, siginfo_t *info, void *context);
 };
 
 
