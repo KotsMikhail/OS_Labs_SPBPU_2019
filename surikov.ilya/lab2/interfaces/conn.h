@@ -10,6 +10,10 @@ public:
   bool Read(void *buf, size_t count);
   bool Write(void *buf, size_t count);
   bool Close();
+
+private:
+    bool _owner;
+    int _id;
 };
 
 #endif // CONN_H

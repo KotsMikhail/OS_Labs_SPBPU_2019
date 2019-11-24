@@ -6,14 +6,12 @@
 #include <sys/shm.h>
 #include <cstring>
 
-int shm_id;
-bool owner;
 
 bool Conn::Open(size_t id, bool create)
 {
     bool success = false;
     //only host can create connection
-    owner = create;
+    _owner = create;
     //granting read and write access
     int shm_flg = 0666;
     if (create)
@@ -26,8 +24,8 @@ bool Conn::Open(size_t id, bool create)
     {
         std::cout << "Getting connection with id: " << id << std::endl;
     }
-    shm_id = shmget(id, sizeof(Message), shm_flg);
-    if (shm_id < 0)
+    _id = shmget(id, sizeof(Message), shm_flg);
+    if (_id < 0)
     {
         std::cout << "ERROR: shmget failed" << std::endl;
     }
@@ -41,7 +39,7 @@ bool Conn::Open(size_t id, bool create)
 bool Conn::Read(void* buf, size_t count)
 {
     bool success = true;
-    void* shm_return = shmat(shm_id, nullptr, 0);
+    void* shm_return = shmat(_id, nullptr, 0);
     if (shm_return == (void*)-1) {
         std::cout << "ERROR: shmat can't attach to memory";
         success = false;
@@ -60,7 +58,7 @@ bool Conn::Read(void* buf, size_t count)
 bool Conn::Write(void* buf, size_t count)
 {
     bool success = true;
-    void* shm_return = shmat(shm_id, nullptr, 0);
+    void* shm_return = shmat(_id, nullptr, 0);
     if (shm_return == (void*)-1) {
         std::cout << "ERROR: shmat can't attach to memory";
         success = false;
@@ -79,7 +77,7 @@ bool Conn::Write(void* buf, size_t count)
 bool Conn::Close()
 {
     bool success = true;
-    if (owner && shmctl(shm_id, IPC_RMID, nullptr) < 0)
+    if (_owner && shmctl(_id, IPC_RMID, nullptr) < 0)
     {
         success = false;
     }

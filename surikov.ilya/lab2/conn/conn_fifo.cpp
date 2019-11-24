@@ -8,15 +8,13 @@
 #include <message.h>
 #include <cerrno>
 
-#define FIFO_NAME "/tmp/lab2_fifo"
+const char* FIFO_NAME = "/tmp/lab2_fifo";
 
-int fd_fifo;
-bool owner;
 
 bool Conn::Open(size_t id, bool create)
 {
     bool res = false;
-    owner = create;
+    _owner = create;
     int fifo_flg = 0777;
     if (create)
     {
@@ -24,7 +22,7 @@ bool Conn::Open(size_t id, bool create)
     } else {
         std::cout << "Getting connection with id: " << id << std::endl;
     }
-    if (owner && mkfifo(FIFO_NAME, fifo_flg) == -1)
+    if (_owner && mkfifo(FIFO_NAME, fifo_flg) == -1)
     {
         std::cout << "ERROR: mkfifo failed, error: " << strerror(errno) << std::endl;
     } else {
@@ -37,18 +35,18 @@ bool Conn::Read(void* buf, size_t count)
 {
     Message fifo_buf;
     bool success = false;
-    if ((fd_fifo = open(FIFO_NAME, O_RDONLY)) == -1)
+    if ((_id = open(FIFO_NAME, O_RDONLY)) == -1)
     {
         std::cout << "ERROR: can't open for reading, error:" << strerror(errno) << std::endl;
     } else {
-        if (read(fd_fifo, &fifo_buf, count) == -1)
+        if (read(_id, &fifo_buf, count) == -1)
         {
             std::cout << "ERROR: reading failed with error: " << strerror(errno) << std::endl;
         } else {
             memcpy(buf, (void*)&fifo_buf, count);
             success = true;
         }
-        close(fd_fifo);
+        close(_id);
     }
     return success;
 }
@@ -56,17 +54,17 @@ bool Conn::Read(void* buf, size_t count)
 bool Conn::Write(void* buf, size_t count)
 {
     bool success = false;
-    if ((fd_fifo = open(FIFO_NAME, O_WRONLY)) == -1)
+    if ((_id = open(FIFO_NAME, O_WRONLY)) == -1)
     {
         std::cout << "ERROR: can't open pipe for writing, error: " << strerror(errno) << std::endl;
     } else {
-        if (write(fd_fifo, buf, count) == -1)
+        if (write(_id, buf, count) == -1)
         {
             std::cout << "ERROR: writing failed with error: " << strerror(errno) << std::endl;
         } else {
             success = true;
         }
-        close(fd_fifo);
+        close(_id);
     }
     return success;
 }
@@ -74,7 +72,7 @@ bool Conn::Write(void* buf, size_t count)
 bool Conn::Close()
 {
     bool res = true;
-    if (owner && remove(FIFO_NAME) < 0)
+    if (_owner && remove(FIFO_NAME) < 0)
     {
         res = false;
     }
