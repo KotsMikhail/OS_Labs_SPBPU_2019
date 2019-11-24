@@ -16,10 +16,13 @@ const int TIMEOUT = 5;
 class Conn
 {
 public:
+    Conn(bool is_host) : is_host(is_host) {}
     bool Open(size_t id, bool create);
     bool Read(void *buf, size_t count = sizeof(Message));
     bool Write(void *buf, size_t count = sizeof(Message));
     bool Close();
+private:
+    bool is_host;
 };
 
 #endif //LAB2_CONN_H

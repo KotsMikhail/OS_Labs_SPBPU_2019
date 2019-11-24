@@ -40,6 +40,7 @@ bool Host::openConnection()
         return false;
     }
 
+    connection = Conn(true);
     if (!connection.Open(getpid(), true))
     {
         std::cout << "ERROR: fail open connection" << std::endl;

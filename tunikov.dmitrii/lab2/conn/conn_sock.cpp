@@ -11,7 +11,6 @@
 #include <unistd.h>
 
 const char * const g_sock_path = "/tmp/sock_server";
-const int g_max_messages_count = 1;
 
 static const std::string g_host_name = "host";
 static const std::string g_client_name = "client";
@@ -84,7 +83,7 @@ bool Conn::Open(size_t id, bool create)
         std::cout << "listener binded" << std::endl;
 
         std::cout << "listening starting" << std::endl;
-        if (listen(g_listener, g_max_messages_count) == -1)
+        if (listen(g_listener, 1) == -1)
         {
             printErrMsg(g_host_name, "fail to listen");
             close(g_listener);

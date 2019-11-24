@@ -11,9 +11,6 @@
 #include <mqueue.h>
 
 const static char* QUEUE_NAME = "/mq_queue";
-const static int QUEUE_MAXMSG = 1;
-const static int QUEUE_MSGSIZE = sizeof(Message);
-const static mq_attr QUEUE_ATTR_INITIALIZER = ((struct mq_attr){0, QUEUE_MAXMSG, QUEUE_MSGSIZE, 0, {0}});
 
 mqd_t mqid;
 bool g_is_host;
@@ -29,7 +26,7 @@ bool Conn::Open(size_t id, bool create)
     {
         std::cout << "Creating connection with id = " << id << std::endl;
         mqflg |= O_CREAT;
-        struct mq_attr attr = QUEUE_ATTR_INITIALIZER;
+        struct mq_attr attr = ((struct mq_attr){0, 1, sizeof(Message), 0, {0}});
         mqid = mq_open(QUEUE_NAME, mqflg, mqperm, &attr);
     }
     else
@@ -54,7 +51,7 @@ bool Conn::Read(void* buf, size_t count)
 {
     Message mq_buf;
     bool success = true;
-    if (mq_receive(mqid, (char *)&mq_buf, QUEUE_MSGSIZE, nullptr) == -1)
+    if (mq_receive(mqid, (char *)&mq_buf, sizeof(Message), nullptr) == -1)
     {
         std::cout << "ERROR: mq_recieve failed, errno = " << strerror(errno) << std::endl;
         success = false;
@@ -69,7 +66,7 @@ bool Conn::Read(void* buf, size_t count)
 bool Conn::Write(void* buf, size_t count)
 {
     bool res = false;
-    if (count <= QUEUE_MSGSIZE)
+    if (count <= sizeof(Message))
     {
         if (mq_send(mqid, (char*)buf, count, 0) == -1)
         {
