@@ -61,7 +61,7 @@ bool Conn::Open(size_t id, bool create)
     if (create)
     {
         if (unlink(g_sock_path) == -1)
-            std::cout << "kek";
+            std::cout << "WARNING: can't unlink " << g_sock_path << std::endl;
 
         // create listener socket
         std::cout << "create listener starting" << std::endl;
