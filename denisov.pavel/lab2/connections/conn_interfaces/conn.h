@@ -2,6 +2,7 @@
 #define __CONN_H__
 
 #include <cstdlib>
+#include <errno.h>
 
 #include "message.h"
 
