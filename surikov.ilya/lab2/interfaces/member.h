@@ -5,8 +5,8 @@
 #include <semaphore.h>
 #include <message.h>
 
-#define SEMAPHORE_NAME "LAB2_SURIKOV"
-#define TIMEOUT 5
+const char* SEMAPHORE_NAME = "LAB2_SURIKOV"
+const int TIMEOUT = 5;
 
 class Member
 {

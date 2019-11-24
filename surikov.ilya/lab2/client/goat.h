@@ -19,6 +19,7 @@ private:
     bool CheckSelfMessage(Message& msg);
 
     Goat(int host_pid);
+    Goat(const Goat& goat);
     static void SignalHandler(int signum);
 };
 

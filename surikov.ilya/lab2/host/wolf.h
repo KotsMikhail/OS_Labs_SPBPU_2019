@@ -23,6 +23,7 @@ private:
     bool CheckSelfMessage(Message& msg);
 
     Wolf();
+    Wolf(const Wolf& wolf);
     Message Step(Message& msg);
     static void SignalHandler(int signum, siginfo_t* info, void *ptr);
 };
