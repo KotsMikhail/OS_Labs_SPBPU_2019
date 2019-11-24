@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include "message.h"
+#include <errno.h>
 
 #define CLIENT_SEM_NAME "client_sem"
 #define HOST_SEM_NAME "host_sem"

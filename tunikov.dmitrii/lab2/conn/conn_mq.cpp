@@ -5,6 +5,7 @@
 #include <conn.h>
 #include <message.h>
 #include <iostream>
+#include <errno.h>
 #include <fcntl.h>
 #include <cstring>
 #include <mqueue.h>

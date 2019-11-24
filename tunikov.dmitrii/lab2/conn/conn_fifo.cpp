@@ -4,7 +4,7 @@
 
 #include <conn.h>
 #include <message.h>
-
+#include <errno.h>
 #include <iostream>
 #include <sys/types.h>
 #include <sys/ipc.h>
