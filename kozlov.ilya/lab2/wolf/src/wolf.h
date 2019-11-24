@@ -13,9 +13,11 @@ public:
   static Wolf& GetInstance();
   bool OpenConnection();
   void Start();
+  Wolf(Wolf&) = delete;
 private:
   Conn connection;
-  sem_t* semaphore;
+  sem_t* semaphore_host;
+  sem_t* semaphore_client;
   ClientInfo client_info;
   int current_number;
 

@@ -2,6 +2,7 @@
 #define CONN_H
 
 #include <cstdlib>
+#include <string>
 
 #include "memory.h"
 
@@ -12,6 +13,11 @@ public:
   bool Read(void *buf, size_t count = sizeof(Message));
   bool Write(void *buf, size_t count = sizeof(Message));
   bool Close();
+
+private:
+  int id;
+  bool owner;
+  std::string name;
 };
 
 #endif // CONN_H

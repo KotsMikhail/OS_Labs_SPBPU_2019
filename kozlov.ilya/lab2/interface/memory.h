@@ -1,20 +1,20 @@
-#ifndef MEMORY_H
-#define MEMORY_H
+#ifndef GLOBAL_MEMORY_H
+#define GLOBAL_MEMORY_H
 
 #include "status.h"
 
-#define SEM_NAME "LAB2"
-#define TIMEOUT 5
+#define SEM_HOST_NAME "LAB2_HOST"
+#define SEM_CLIENT_NAME "LAB2_CLIENT"
+const int TIMEOUT = 5;
 
 struct Message
 {
-  Owner owner;
   Status status;
   int number;
 
-  Message(Owner ow = WOLF, Status st = ALIVE, int num = 0) : owner(ow), status(st), number(num)
+  Message(Status st = Status::ALIVE, int num = 0) : status(st), number(num)
   {
   }
 };
 
-#endif // MEMORY_H
+#endif // GLOBAL_MEMORY_H

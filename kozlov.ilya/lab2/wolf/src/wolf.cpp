@@ -29,8 +29,9 @@ bool Wolf::OpenConnection()
   bool res = false;
   if (connection.Open(getpid(), true))
   {
-    semaphore = sem_open(SEM_NAME, O_CREAT, 0666, 1);
-    if (semaphore == SEM_FAILED)
+    semaphore_host = sem_open(SEM_HOST_NAME, O_CREAT, 0666, 0);
+    semaphore_client = sem_open(SEM_CLIENT_NAME, O_CREAT, 0666, 0);
+    if (semaphore_host == SEM_FAILED || semaphore_client == SEM_FAILED)
     {
       std::cout << "ERROR: sem_open failed with error = " << strerror(errno) << std::endl;
     }
@@ -45,127 +46,78 @@ bool Wolf::OpenConnection()
 
 void Wolf::Start()
 {
-#ifndef host_fifo
   struct timespec ts;
-  sem_wait(semaphore);
-#endif
   std::cout << "Waiting for client..." << std::endl;
   pause();
   std::cout << "Client attached!" << std::endl;
   current_number = GetRand();
   std::cout << "Wolf current number: " << current_number << std::endl;
-  Message msg(WOLF, ALIVE, current_number);
+  Message msg(Status::ALIVE, current_number);
   connection.Write(&msg, sizeof(msg));
-#ifndef host_fifo
-  sem_post(semaphore);
-#endif
+  sem_post(semaphore_client);
   while (true)
   {
     if (!client_info.attached)
     {
       std::cout << "Waiting for client..." << std::endl;
-#ifndef host_fifo
-      sem_wait(semaphore);
-#endif
+      sem_wait(semaphore_client);
       pause();
       std::cout << "Wolf current number: " << current_number << std::endl;
-      msg = Message(WOLF, ALIVE, current_number);
+      msg = Message(Status::ALIVE, current_number);
       connection.Write(&msg, sizeof(msg));
-#ifndef host_fifo
-      sem_post(semaphore);
-#endif
+      sem_post(semaphore_client);
     }
     else
     {
-#ifndef host_fifo
       clock_gettime(CLOCK_REALTIME, &ts);
       ts.tv_sec += TIMEOUT;
-      if (sem_timedwait(semaphore, &ts) == -1)
+      if (sem_timedwait(semaphore_host, &ts) == -1)
       {
+        if (errno == EINTR)
+        {
+          continue;
+        }
         kill(client_info.pid, SIGTERM);
         client_info = ClientInfo(0);
         continue;
       }
-#endif
       if (connection.Read(&msg))
       {
-        if (CheckIfSelfMessage(msg))
-        {
-          continue;
-        }
         std::cout << "---------------- ROUND ----------------" << std::endl;
         std::cout << "Wolf current number: " << current_number << std::endl;
         std::cout << "Goat current number: " << msg.number << std::endl;
-        std::cout << "Goat current status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
+        std::cout << "Goat current status: " << ((msg.status == Status::ALIVE) ? "alive" : "dead") << std::endl;
         msg = CountStep(msg);
         if (client_info.attached)
         {
           std::cout << "Wolf new number: " << current_number << std::endl;
-          std::cout << "Goat new status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
+          std::cout << "Goat new status: " << ((msg.status == Status::ALIVE) ? "alive" : "dead") << std::endl;
           connection.Write(&msg, sizeof(msg));
         }
       }
-#ifndef host_fifo
-      sem_post(semaphore);
-#endif
+      sem_post(semaphore_client);
     }
   }
-}
-
-bool Wolf::CheckIfSelfMessage(Message& msg)
-{
-  static struct timespec skip_start;
-  bool res = false;
-  if (msg.owner == WOLF)
-  {
-    res = true;
-    client_info.skipped_msgs++;
-    if (client_info.skipped_msgs == 1)
-    {
-      clock_gettime(CLOCK_REALTIME, &skip_start);
-    }
-    else
-    {
-      struct timespec cur_time;
-      clock_gettime(CLOCK_REALTIME, &cur_time);
-      if (cur_time.tv_sec - skip_start.tv_sec >= TIMEOUT)
-      {
-        kill(client_info.pid, SIGTERM);
-        client_info = ClientInfo(0);
-      }
-    }
-#ifdef host_mq
-    connection.Write(&msg, sizeof(msg));
-#endif
-#ifndef host_fifo
-    sem_post(semaphore);
-#endif
-  }
-  else
-  {
-    client_info.skipped_msgs = 0;
-  }
-  return res;
 }
 
 Message Wolf::CountStep(Message& answer)
 {
   Message msg;
-  if ((answer.status == ALIVE && abs(current_number - answer.number) <= 70) ||
-      (answer.status == DEAD && abs(current_number - answer.number) <= 20))
+  if ((answer.status == Status::ALIVE && abs(current_number - answer.number) <= 70) ||
+      (answer.status == Status::DEAD && abs(current_number - answer.number) <= 20))
   {
     client_info.deads_num = 0;
   }
   else
   {
-    msg.status = DEAD;
+    msg.status = Status::DEAD;
     client_info.deads_num++;
     if (client_info.deads_num == 2)
     {
       kill(client_info.pid, SIGTERM);
       client_info = ClientInfo(0);
       // This is new data for new clients
-      msg.status = ALIVE;
+      msg.status = Status::ALIVE;
     }
   }
   current_number = GetRand();
@@ -184,11 +136,17 @@ int Wolf::GetRand()
 void Wolf::Terminate(int signum)
 {
   std::cout << "Wolf::Terminate()" << std::endl;
-  if (connection.Close() && sem_unlink(SEM_NAME) == 0)
+  semaphore_client = SEM_FAILED;
+  semaphore_host = SEM_FAILED;
+  if (sem_unlink(SEM_HOST_NAME) == -1 || sem_unlink(SEM_CLIENT_NAME) == -1)
   {
-    exit(signum);
+    exit(errno);
   }
-  exit(errno);
+  if (!connection.Close())
+  {
+    exit(errno);
+  }
+  exit(signum);
 }
 
 void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr)

@@ -10,15 +10,11 @@
 #include <zconf.h>
 #include <error.h>
 
-#define FIFO_NAME "/tmp/lab2_pipe"
-
-int fd;
-bool owner;
-
 bool Conn::Open(size_t id, bool create)
 {
   bool res = false;
   owner = create;
+  name = "/tmp/lab2_pipe";
   int fifoflg = 0777;
   if (create)
   {
@@ -28,13 +24,21 @@ bool Conn::Open(size_t id, bool create)
   {
     std::cout << "Getting connection with id = " << id << std::endl;
   }
-  if (owner && mkfifo(FIFO_NAME, fifoflg) == -1)
+  if (owner && mkfifo(name.c_str(), fifoflg) == -1)
   {
     std::cout << "ERROR: mkfifo failed, error = " << strerror(errno) << std::endl;
   }
   else
   {
-    res = true;
+    this->id = open(name.c_str(), O_RDWR);
+    if (this->id == -1)
+    {
+      std::cout << "ERROR: open failed, error = " << strerror(errno) << std::endl;
+    }
+    else
+    {
+      res = true;
+    }
   }
   return res;
 }
@@ -43,22 +47,14 @@ bool Conn::Read(void* buf, size_t count)
 {
   Message shm_buf;
   bool success = false;
-  if ((fd = open(FIFO_NAME, O_RDONLY)) == -1)
+  if (read(id, &shm_buf, count) == -1)
   {
-    std::cout << "ERROR: can't open pipe for reading, error = " << strerror(errno) << std::endl;
+    std::cout << "ERROR: reading failed with error = " << strerror(errno) << std::endl;
   }
   else
   {
-    if (read(fd, &shm_buf, count) == -1)
-    {
-      std::cout << "ERROR: reading failed with error = " << strerror(errno) << std::endl;
-    }
-    else
-    {
-      *((Message*) buf) = shm_buf;
-      success = true;
-    }
-    close(fd);
+    *((Message*) buf) = shm_buf;
+    success = true;
   }
   return success;
 }
@@ -66,21 +62,13 @@ bool Conn::Read(void* buf, size_t count)
 bool Conn::Write(void* buf, size_t count)
 {
   bool success = false;
-  if ((fd = open(FIFO_NAME, O_WRONLY)) == -1)
+  if (write(id, buf, count) == -1)
   {
-    std::cout << "ERROR: can't open pipe for writing, error = " << strerror(errno) << std::endl;
+    std::cout << "ERROR: writing failed with error = " << strerror(errno) << std::endl;
   }
   else
   {
-    if (write(fd, buf, count) == -1)
-    {
-      std::cout << "ERROR: writing failed with error = " << strerror(errno) << std::endl;
-    }
-    else
-    {
-      success = true;
-    }
-    close(fd);
+    success = true;
   }
   return success;
 }
@@ -88,7 +76,7 @@ bool Conn::Write(void* buf, size_t count)
 bool Conn::Close()
 {
   bool res = true;
-  if (owner && remove(FIFO_NAME) < 0)
+  if (close(id) < 0 || (owner && remove(name.c_str()) < 0))
   {
     res = false;
   }

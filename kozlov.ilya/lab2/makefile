@@ -13,7 +13,7 @@ LIB_DIR=$(HOME)/conn
 LDFLAGS=-L$(LIB_DIR) -lpthread -Wl,-rpath=$(LIB_DIR)
 LIB_SOURCES=$(shell cd $(LIB_DIR) && ls conn_*.cpp)
 POSTFIX=$(LIB_SOURCES:conn%.cpp=%)
-CFLAGS=-c -Wall -Werror -fPIC $(INCLUDEDIRS)
+CFLAGS=-c -std=c++11 -Wall -Werror -fPIC $(INCLUDEDIRS)
 
 all: make_libs make_clients
 	echo "Make hosts"

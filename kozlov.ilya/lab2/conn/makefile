@@ -4,7 +4,7 @@ LDFLAGS=-shared -lrt
 SOURCES=$(shell ls conn_*.cpp)
 OBJECTS=$(SOURCES:.cpp=.o)
 NAMES=$(OBJECTS:%.o=%)
-CFLAGS=-c -Wall -Werror -fPIC $(INCLUDEDIRS)
+CFLAGS=-c -std=c++11 -Wall -Werror -fPIC $(INCLUDEDIRS)
 
 all: make_libs
 
