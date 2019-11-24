@@ -2,6 +2,7 @@
 #define CONN_H
 
 #include <cstdlib>
+#include <string>
 
 class Conn
 {
@@ -14,6 +15,7 @@ public:
 private:
     bool _owner;
     int _id;
+    std::string _name;
 };
 
 #endif // CONN_H

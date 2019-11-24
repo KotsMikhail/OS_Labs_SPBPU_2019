@@ -5,8 +5,6 @@
 #include <member.h>
 #include "client_info.h"
 
-#define RAND_LIMIT_WOLF 100
-
 class Wolf: public Member
 {
 public:
@@ -18,12 +16,12 @@ public:
 private:
     ClientInfo client_info;
     int curr_num;
+    const int RAND_LIMIT = 100;
 
     void Terminate(int signum);
-    bool CheckSelfMessage(Message& msg);
 
     Wolf();
-    Wolf(const Wolf& wolf);
+    Wolf(const Wolf&);
     Message Step(Message& msg);
     static void SignalHandler(int signum, siginfo_t* info, void *ptr);
 };

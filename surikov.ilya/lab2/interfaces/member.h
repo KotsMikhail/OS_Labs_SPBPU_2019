@@ -13,11 +13,11 @@ public:
 
 private:
     virtual void Terminate(int signum) = 0;
-    virtual bool CheckSelfMessage(Message& msg) = 0;
 
 protected:
     Conn connection;
-    sem_t* semaphore;
+    sem_t* semaphore_host;
+    sem_t* semaphore_client;
     Member() {}
     ~Member() {}
 };

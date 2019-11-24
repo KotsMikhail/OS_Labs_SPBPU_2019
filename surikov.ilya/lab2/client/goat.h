@@ -3,9 +3,6 @@
 
 #include <member.h>
 
-#define RAND_LIMIT_ALIVE 100
-#define RAND_LIMIT_DEAD 50
-
 class Goat: public Member
 {
 public:
@@ -14,12 +11,13 @@ public:
     static Goat& GetInstance(int host_pid);
 private:
     int host_pid;
+    const int RAND_LIMIT_ALIVE = 100;
+    const int RAND_LIMIT_DEAD = 50;
 
     void Terminate(int signum);
-    bool CheckSelfMessage(Message& msg);
 
     Goat(int host_pid);
-    Goat(const Goat& goat);
+    Goat(const Goat&);
     static void SignalHandler(int signum);
 };
 

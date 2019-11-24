@@ -14,25 +14,19 @@ void Goat::Start()
     Message msg;
     while (true)
     {
-#ifndef client_fifo
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += TIMEOUT;
-        if (sem_timedwait(semaphore, &ts) == -1)
+        if (sem_timedwait(semaphore_client, &ts) == -1)
         {
             std::cout << "Timeout: terminating..." << std::endl;
             Terminate(errno);
         }
-#endif
         if (connection.Read(&msg, sizeof(Message)))
         {
-            if (CheckSelfMessage(msg))
-            {
-                continue;
-            }
             std::cout << "--------------------------------" << std::endl;
-            std::cout << "Status: " << ((msg.status == ALIVE) ? "alive" : "dead") << std::endl;
+            std::cout << "Status: " << ((msg.status == Status::ALIVE) ? "alive" : "dead") << std::endl;
             std::cout << "Wolf number: " << msg.number << std::endl;
-            if (msg.status == ALIVE)
+            if (msg.status == Status::ALIVE)
             {
                 msg.number = GetRand(RAND_LIMIT_ALIVE);
             }
@@ -41,12 +35,9 @@ void Goat::Start()
                 msg.number = GetRand(RAND_LIMIT_DEAD);
             }
             std::cout << "Goat number: " << msg.number << std::endl;
-            msg.owner = GOAT;
             connection.Write(&msg, sizeof(msg));
         }
-#ifndef client_fifo
-        sem_post(semaphore);
-#endif
+        sem_post(semaphore_host);
     }
 }
 
@@ -55,8 +46,9 @@ bool Goat::OpenConnection()
     bool res = false;
     if (connection.Open(host_pid, false))
     {
-        semaphore = sem_open(SEMAPHORE_NAME, 0);
-        if (semaphore == SEM_FAILED)
+        semaphore_host = sem_open(SEMAPHORE_HOST_NAME, 0);
+        semaphore_client = sem_open(SEMAPHORE_CLIENT_NAME, 0);
+        if (semaphore_host == SEM_FAILED || semaphore_client == SEM_FAILED)
         {
             std::cout << "ERROR: sem_open failed with error: " << strerror(errno) << std::endl;
         }
@@ -80,49 +72,17 @@ void Goat::Terminate(int signum)
 {
     kill(host_pid, SIGUSR2);
     std::cout << "Goat::Terminate()" << std::endl;
-    if (connection.Close() && sem_post(semaphore) == 0 && sem_close(semaphore) == 0)
+    if (sem_close(semaphore_client) == -1 || sem_close(semaphore_host) == -1)
     {
-        exit(signum);
+        std::cout << "Failed: " << strerror(errno) << std::endl;
+        exit(errno);
     }
-    std::cout << "ERROR: " << strerror(errno) << std::endl;
-    exit(errno);
-}
-
-bool Goat::CheckSelfMessage(Message &msg)
-{
-    static int count_skipped_msgs = 0;
-    static struct timespec skip_start;
-    bool res = false;
-    if (msg.owner == GOAT)
+    if (!connection.Close())
     {
-        res = true;
-        count_skipped_msgs++;
-        if (count_skipped_msgs == 1)
-        {
-            clock_gettime(CLOCK_REALTIME, &skip_start);
-        }
-        else
-        {
-            struct timespec cur_time;
-            clock_gettime(CLOCK_REALTIME, &cur_time);
-            if (cur_time.tv_sec - skip_start.tv_sec >= TIMEOUT)
-            {
-                std::cout << "Goat::CheckSelfMessage: Timeout. Terminating..." << std::endl;
-                Terminate(SIGTERM);
-            }
-        }
-#ifdef client_mq
-        connection.Write(&msg, sizeof(msg));
-#endif
-#ifndef client_fifo
-        sem_post(semaphore);
-#endif
+        std::cout << "Failed: " << strerror(errno) << std::endl;
+        exit(errno);
     }
-    else
-    {
-        count_skipped_msgs = 0;
-    }
-    return res;
+    exit(signum);
 }
 
 Goat::Goat(int pid)
