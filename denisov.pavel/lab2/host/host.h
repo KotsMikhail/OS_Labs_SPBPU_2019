@@ -54,6 +54,7 @@ private:
     int curNumber;
 
     Host ();
+
     void SendFirstMessageToClient ();
     Message CountClientStatus     (const Message& curClientMessage);
 };

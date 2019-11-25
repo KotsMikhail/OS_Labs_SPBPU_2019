@@ -9,6 +9,7 @@
 const char * const HOST_SEM_NAME   = "/lab2_host_sem";
 const char * const CLIENT_SEM_NAME = "/lab2_client_sem";
 
+
 class Conn
 {
 public:

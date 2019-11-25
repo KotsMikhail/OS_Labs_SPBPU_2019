@@ -21,8 +21,8 @@ public:
 
 private:
     static const int MIN_RAND       = 1;
-    static const int ALIVE_MAX_RAND = 100;
     static const int DEAD_MAX_RAND  = 50;
+    static const int ALIVE_MAX_RAND = 100;
 
     pid_t hostPid;
     Conn conn;

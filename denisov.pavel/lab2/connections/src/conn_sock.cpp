@@ -14,10 +14,9 @@ const int MAXMSGSNUM = 1;
 
 Conn::Conn ()
 {
-    additionalArgs = new (std::nothrow) int[2]();
     // additionalArgs[0] - listener
     // additionalArgs[1] - sock
-
+    additionalArgs = new (std::nothrow) int[2]();
     wasCreated = false;
 }
 
