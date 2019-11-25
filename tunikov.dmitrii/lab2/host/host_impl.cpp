@@ -15,13 +15,13 @@ bool Host::openConnection()
 {
     std::cout << "opening connection for host with pid: " << getpid() << std::endl;
 
-    client_semaphore = sem_open(constants::client_sem_name, O_CREAT, 0666, 1);
+    client_semaphore = sem_open(constants::client_sem_name, O_CREAT, 0666, 0);
     if (client_semaphore == SEM_FAILED)
     {
         std::cout << "ERROR: can't open client semathore" << std::endl;
         return false;
     }
-    host_semaphore = sem_open(constants::host_sem_name, O_CREAT, 0666, 1);
+    host_semaphore = sem_open(constants::host_sem_name, O_CREAT, 0666, 0);
     if (host_semaphore == SEM_FAILED)
     {
         std::cout << "ERROR: can't open host semathore" << std::endl;
