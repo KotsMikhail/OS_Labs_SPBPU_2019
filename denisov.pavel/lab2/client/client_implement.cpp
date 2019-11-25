@@ -18,7 +18,7 @@ static void ClientSignalHandler (int signalNum)
 
 Client& Client::GetInstance (pid_t pid)
 {
-    static Client inst = Client(pid);
+    static Client inst(pid);
     return inst;
 }
 

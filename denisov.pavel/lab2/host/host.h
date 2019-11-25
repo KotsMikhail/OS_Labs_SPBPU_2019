@@ -9,6 +9,9 @@
 class Host
 {
 public:
+    Host (const Host&) = delete;
+    Host & operator=(const Host&) = delete;
+
     static Host& GetInstance ();
 
     void  Start            ();
@@ -44,9 +47,6 @@ private:
     };
 
 private:
-    const int MIN_RAND = 1;
-    const int MAX_RAND = 100;
-
     Client curClientInfo;
     Conn   conn;
     sem_t *semaphore_host, *semaphore_client;
@@ -54,7 +54,6 @@ private:
     int curNumber;
 
     Host ();
-    int  GetNewRandomNumber       ();
     void SendFirstMessageToClient ();
     Message CountClientStatus     (const Message& curClientMessage);
 };

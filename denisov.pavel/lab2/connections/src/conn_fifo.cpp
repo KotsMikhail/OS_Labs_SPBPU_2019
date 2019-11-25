@@ -1,9 +1,7 @@
 #include <iostream>
-#include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <cstring>
 #include <fcntl.h>
 
 #include <conn.h>
@@ -11,10 +9,20 @@
 
 const char * const FIFO_PATH = "/tmp/lab2_fifo_path";
 
-bool wasCreated = false, isHost;
-int fifoID;
 
-bool Conn::Open(size_t id, bool create)
+Conn::Conn ()
+{
+    additionalArgs = NULL;
+    wasCreated = false;
+}
+
+
+Conn::~Conn ()
+{
+}
+
+
+bool Conn::Open (size_t id, bool create)
 {
     if (wasCreated) {
         return true;
@@ -31,8 +39,8 @@ bool Conn::Open(size_t id, bool create)
         std::cout << "Getting fifo..." << std::endl;
     }
 
-    fifoID = open(FIFO_PATH, O_RDWR);
-    if (fifoID == -1) {
+    descID = open(FIFO_PATH, O_RDWR);
+    if (descID == -1) {
         std::cout << "[ERROR]: Failed to open fifo, error: " << strerror(errno) << std::endl;
         if (isHost) {
             unlink(FIFO_PATH);
@@ -40,16 +48,17 @@ bool Conn::Open(size_t id, bool create)
 
         return false;
     }
+    std::cout << "Fifo succeeded." << std::endl;
 
     wasCreated = true;
     return true;
 }
 
 
-bool Conn::Close()
+bool Conn::Close ()
 {
     if (wasCreated) {
-        if (close(fifoID) == -1) {
+        if (close(descID) == -1) {
             std::cout << "[ERROR]: Connection closing failed, error: " << strerror(errno) << std::endl;
             return false;
         }
@@ -65,9 +74,9 @@ bool Conn::Close()
 }
 
 
-bool Conn::Read(void *buf, size_t count)
+bool Conn::Read (void *buf, size_t count)
 {
-    if (read(fifoID, buf, count) == -1) {
+    if (read(descID, buf, count) == -1) {
         std::cout << "[ERROR]: failed to read message, error: " << strerror(errno) << std::endl;
         return false;
     }
@@ -76,9 +85,9 @@ bool Conn::Read(void *buf, size_t count)
 }
 
 
-bool Conn::Write(void *buf, size_t count)
+bool Conn::Write (void *buf, size_t count)
 {
-    if (write(fifoID, buf, count) == -1) {
+    if (write(descID, buf, count) == -1) {
         std::cout << "[ERROR]: failed to send message, error: " << strerror(errno) << std::endl;
         return false;
     }

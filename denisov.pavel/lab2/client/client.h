@@ -8,6 +8,10 @@
 class Client
 {
 public:
+    Client () = delete;
+    Client (const Client&) = delete;
+    Client & operator=(const Client&) = delete;
+
     static Client& GetInstance (pid_t pid);
 
     void Start     ();
@@ -16,18 +20,18 @@ public:
     bool OpenConnection ();
 
 private:
-    const int MIN_RAND       = 1;
-    const int ALIVE_MAX_RAND = 100;
-    const int DEAD_MAX_RAND  = 50;
+    static const int MIN_RAND       = 1;
+    static const int ALIVE_MAX_RAND = 100;
+    static const int DEAD_MAX_RAND  = 50;
 
     pid_t hostPid;
     Conn conn;
 
     sem_t *semaphore_host, *semaphore_client;
 
-    Client (pid_t pid);
+    explicit Client (pid_t pid);
 
-    int  GetNewRandomNumber (int rightRandEdge);
+    static int GetNewRandomNumber (int rightRandEdge);
 };
 
 #endif //__CLIENT_H__

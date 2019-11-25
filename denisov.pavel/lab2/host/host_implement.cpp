@@ -1,7 +1,6 @@
 #include <iostream>
 #include <csignal>
 #include <fcntl.h>
-#include <random>
 #include <unistd.h>
 #include <cstring>
 
@@ -37,6 +36,11 @@ static void HostSignalHandler (int signalNum, siginfo_t* info, void* ptr)
                 host.DeattachClient();
             }
             host.Terminate();
+            break;
+
+        case SIGINT:
+            host.Terminate();
+            break;
     }
 }
 
@@ -55,6 +59,7 @@ Host::Host ()
     memset(&sigact, 0, sizeof(sigact));
     sigact.sa_sigaction = HostSignalHandler;
     sigact.sa_flags = SA_SIGINFO;
+    sigaction(SIGINT, &sigact, NULL);
     sigaction(SIGTERM, &sigact, NULL);
     sigaction(SIGUSR2, &sigact, NULL);
     sigaction(SIGUSR1, &sigact, NULL);
@@ -113,8 +118,8 @@ bool Host::OpenConnection ()
 
 void Host::SendFirstMessageToClient ()
 {
-    curNumber = GetNewRandomNumber();
-    std::cout << "Host number: " << curNumber << std::endl;
+    std::cout << "Input new host number: ";
+    std::cin >> curNumber;
     Message msg(MSG_OWNER::HOST, MSG_STATUS::ALIVE, curNumber);
     conn.Write((void *) &msg);
 }
@@ -133,6 +138,9 @@ void Host::Start ()
     // Job loop
     while (true) {
         if (!IsClientAttached()) {
+            // this 'sleep' guaranteed that client will send SIGUSR2 before 'pause()'
+            sleep(1);
+
             // Waiting while client will be attached - signal SIGUSR1
             std::cout << "Wait client..." << std::endl;
             pause();
@@ -160,6 +168,9 @@ void Host::Start ()
             if (IsClientAttached()) {
                 std::cout << "Client's status after round: " << ((msg.status == MSG_STATUS::ALIVE) ? "ALIVE" : "DEAD") << std::endl;
                 conn.Write((void *) &msg);
+
+                std::cout << "Input new number: ";
+                std::cin >> curNumber;
             }
 
             std::cout << "------------HOST-----------" << std::endl;
@@ -187,18 +198,9 @@ Message Host::CountClientStatus (const Message& curClientMessage)
         }
     }
 
-    curNumber = GetNewRandomNumber();
     return hostMsg;
 }
 
-
-int Host::GetNewRandomNumber ()
-{
-    std::random_device randDev;
-    std::mt19937 mt(randDev());
-    std::uniform_int_distribution<int> uniformDist(MIN_RAND, MAX_RAND);
-    return uniformDist(mt);
-}
 
 void Host::Terminate ()
 {

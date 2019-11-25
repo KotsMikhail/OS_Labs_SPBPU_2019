@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     }
 
     std::cout << "Starting client..." << std::endl;
-    Client cl = Client::GetInstance(hostPid);
+    Client& cl = Client::GetInstance(hostPid);
     if (cl.OpenConnection()) {
         cl.Start();
     }
