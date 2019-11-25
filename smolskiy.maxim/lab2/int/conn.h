@@ -1,7 +1,7 @@
 #ifndef CONN_H
 #define CONN_H
 
-#include <sys/types.h>
+#include <unistd.h>
 
 #include <string>
 

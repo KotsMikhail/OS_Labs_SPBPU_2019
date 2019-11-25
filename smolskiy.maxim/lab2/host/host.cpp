@@ -7,24 +7,15 @@
 #include <semaphore.h>
 
 #include <cstdlib>
-#include <ctime>
 #include <string>
-#include <iostream>
 
-#include "conn.h"
+#include "wolf.h"
+#include "little_goat.h"
 
 using namespace std;
 
-const string SHM_NAME_1 = "shm1";
-const string SHM_NAME_2 = "shm2";
-
-const int ALIVE_MAX = 100;
-const int DEAD_MAX = 50;
-
-const int ALIVE_MAX_DIFF = 70;
-const int DEAD_MAX_DIFF = 20;
-
-const int DEAD_MOVE_MAX = 2;
+const string SHM_HOST = "shm_host";
+const string SHM_CLIENT = "shm_client";
 
 const int TIMEOUT = 5;
 
@@ -102,8 +93,8 @@ int main()
     openlog("game", LOG_CONS | LOG_PID, LOG_USER);
     syslog(LOG_INFO, "Host run.");
 
-    int shm1 = OpenShm(SHM_NAME_1), shm2 = OpenShm(SHM_NAME_2);
-    sem_t *sem1 = InitSem(shm1), *sem2 = InitSem(shm2);
+    int shmHost = OpenShm(SHM_HOST), shmClient = OpenShm(SHM_CLIENT);
+    sem_t *semHost = InitSem(shmHost), *semClient = InitSem(shmClient);
 
     pid_t pid = fork();
 
@@ -114,112 +105,42 @@ int main()
     {
         syslog(LOG_INFO, "Host run client.");
 
-        Conn conn(pid, true);
+        Wolf &wolf = Wolf::GetInstance();
 
-        WaitSemTimed(sem2);
+        bool isGameOver = false;
 
-        printf("Game on\n");
-
-        int cntMove = 1, cntDeadMove = 0, isAlive = 1;
-
-        while (true)
+        while (!isGameOver)
         {
-            printf("Move: %d\n", cntMove);
+            WaitSemTimed(semHost);
 
-            int wolfNum;
-            printf("Wolf: ");
-            scanf("%d", &wolfNum);
+            isGameOver = wolf.CatchLittleGoat();
 
-            PostSem(sem1);
-            WaitSemTimed(sem2);
-
-            int littleGoatNum = conn.Read();
-            int diff = abs(wolfNum - littleGoatNum);
-
-            if (isAlive)
-            {
-                printf("Alive little goat: %d\n", littleGoatNum);
-
-                if (diff <= ALIVE_MAX_DIFF)
-                    printf("Diff = |%d - %d| = %d <= %d => Alive\n", wolfNum, littleGoatNum, diff, ALIVE_MAX_DIFF);
-                else
-                {
-                    isAlive = 0;
-                    printf("Diff = |%d - %d| = %d  > %d => Dead\n", wolfNum, littleGoatNum, diff, ALIVE_MAX_DIFF);
-                }
-            }
-            else
-            {
-                printf("Dead little goat: %d\n", littleGoatNum);
-
-                if (diff <= DEAD_MAX_DIFF)
-                {
-                    printf("Diff = |%d - %d| = %d <= %d => Alive\n", wolfNum, littleGoatNum, diff, DEAD_MAX_DIFF);
-                    isAlive = 1;
-                    cntDeadMove = 0;
-                }
-                else
-                {
-                    printf("Diff = |%d - %d| = %d > %d => Dead\n", wolfNum, littleGoatNum, diff, DEAD_MAX_DIFF);
-                    cntDeadMove++;
-
-                    if (cntDeadMove == 2)
-                    {
-                        printf("2 dead little goat's moves in a row => Game over\n");
-
-                        DestroySem(sem1);
-                        DestroySem(sem2);
-
-                        UnlinkShm(SHM_NAME_1);
-                        UnlinkShm(SHM_NAME_2);
-
-                        kill(pid, SIGTERM);
-                        syslog(LOG_INFO, "Client completed.");
-
-                        break;
-                    }
-                }
-            }
-
-            conn.Write(isAlive);
-
-            cntMove++;
-
-            PostSem(sem1);
-            WaitSemTimed(sem2);
+            PostSem(semClient);
         }
+
+        DestroySem(semHost);
+        DestroySem(semClient);
+
+        UnlinkShm(SHM_HOST);
+        UnlinkShm(SHM_CLIENT);
+
+        kill(pid, SIGTERM);
+        syslog(LOG_INFO, "Client completed.");
     }
     else
     {
         sleep(1);
 
-        Conn conn(getppid(), false);
-
-        PostSem(sem2);
-
-        srand(time(nullptr));
-
-        int isAlive = 1;
+        LittleGoat &littleGoat = LittleGoat::GetInstance();
 
         while (true)
         {
-            WaitSem(sem1);
+            littleGoat.MakeMove();
 
-            int littleGoatNum;
-
-            if (isAlive)
-                littleGoatNum = rand() % ALIVE_MAX + 1;
-            else
-                littleGoatNum = rand() % DEAD_MAX + 1;
-
-            conn.Write(littleGoatNum);
-
-            PostSem(sem2);
-            WaitSemTimed(sem1);
+            PostSem(semHost);
+            WaitSem(semClient);
             
-            isAlive = conn.Read();
-
-            PostSem(sem2);
+            littleGoat.FindOutStatus();
         }
     }
 }
