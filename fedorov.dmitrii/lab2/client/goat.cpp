@@ -112,10 +112,7 @@ bool Goat::SemWait (sem_t* sem) {
       return true;
    }
 
-   struct timespec ts;
-   clock_gettime(CLOCK_REALTIME, &ts);
-   ts.tv_sec += g_timeout;
-   if (sem_timedwait(sem, &ts) == -1) {
+   if (sem_wait(sem) == -1) {
       perror("sem_timewait() ");
       return false;
    }

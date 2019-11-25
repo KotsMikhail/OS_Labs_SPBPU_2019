@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "conn_fifo.h"
+#include "conn.h"
 
 #include "../support/message_types.h"
 
@@ -19,7 +19,7 @@ std::string Conn::GetType ()
 Conn::Conn (int host_pid_, bool create) {
    owner = create;
    host_pid = host_pid_;
-   filename = std::string("/tmp/" + std::to_string(host_pid)).c_str();
+   std::string filename = std::string("/tmp/" + std::to_string(host_pid)).c_str();
    
    unlink(filename.c_str());
    
@@ -38,6 +38,8 @@ Conn::Conn (int host_pid_, bool create) {
 
 
 Conn::~Conn() {
+   std::string filename = std::string("/tmp/" + std::to_string(host_pid)).c_str();
+
    if (owner) {
       remove(filename.c_str());
       std::cout << "Connection: close fifo with name - " << filename << std::endl;
@@ -47,18 +49,19 @@ Conn::~Conn() {
 
 bool Conn::Read (void* buf, size_t count) {
    Msg msg;
-   int fifo_desc;
-   
-   if ((fifo_desc = open(filename.c_str(), O_RDONLY)) == -1) {
+   int desc;   
+   std::string filename = std::string("/tmp/" + std::to_string(host_pid)).c_str();
+
+   if ((desc = open(filename.c_str(), O_RDONLY)) == -1) {
       perror("open() ");
       return false;
    } else {
-      if (read(fifo_desc, &msg, count) == -1) {
+      if (read(desc, &msg, count) == -1) {
          perror("read() ");
-         close(fifo_desc);
+         close(desc);
       } else {
          *((Msg*)buf) = msg;
-         close(fifo_desc);
+         close(desc);
          return true;
       }
    }
@@ -67,17 +70,18 @@ bool Conn::Read (void* buf, size_t count) {
 
 
 bool Conn::Write (void* buf, size_t count) {
-   int fifo_desc;
-   
-   if ((fifo_desc = open(filename.c_str(), O_WRONLY)) == -1) {
+   int desc;   
+   std::string filename = std::string("/tmp/" + std::to_string(host_pid)).c_str();
+
+   if ((desc = open(filename.c_str(), O_WRONLY)) == -1) {
       perror("open() ");
       return false;
    } else {
-      if (write(fifo_desc, buf, count) == -1) {
+      if (write(desc, buf, count) == -1) {
          perror("write() ");
-         close(fifo_desc);
+         close(desc);
       } else {
-         close(fifo_desc);
+         close(desc);
          return true;
       }
    }

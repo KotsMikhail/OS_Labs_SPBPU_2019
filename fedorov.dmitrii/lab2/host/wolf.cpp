@@ -9,6 +9,7 @@
 #include <random>
 #include <time.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include "../connections/conn.h"
 #include "../support/message_types.h"
@@ -78,7 +79,7 @@ void Wolf::StartGame () {
          }
 
          std::cout << "___________GAME_STEP___________" << std::endl;
-         int cur_val = GenerateValue();
+         int cur_val = GetValue();
          std::cout << "Wolf: num is " << cur_val << std::endl;
   
          int goat_val = msg.data;
@@ -126,12 +127,15 @@ void Wolf::StartGame () {
 }
 
 
-int Wolf::GenerateValue ()
+int Wolf::GetValue ()
 {
-   std::random_device rd;
-   std::mt19937 gen(rd());
-   std::uniform_int_distribution<int> dis(1, 100);
-   return dis(gen);
+   int res;
+   std::cout << "Enter number from 1 to 100" << std::endl;
+
+   do {
+      std::cin >> res;
+   } while (res < 1 || res > 100);
+   return res;
 }
 
 

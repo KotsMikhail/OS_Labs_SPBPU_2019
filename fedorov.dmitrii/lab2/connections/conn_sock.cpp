@@ -3,7 +3,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "conn_sock.h"
+#include "conn.h"
 
 #include "../support/message_types.h"
 
@@ -16,8 +16,9 @@ std::string Conn::GetType ()
 Conn::Conn (int host_pid_, bool create) { 
    owner = create;
    host_pid = host_pid_;
-   socketpath = std::string("/tmp/" + std::to_string(host_pid));
- 
+   std::string socketpath = std::string("/tmp/" + std::to_string(host_pid));
+   internal_data = new (std::nothrow) int[2]; 
+
    struct sockaddr_un serv_addr;
    serv_addr.sun_family = AF_UNIX;
    strcpy(serv_addr.sun_path, socketpath.c_str());
@@ -25,46 +26,46 @@ Conn::Conn (int host_pid_, bool create) {
 
    if (create) {
       std::cout << "Create listener" << std::endl;
-      hsocket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-      if (hsocket == -1) {
+      internal_data[0] = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+      if (internal_data[0] == -1) {
          perror("socket() ");
          exit(EXIT_FAILURE);
       }
       
       std::cout << "Bind listener" << std::endl;
-      if (bind(hsocket, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
+      if (bind(internal_data[0], (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
          perror("bind() ");
-         close(hsocket);
+         close(internal_data[0]);
          exit(EXIT_FAILURE);
       }
 
       std::cout << "Listen" << std::endl;
-      if (listen(hsocket, 1) < 0 ) {
+      if (listen(internal_data[0], 1) < 0 ) {
          perror("listen() ");
-         close(hsocket);
+         close(internal_data[0]);
          unlink(socketpath.c_str());
          exit(EXIT_FAILURE);
       }
  
       std::cout << "Accept" << std::endl;
-      csocket = accept(hsocket, NULL, NULL);
-      if (csocket < 0) {
+      internal_data[1] = accept(internal_data[0], NULL, NULL);
+      if (internal_data[1] < 0) {
          perror("accept() ");
-         close(hsocket);
+         close(internal_data[0]);
          unlink(socketpath.c_str());
          exit(EXIT_FAILURE);
       }
    } else {
-      csocket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-      if (csocket < 0) { 
+      internal_data[1] = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+      if (internal_data[1] < 0) { 
          perror("socket() ");
          exit(EXIT_FAILURE);
       }
       std::cout << "Socket created" << std::endl;
   
-      if (connect(csocket,(struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+      if (connect(internal_data[1],(struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
          perror("connect()");
-         close(csocket);
+         close(internal_data[1]);
          exit(EXIT_FAILURE);
       }   
       std::cout << "Socket connected" << std::endl;
@@ -72,18 +73,20 @@ Conn::Conn (int host_pid_, bool create) {
 }
 
 Conn::~Conn() {
+   std::string socketpath = std::string("/tmp/" + std::to_string(host_pid));
+
    if (!owner) {
-      if (close(csocket) < 0) {
+      if (close(internal_data[1]) < 0) {
          perror("close(csocket) ");
          exit(EXIT_FAILURE);
       }
    }
    if (owner) {
-      if (close(csocket) < 0) {
+      if (close(internal_data[1]) < 0) {
          perror("close(csocket) ");
          exit(EXIT_FAILURE);
       }
-      if (close(hsocket) < 0) {
+      if (close(internal_data[0]) < 0) {
          perror("close(hsocket) ");
          exit(EXIT_FAILURE);
       } 
@@ -93,7 +96,7 @@ Conn::~Conn() {
 }
 
 bool Conn::Read (void* buf, size_t count) {
-    int n = recv(csocket, buf, count, 0);
+    int n = recv(internal_data[1], buf, count, 0);
     if (n < 0) { 
        perror("read()");
        return false; 
@@ -102,7 +105,7 @@ bool Conn::Read (void* buf, size_t count) {
 }
 
 bool Conn::Write (void* buf, size_t count) {
-    int n = send(csocket, buf, count, MSG_NOSIGNAL);
+    int n = send(internal_data[1], buf, count, MSG_NOSIGNAL);
     if (n < 0) { 
        perror("write() ");
        return false; 

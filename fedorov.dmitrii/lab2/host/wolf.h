@@ -13,7 +13,7 @@ private:
    Wolf (int host_pid);
    void Terminate ();   
 
-   int GenerateValue ();
+   int GetValue ();
    bool SemWait (sem_t* sem);   
    bool SemSignal (sem_t* sem);   
    

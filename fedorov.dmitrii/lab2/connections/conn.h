@@ -13,4 +13,10 @@ public:
    bool Write (void* buf, size_t count);
 
    static std::string GetType ();
+private:
+   bool owner;
+   int host_pid;
+   int desc;
+   
+   int* internal_data;
 };
