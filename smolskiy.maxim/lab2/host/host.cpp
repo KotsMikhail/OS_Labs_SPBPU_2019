@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <string>
+#include <iostream>
 
 #include "conn.h"
 
@@ -17,7 +18,6 @@ using namespace std;
 const string SHM_NAME_1 = "shm1";
 const string SHM_NAME_2 = "shm2";
 
-const int WOLF_MAX = 100;
 const int ALIVE_MAX = 100;
 const int DEAD_MAX = 50;
 
@@ -69,11 +69,20 @@ void PostSem(sem_t *sem)
 void WaitSemTimed(sem_t *sem)
 {
     struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
+    
+    if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
+        ReportError("Clock_gettime error.");
+    
     ts.tv_sec += TIMEOUT;
 
     if (sem_timedwait(sem, &ts) == -1)
         ReportError("Sem_timedwait error.");
+}
+
+void WaitSem(sem_t *sem)
+{
+    if (sem_wait(sem) == -1)
+        ReportError("Sem_wait error.");
 }
 
 void DestroySem(sem_t *sem)
@@ -109,18 +118,17 @@ int main()
 
         WaitSemTimed(sem2);
 
-        syslog(LOG_INFO, "Game on.");
-
-        srand(time(nullptr));
+        printf("Game on\n");
 
         int cntMove = 1, cntDeadMove = 0, isAlive = 1;
 
         while (true)
         {
-            syslog(LOG_INFO, "Move: %d.", cntMove);
+            printf("Move: %d\n", cntMove);
 
-            int wolfNum = rand() % WOLF_MAX + 1;
-            syslog(LOG_INFO, "Wolf: %d.", wolfNum);
+            int wolfNum;
+            printf("Wolf: ");
+            scanf("%d", &wolfNum);
 
             PostSem(sem1);
             WaitSemTimed(sem2);
@@ -130,30 +138,34 @@ int main()
 
             if (isAlive)
             {
+                printf("Alive little goat: %d\n", littleGoatNum);
+
                 if (diff <= ALIVE_MAX_DIFF)
-                    syslog(LOG_INFO, "Diff = |%d - %d| = %d <= %d => Alive.", wolfNum, littleGoatNum, diff, ALIVE_MAX_DIFF);
+                    printf("Diff = |%d - %d| = %d <= %d => Alive\n", wolfNum, littleGoatNum, diff, ALIVE_MAX_DIFF);
                 else
                 {
                     isAlive = 0;
-                    syslog(LOG_INFO, "Diff = |%d - %d| = %d  > %d => Dead.", wolfNum, littleGoatNum, diff, ALIVE_MAX_DIFF);
+                    printf("Diff = |%d - %d| = %d  > %d => Dead\n", wolfNum, littleGoatNum, diff, ALIVE_MAX_DIFF);
                 }
             }
             else
             {
+                printf("Dead little goat: %d\n", littleGoatNum);
+
                 if (diff <= DEAD_MAX_DIFF)
                 {
-                    syslog(LOG_INFO, "Diff = |%d - %d| = %d <= %d => Alive.", wolfNum, littleGoatNum, diff, DEAD_MAX_DIFF);
+                    printf("Diff = |%d - %d| = %d <= %d => Alive\n", wolfNum, littleGoatNum, diff, DEAD_MAX_DIFF);
                     isAlive = 1;
                     cntDeadMove = 0;
                 }
                 else
                 {
-                    syslog(LOG_INFO, "Diff = |%d - %d| = %d > %d => Dead.", wolfNum, littleGoatNum, diff, DEAD_MAX_DIFF);
+                    printf("Diff = |%d - %d| = %d > %d => Dead\n", wolfNum, littleGoatNum, diff, DEAD_MAX_DIFF);
                     cntDeadMove++;
 
                     if (cntDeadMove == 2)
                     {
-                        syslog(LOG_INFO, "2 dead little goat's moves in a row => Game over.");
+                        printf("2 dead little goat's moves in a row => Game over\n");
 
                         DestroySem(sem1);
                         DestroySem(sem2);
@@ -185,26 +197,20 @@ int main()
 
         PostSem(sem2);
 
-        srand(time(nullptr) + rand());
+        srand(time(nullptr));
 
         int isAlive = 1;
 
         while (true)
         {
-            WaitSemTimed(sem1);
+            WaitSem(sem1);
 
             int littleGoatNum;
 
             if (isAlive)
-            {
                 littleGoatNum = rand() % ALIVE_MAX + 1;
-                syslog(LOG_INFO, "Alive little goat: %d.", littleGoatNum);
-            }
             else
-            {
                 littleGoatNum = rand() % DEAD_MAX + 1;
-                syslog(LOG_INFO, "Dead little goat: %d.", littleGoatNum);
-            }
 
             conn.Write(littleGoatNum);
 

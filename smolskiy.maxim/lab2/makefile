@@ -1,7 +1,7 @@
 all: build_all
 
 define build
-	g++ -std=c++11 -Wall -Werror -I ./int/ -Dhost_$(1) ./host/* ./int/* ./conns/conn_$(1).cpp -o host_$(1) -pthread -lrt;
+	g++ -std=c++11 -Wall -Werror -I ./int/ ./host/* ./int/* ./conns/conn_$(1).cpp -o host_$(1) -pthread -lrt;
 endef
 
 build_all:
