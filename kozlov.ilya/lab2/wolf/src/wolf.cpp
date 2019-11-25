@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <random>
 #include <errno.h>
+#include <const.h>
 
 Wolf& Wolf::GetInstance()
 {
@@ -22,6 +23,7 @@ Wolf::Wolf() : client_info(0)
   sigaction(SIGTERM, &act, nullptr);
   sigaction(SIGUSR1, &act, nullptr);
   sigaction(SIGUSR2, &act, nullptr);
+  sigaction(SIGINT, &act, nullptr);
 }
 
 bool Wolf::OpenConnection()
@@ -29,8 +31,8 @@ bool Wolf::OpenConnection()
   bool res = false;
   if (connection.Open(getpid(), true))
   {
-    semaphore_host = sem_open(SEM_HOST_NAME, O_CREAT, 0666, 0);
-    semaphore_client = sem_open(SEM_CLIENT_NAME, O_CREAT, 0666, 0);
+    semaphore_host = sem_open(Const::SEM_HOST_NAME, O_CREAT, 0666, 0);
+    semaphore_client = sem_open(Const::SEM_CLIENT_NAME, O_CREAT, 0666, 0);
     if (semaphore_host == SEM_FAILED || semaphore_client == SEM_FAILED)
     {
       std::cout << "ERROR: sem_open failed with error = " << strerror(errno) << std::endl;
@@ -47,12 +49,10 @@ bool Wolf::OpenConnection()
 void Wolf::Start()
 {
   struct timespec ts;
+  Message msg;
   std::cout << "Waiting for client..." << std::endl;
   pause();
   std::cout << "Client attached!" << std::endl;
-  GetUserNumber();
-  Message msg(Status::ALIVE, current_number);
-  connection.Write(&msg, sizeof(msg));
   sem_post(semaphore_client);
   while (true)
   {
@@ -64,15 +64,12 @@ void Wolf::Start()
       {
         pause();
       }
-      GetUserNumber();
-      msg = Message(Status::ALIVE, current_number);
-      connection.Write(&msg, sizeof(msg));
       sem_post(semaphore_client);
     }
     else
     {
       clock_gettime(CLOCK_REALTIME, &ts);
-      ts.tv_sec += TIMEOUT;
+      ts.tv_sec += Const::TIMEOUT;
       if (sem_timedwait(semaphore_host, &ts) == -1)
       {
         if (errno == EINTR)
@@ -88,6 +85,7 @@ void Wolf::Start()
         std::cout << "---------------- ROUND ----------------" << std::endl;
         std::cout << "Goat current number: " << msg.number << std::endl;
         std::cout << "Goat current status: " << ((msg.status == Status::ALIVE) ? "alive" : "dead") << std::endl;
+        GetUserNumber();
         msg = CountStep(msg);
         if (client_info.attached)
         {
@@ -102,8 +100,7 @@ void Wolf::Start()
 
 Message Wolf::CountStep(Message& answer)
 {
-  Message msg;
-  bool need_new_number = true;
+  Message msg(Status::ALIVE, current_number);
   if ((answer.status == Status::ALIVE && abs(current_number - answer.number) <= 70) ||
       (answer.status == Status::DEAD && abs(current_number - answer.number) <= 20))
   {
@@ -117,15 +114,7 @@ Message Wolf::CountStep(Message& answer)
     {
       kill(client_info.pid, SIGTERM);
       client_info = ClientInfo(0);
-      need_new_number = false;
-      // This is new data for new clients
-      msg.status = Status::ALIVE;
     }
-  }
-  if (need_new_number)
-  {
-    GetUserNumber();
-    msg.number = current_number;
   }
   return msg;
 }
@@ -133,11 +122,38 @@ Message Wolf::CountStep(Message& answer)
 void Wolf::GetUserNumber()
 {
   std::cout << "Enter wolf new number: ";
-  std::cin >> current_number;
-  while (current_number < 1 || current_number > 100)
+  bool is_set = false;
+  std::string input;
+  while (!is_set)
   {
-    std::cout << "Wrong number, should be 1 <= num <= 100, try again: ";
-    std::cin >> current_number;
+    std::getline(std::cin, input);
+    if (input.find_last_not_of("0123456789") != std::string::npos)
+    {
+      std::cout << "Wrong input format, should be only one integer!" << std::endl;
+    }
+    else
+    {
+      try
+      {
+        current_number = std::stoi(input);
+        if (current_number < 1 || current_number > 100)
+        {
+          std::cout << "Wrong number, should be 1 <= num <= 100!" << std::endl;
+        }
+        else
+        {
+          is_set = true;
+        }
+      }
+      catch (const std::invalid_argument& exp)
+      {
+        std::cout << "Can't get integer from input!" << std::endl;
+      }
+    }
+    if (!is_set)
+    {
+      std::cout << "Try again: ";
+    }
   }
 }
 
@@ -146,7 +162,7 @@ void Wolf::Terminate(int signum)
   std::cout << "Wolf::Terminate()" << std::endl;
   semaphore_client = SEM_FAILED;
   semaphore_host = SEM_FAILED;
-  if (sem_unlink(SEM_HOST_NAME) == -1 || sem_unlink(SEM_CLIENT_NAME) == -1)
+  if (sem_unlink(Const::SEM_HOST_NAME) == -1 || sem_unlink(Const::SEM_CLIENT_NAME) == -1)
   {
     exit(errno);
   }
@@ -175,9 +191,8 @@ void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr)
       }
       break;
     }
-    case SIGUSR2: // client failed
+    case SIGUSR2:
     {
-      std::cout << "Client failed" << std::endl;
       if (instance.client_info.pid == info->si_pid)
       {
         instance.client_info = ClientInfo(0);
@@ -188,7 +203,7 @@ void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr)
     {
       if (instance.client_info.attached)
       {
-        kill(instance.client_info.pid, SIGTERM);
+        kill(instance.client_info.pid, signum);
         instance.client_info = ClientInfo(0);
       }
       instance.Terminate(signum);

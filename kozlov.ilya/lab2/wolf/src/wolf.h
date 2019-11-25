@@ -25,7 +25,6 @@ private:
   Message CountStep(Message& answer);
   void Terminate(int signum);
   void GetUserNumber();
-  bool CheckIfSelfMessage(Message& msg);
   static void SignalHandler(int signum, siginfo_t* info, void *ptr);
   // TODO
 };

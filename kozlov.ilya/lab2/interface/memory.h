@@ -3,10 +3,6 @@
 
 #include "status.h"
 
-#define SEM_HOST_NAME "LAB2_HOST"
-#define SEM_CLIENT_NAME "LAB2_CLIENT"
-const int TIMEOUT = 5;
-
 struct Message
 {
   Status status;

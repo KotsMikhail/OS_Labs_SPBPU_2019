@@ -14,6 +14,8 @@ public:
   bool OpenConnection();
   Goat(Goat&) = delete;
 private:
+  static int const ALIVE_MAX;
+  static int const DEAD_MAX;
   Conn connection;
   sem_t* semaphore_host;
   sem_t* semaphore_client;
@@ -21,7 +23,6 @@ private:
 
   explicit Goat(int host_pid);
   void Terminate(int signum);
-  bool CheckIfSelfMessage(Message& msg);
   static int GetRand(int right);
   static void SignalHandler(int signum);
 };

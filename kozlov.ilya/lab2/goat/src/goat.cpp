@@ -5,6 +5,10 @@
 #include <errno.h>
 #include <random>
 #include <cstring>
+#include <const.h>
+
+const int Goat::ALIVE_MAX = 100;
+const int Goat::DEAD_MAX = 50;
 
 Goat& Goat::GetInstance(int host_pid)
 {
@@ -17,6 +21,7 @@ Goat::Goat(int host_pid)
   std::cout << "host Wolf pid is: " << host_pid << std::endl;
   this->host_pid = host_pid;
   signal(SIGTERM, SignalHandler);
+  signal(SIGINT, SignalHandler);
 }
 
 bool Goat::OpenConnection()
@@ -24,8 +29,8 @@ bool Goat::OpenConnection()
   bool res = false;
   if (connection.Open(host_pid, false))
   {
-    semaphore_host = sem_open(SEM_HOST_NAME, 0);
-    semaphore_client = sem_open(SEM_CLIENT_NAME, 0);
+    semaphore_host = sem_open(Const::SEM_HOST_NAME, 0);
+    semaphore_client = sem_open(Const::SEM_CLIENT_NAME, 0);
     if (semaphore_host == SEM_FAILED || semaphore_client == SEM_FAILED)
     {
       std::cout << "ERROR: sem_open failed with error = " << strerror(errno) << std::endl;
@@ -63,10 +68,20 @@ void Goat::Terminate(int signum)
 
 void Goat::Start()
 {
+  Message msg;
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  ts.tv_sec += Const::TIMEOUT;
+  if (sem_timedwait(semaphore_client, &ts) == -1)
+  {
+   Terminate(errno);
+  }
+  msg.number = GetRand(ALIVE_MAX);
+  connection.Write((void *)&msg, sizeof(msg));
+  sem_post(semaphore_host);
   while (true)
   {
     sem_wait(semaphore_client);
-    Message msg;
     if (connection.Read(&msg))
     {
       std::cout << "---------------- ROUND ----------------" << std::endl;
@@ -74,11 +89,11 @@ void Goat::Start()
       std::cout << "Status: " << ((msg.status == Status::ALIVE) ? "alive" : "dead") << std::endl;
       if (msg.status == Status::ALIVE)
       {
-        msg.number = GetRand(100);
+        msg.number = GetRand(ALIVE_MAX);
       }
       else
       {
-        msg.number = GetRand(50);
+        msg.number = GetRand(DEAD_MAX);
       }
       std::cout << "Goat number: " << msg.number << std::endl;
       connection.Write((void *)&msg, sizeof(msg));
