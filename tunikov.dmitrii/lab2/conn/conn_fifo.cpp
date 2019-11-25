@@ -16,17 +16,19 @@
 
 Conn::Conn() : is_open(false)
 {
-    desc = new (std::nothrow) int (-1);
+    desc_ = new (std::nothrow) int (-1);
     channel_name = "/tmp/fifo_pipe1";
 }
 
 Conn::~Conn()
 {
-    delete desc;
+    delete (int*)desc_;
 }
 
 bool Conn::Open(size_t id, bool create)
 {
+    int* desc = (int*)desc_;
+
     if (desc == nullptr)
         return false;
 
@@ -67,6 +69,7 @@ bool Conn::Read(void* buf, size_t count)
         return false;
     }
 
+    int* desc = (int*)desc_;
     if (read(*desc, buf, count) == -1)
     {
         std::cout << "ERROR: reading failed with error = " << strerror(errno) << std::endl;
@@ -84,6 +87,7 @@ bool Conn::Write(void* buf, size_t count)
         return false;
     }
 
+    int* desc = (int*)desc_;
     if (write(*desc, buf, count) == -1)
     {
         std::cout << "ERROR: writing failed with error = " << strerror(errno) << std::endl;
@@ -95,6 +99,7 @@ bool Conn::Write(void* buf, size_t count)
 
 bool Conn::Close()
 {
+    int* desc = (int*)desc_;
     if (is_open && !close(*desc) && (!is_host || !unlink(channel_name)))
     {
         std::cout << "fifo closed" << std::endl;

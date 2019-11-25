@@ -12,17 +12,18 @@
 
 Conn::Conn() : is_open(false)
 {
-    desc = new (std::nothrow) int (-1);
+    desc_= new (std::nothrow) int (-1);
     channel_name = "/mq_queue";
 }
 
 Conn::~Conn()
 {
-    delete desc;
+    delete (int*)desc_;
 }
 
 bool Conn::Open(size_t id, bool create)
 {
+    int* desc = (int*)desc_;
     if (desc == nullptr)
         return false;
 
@@ -65,6 +66,7 @@ bool Conn::Read(void* buf, size_t count)
         return false;
     }
 
+    int* desc = (int*)desc_;
     Message mq_buf;
     bool success = true;
     if (mq_receive(*desc, (char *)&mq_buf, sizeof(Message), nullptr) == -1)
@@ -90,6 +92,7 @@ bool Conn::Write(void* buf, size_t count)
     bool res = false;
     if (count <= sizeof(Message))
     {
+        int* desc = (int*)desc_;
         if (mq_send(*desc, (char*)buf, count, 0) == -1)
         {
             std::cout << "ERROR: mq_send failed, errno = " << strerror(errno) << std::endl;
@@ -111,6 +114,7 @@ bool Conn::Close()
     }
 
     bool res = false;
+    int* desc = (int*)desc_;
     if (mq_close(*desc) == 0)
     {
         if (!is_host)

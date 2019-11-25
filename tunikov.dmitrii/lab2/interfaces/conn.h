@@ -24,7 +24,7 @@ private:
     bool is_host;
     bool is_open;
     const char* channel_name;
-    int* desc;
+    void* desc_;
 };
 
 #endif //LAB2_CONN_H

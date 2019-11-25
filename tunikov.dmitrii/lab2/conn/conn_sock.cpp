@@ -10,15 +10,21 @@
 #include <message.h>
 #include <unistd.h>
 
+struct SockInfo
+{
+    int listener;
+    int sock;
+};
+
 Conn::Conn() : is_open(false)
 {
     channel_name = "/tmp/sock_server";
-    desc = new (std::nothrow) int[2]();
+    desc_ = new (std::nothrow) SockInfo();
 }
 
 Conn::~Conn()
 {
-    delete[] desc;
+    delete (SockInfo*)desc_;
 }
 
 void printErrMsg(const std::string& who, const std::string& msg)
@@ -28,7 +34,9 @@ void printErrMsg(const std::string& who, const std::string& msg)
 
 bool Conn::Open(size_t id, bool create)
 {
-    if (desc == nullptr)
+    SockInfo* sockInfo = (SockInfo*)desc_;
+
+    if (sockInfo == nullptr)
         return false;
 
     std::cout << "start open socket with address: " << channel_name << std::endl;
@@ -41,11 +49,11 @@ bool Conn::Open(size_t id, bool create)
     {
         if (is_host)
         {
-            desc[1] = accept(desc[0], NULL, NULL);
-            if (desc[1] == -1)
+            sockInfo->sock = accept(sockInfo->listener, NULL, NULL);
+            if (sockInfo->sock == -1)
             {
                 printErrMsg("host", "fail to accept the socket");
-                close(desc[0]);
+                close(sockInfo->listener);
                 unlink(channel_name);
                 return false;
             }
@@ -53,10 +61,10 @@ bool Conn::Open(size_t id, bool create)
         }
         else
         {
-            if (connect(desc[1], (struct sockaddr *)&saddr, SUN_LEN(&saddr)) == -1)
+            if (connect(sockInfo->sock, (struct sockaddr *)&saddr, SUN_LEN(&saddr)) == -1)
             {
                 printErrMsg("client", "fail to connect to socket");
-                close(desc[1]);
+                close(sockInfo->sock);
                 return false;
             }
         }
@@ -71,39 +79,39 @@ bool Conn::Open(size_t id, bool create)
 
         // create listener socket
         std::cout << "create listener starting" << std::endl;
-        desc[0] = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (desc[0] == -1) {
+        sockInfo->listener = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (sockInfo->listener == -1) {
             printErrMsg("host", "fail to create listener");
             return false;
         }
-        std::cout << "desc[0] started" << std::endl;
+        std::cout << "sockInfo->listener started" << std::endl;
 
-        // bind desc[0] socket
+        // bind sockInfo->listener socket
         std::cout << "bind listener starting" << std::endl;
-        if (bind(desc[0], (struct sockaddr *)&saddr, SUN_LEN(&saddr)) < 0)
+        if (bind(sockInfo->listener, (struct sockaddr *)&saddr, SUN_LEN(&saddr)) < 0)
         {
             printErrMsg("host", "fail to bind listener");
-            close(desc[0]);
+            close(sockInfo->listener);
             return false;
         }
         std::cout << "listener binded" << std::endl;
 
         std::cout << "listening starting" << std::endl;
-        if (listen(desc[0], 1) == -1)
+        if (listen(sockInfo->listener, 1) == -1)
         {
             printErrMsg("host", "fail to listen");
-            close(desc[0]);
+            close(sockInfo->listener);
             unlink(channel_name);
             return false;
         }
         std::cout << "listening started" << std::endl;
 
         std::cout << "accept listener starting" << std::endl;
-        desc[1] = accept(desc[0], NULL, NULL);
-        if (desc[1] == -1)
+        sockInfo->sock = accept(sockInfo->listener, NULL, NULL);
+        if (sockInfo->sock == -1)
         {
             printErrMsg("host", "fail to accept listener");
-            close(desc[0]);
+            close(sockInfo->listener);
             unlink(channel_name);
             return false;
         }
@@ -111,18 +119,18 @@ bool Conn::Open(size_t id, bool create)
     }
     else
     {
-        desc[0] = -1;
-        desc[1] = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (desc[1] == -1)
+        sockInfo->listener = -1;
+        sockInfo->sock = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (sockInfo->sock == -1)
         {
             printErrMsg("client", "fail to create socket");
             return false;
         }
 
-        if (connect(desc[1], (struct sockaddr *)&saddr, SUN_LEN(&saddr)) == -1)
+        if (connect(sockInfo->sock, (struct sockaddr *)&saddr, SUN_LEN(&saddr)) == -1)
         {
             printErrMsg("client", "fail to connect socket");
-            close(desc[1]);
+            close(sockInfo->sock);
             return false;
         }
     }
@@ -135,13 +143,18 @@ bool Conn::Open(size_t id, bool create)
 
 bool Conn::Close()
 {
-    if (is_open && close(desc[1]) == 0)
+    SockInfo* sockInfo = (SockInfo*)desc_;
+
+    if (sockInfo == nullptr)
+        return false;
+
+    if (is_open && close(sockInfo->sock) == 0)
     {
-        if (desc[0] != -1)
+        if (sockInfo->listener != -1)
         {
-            if (close(desc[0]) == -1)
+            if (close(sockInfo->listener) == -1)
             {
-                std::cout << "ERROR: Failed to close desc[0], error: " << strerror(errno) << std::endl;
+                std::cout << "ERROR: Failed to close sockInfo->listener, error: " << strerror(errno) << std::endl;
                 return false;
             }
         }
@@ -162,7 +175,10 @@ bool Conn::Close()
 
 bool Conn::Read(void *buf, size_t count)
 {
-    if (recv(desc[1], buf, count, 0) == -1)
+    SockInfo* sockInfo = (SockInfo*)desc_;
+    if (sockInfo == nullptr)
+        return false;
+    if (recv(sockInfo->sock, buf, count, 0) == -1)
     {
         std::cout << "ERROR: failed to read message, error: " << strerror(errno) << std::endl;
         return false;
@@ -174,7 +190,10 @@ bool Conn::Read(void *buf, size_t count)
 
 bool Conn::Write(void *buf, size_t count)
 {
-    if (send(desc[1], buf, count, MSG_NOSIGNAL) == -1)
+    SockInfo* sockInfo = (SockInfo*)desc_;
+    if (sockInfo == nullptr)
+        return false;
+    if (send(sockInfo->sock, buf, count, MSG_NOSIGNAL) == -1)
     {
         std::cout << "ERROR: failed to send message, error: " << strerror(errno) << std::endl;
         return false;
