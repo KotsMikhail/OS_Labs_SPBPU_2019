@@ -26,7 +26,10 @@ void Wolf::Start()
                 pause();
             }
             std::cout << "Client attached!" << std::endl;
-            curr_num = GetRand(RAND_LIMIT);
+            do {
+                std::cout << "Enter the number from 1 to 100" << std::endl;
+                std::cin >> curr_num;
+            } while (curr_num < 1 || curr_num > RAND_LIMIT);
             std::cout << "Wolf current number: " << curr_num << std::endl;
             msg = Message(Status::ALIVE, curr_num);
             connection.Write(&msg, sizeof(msg));
@@ -136,7 +139,10 @@ Message Wolf::Step(Message &ans)
             return msg;
         }
     }
-    curr_num = GetRand(RAND_LIMIT);
+    do {
+        std::cout << "Enter the number from 1 to 100" << std::endl;
+        std::cin >> curr_num;
+    } while (curr_num < 1 || curr_num > RAND_LIMIT);
     msg.number = curr_num;
     return msg;
 }
