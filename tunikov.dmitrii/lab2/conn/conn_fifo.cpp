@@ -13,28 +13,33 @@
 #include <sys/stat.h>
 #include <zconf.h>
 
-static const char* FIFO_FILE_NAME = "/tmp/fifo_pipe";
+bool Conn::is_created;
+int Conn::desc;
+int Conn::listener;
+const char* Conn::channel_name;
 
-static int fd;
-static bool g_is_host;
+Conn::Conn()
+{
+    channel_name = "/tmp/fifo_pipe";
+}
 
 bool Conn::Open(size_t id, bool create)
 {
     bool res = false;
-    g_is_host = create;
+    is_host = create;
     int fifoflg = 0777;
 
     if (create)
     {
         std::cout << "Creating connection with id = " << id << std::endl;
-        unlink(FIFO_FILE_NAME);
+        unlink(channel_name);
     }
     else
     {
         std::cout << "Getting connection with id = " << id << std::endl;
     }
 
-    if (g_is_host && mkfifo(FIFO_FILE_NAME, fifoflg) == -1)
+    if (is_host && mkfifo(channel_name, fifoflg) == -1)
     {
         std::cout << "ERROR: mkfifo failed, error = " << strerror(errno) << std::endl;
     }
@@ -49,13 +54,13 @@ bool Conn::Read(void* buf, size_t count)
 {
     Message shm_buf;
     bool success = false;
-    if ((fd = open(FIFO_FILE_NAME, O_RDONLY)) == -1)
+    if ((desc = open(channel_name, O_RDONLY)) == -1)
     {
         std::cout << "ERROR: can't open fifo pipe for reading, error = " << strerror(errno) << std::endl;
     }
     else
     {
-        if (read(fd, &shm_buf, count) == -1)
+        if (read(desc, &shm_buf, count) == -1)
         {
             std::cout << "ERROR: reading failed with error = " << strerror(errno) << std::endl;
         }
@@ -64,7 +69,7 @@ bool Conn::Read(void* buf, size_t count)
             *((Message*) buf) = shm_buf;
             success = true;
         }
-        close(fd);
+        close(desc);
     }
     return success;
 }
@@ -72,13 +77,13 @@ bool Conn::Read(void* buf, size_t count)
 bool Conn::Write(void* buf, size_t count)
 {
     bool success = false;
-    if ((fd = open(FIFO_FILE_NAME, O_WRONLY)) == -1)
+    if ((desc = open(channel_name, O_WRONLY)) == -1)
     {
         std::cout << "ERROR: can't open pipe for writing, error = " << strerror(errno) << std::endl;
     }
     else
     {
-        if (write(fd, buf, count) == -1)
+        if (write(desc, buf, count) == -1)
         {
             std::cout << "ERROR: writing failed with error = " << strerror(errno) << std::endl;
         }
@@ -86,7 +91,7 @@ bool Conn::Write(void* buf, size_t count)
         {
             success = true;
         }
-        close(fd);
+        close(desc);
     }
     return success;
 }
@@ -94,7 +99,7 @@ bool Conn::Write(void* buf, size_t count)
 bool Conn::Close()
 {
     bool res = true;
-    if (g_is_host && remove(FIFO_FILE_NAME) < 0)
+    if (is_host && remove(channel_name) < 0)
     {
         res = false;
     }

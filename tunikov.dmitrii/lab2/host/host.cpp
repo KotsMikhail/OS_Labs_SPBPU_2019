@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <sstream>
 #include <vector>
+#include <constants.h>
 #include "host.h"
 
 int main()
@@ -26,26 +27,26 @@ bool Host::openConnection()
 {
     std::cout << "opening connection for host with pid: " << getpid() << std::endl;
 
-    client_semaphore = sem_open(CLIENT_SEM_NAME, O_CREAT, 0666, 1);
+    client_semaphore = sem_open(constants::client_sem_name, O_CREAT, 0666, 1);
     if (client_semaphore == SEM_FAILED)
     {
         std::cout << "ERROR: can't open client semathore" << std::endl;
         return false;
     }
-    host_semaphore = sem_open(HOST_SEM_NAME, O_CREAT, 0666, 1);
+    host_semaphore = sem_open(constants::host_sem_name, O_CREAT, 0666, 1);
     if (host_semaphore == SEM_FAILED)
     {
         std::cout << "ERROR: can't open host semathore" << std::endl;
-        sem_unlink(CLIENT_SEM_NAME);
+        sem_unlink(constants::client_sem_name);
         return false;
     }
 
-    connection = Conn(true);
+    connection = Conn();
     if (!connection.Open(getpid(), true))
     {
         std::cout << "ERROR: fail open connection" << std::endl;
-        sem_unlink(CLIENT_SEM_NAME);
-        sem_unlink(HOST_SEM_NAME);
+        sem_unlink(constants::client_sem_name);
+        sem_unlink(constants::host_sem_name);
         return false;
     }
 
@@ -211,7 +212,7 @@ void Host::close(int exit_code)
 
     std::cout << "host terminating..." << std::endl;
 
-    if (h.connection.Close() && sem_unlink(CLIENT_SEM_NAME) == 0 && sem_unlink(HOST_SEM_NAME))
+    if (h.connection.Close() && sem_unlink(constants::client_sem_name) == 0 && sem_unlink(constants::host_sem_name))
     {
         exit(exit_code);
     }
