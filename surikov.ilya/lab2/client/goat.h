@@ -11,8 +11,8 @@ public:
     static Goat& GetInstance(int host_pid);
 private:
     int host_pid;
-    const int RAND_LIMIT_ALIVE = 100;
-    const int RAND_LIMIT_DEAD = 50;
+    static const int RAND_LIMIT_ALIVE = 100;
+    static const int RAND_LIMIT_DEAD = 50;
 
     void Terminate(int signum);
 

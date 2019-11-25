@@ -16,7 +16,7 @@ public:
 private:
     ClientInfo client_info;
     int curr_num;
-    const int RAND_LIMIT = 100;
+    static const int RAND_LIMIT = 100;
 
     void Terminate(int signum);
 
