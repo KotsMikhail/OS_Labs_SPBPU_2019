@@ -51,6 +51,7 @@ Client::Client(int host_pid_)
     act.sa_sigaction = signalHandler;
     act.sa_flags = SA_SIGINFO;
     sigaction(SIGTERM, &act, nullptr);
+    sigaction(SIGINT, &act, nullptr);
 }
 
 bool Client::openConnection()

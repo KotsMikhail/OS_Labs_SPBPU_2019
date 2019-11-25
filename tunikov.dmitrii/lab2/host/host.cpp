@@ -69,6 +69,7 @@ Host::Host() : client_data(0)
     sigaction(SIGTERM, &act, nullptr);
     sigaction(SIGUSR1, &act, nullptr);
     sigaction(SIGUSR2, &act, nullptr);
+    sigaction(SIGINT, &act, nullptr);
 }
 
 bool Host::readDate(Message &msg)
@@ -194,11 +195,8 @@ void Host::signalHandler(int sig, siginfo_t* info, void* ptr)
             }
             break;
         case SIGTERM:
-            if (h.client_data.attached)
-            {
-                kill(h.client_data.pid, SIGTERM);
-                h.client_data = ClientData(0);
-            }
+            Host::close(sig);
+        case SIGINT:
             Host::close(sig);
         default:
             std::cout << "unknown signal accepted" << std::endl;
@@ -209,6 +207,12 @@ void Host::signalHandler(int sig, siginfo_t* info, void* ptr)
 void Host::close(int exit_code)
 {
     static Host&h = Host::getInstance();
+
+    if (h.client_data.attached)
+    {
+        kill(h.client_data.pid, SIGTERM);
+        h.client_data = ClientData(0);
+    }
 
     std::cout << "host terminating..." << std::endl;
 
