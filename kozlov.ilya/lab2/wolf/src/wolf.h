@@ -24,8 +24,8 @@ private:
   Wolf();
   Message CountStep(Message& answer);
   void Terminate(int signum);
+  void GetUserNumber();
   bool CheckIfSelfMessage(Message& msg);
-  static int GetRand();
   static void SignalHandler(int signum, siginfo_t* info, void *ptr);
   // TODO
 };

@@ -65,17 +65,7 @@ void Goat::Start()
 {
   while (true)
   {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    ts.tv_sec += TIMEOUT;
-    if (sem_timedwait(semaphore_client, &ts) == -1)
-    {
-      if (errno == EINTR)
-      {
-        continue;
-      }
-      Terminate(errno);
-    }
+    sem_wait(semaphore_client);
     Message msg;
     if (connection.Read(&msg))
     {

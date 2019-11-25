@@ -50,8 +50,7 @@ void Wolf::Start()
   std::cout << "Waiting for client..." << std::endl;
   pause();
   std::cout << "Client attached!" << std::endl;
-  current_number = GetRand();
-  std::cout << "Wolf current number: " << current_number << std::endl;
+  GetUserNumber();
   Message msg(Status::ALIVE, current_number);
   connection.Write(&msg, sizeof(msg));
   sem_post(semaphore_client);
@@ -65,7 +64,7 @@ void Wolf::Start()
       {
         pause();
       }
-      std::cout << "Wolf current number: " << current_number << std::endl;
+      GetUserNumber();
       msg = Message(Status::ALIVE, current_number);
       connection.Write(&msg, sizeof(msg));
       sem_post(semaphore_client);
@@ -87,13 +86,11 @@ void Wolf::Start()
       if (connection.Read(&msg))
       {
         std::cout << "---------------- ROUND ----------------" << std::endl;
-        std::cout << "Wolf current number: " << current_number << std::endl;
         std::cout << "Goat current number: " << msg.number << std::endl;
         std::cout << "Goat current status: " << ((msg.status == Status::ALIVE) ? "alive" : "dead") << std::endl;
         msg = CountStep(msg);
         if (client_info.attached)
         {
-          std::cout << "Wolf new number: " << current_number << std::endl;
           std::cout << "Goat new status: " << ((msg.status == Status::ALIVE) ? "alive" : "dead") << std::endl;
           connection.Write(&msg, sizeof(msg));
         }
@@ -106,6 +103,7 @@ void Wolf::Start()
 Message Wolf::CountStep(Message& answer)
 {
   Message msg;
+  bool need_new_number = true;
   if ((answer.status == Status::ALIVE && abs(current_number - answer.number) <= 70) ||
       (answer.status == Status::DEAD && abs(current_number - answer.number) <= 20))
   {
@@ -119,21 +117,28 @@ Message Wolf::CountStep(Message& answer)
     {
       kill(client_info.pid, SIGTERM);
       client_info = ClientInfo(0);
+      need_new_number = false;
       // This is new data for new clients
       msg.status = Status::ALIVE;
     }
   }
-  current_number = GetRand();
-  msg.number = current_number;
+  if (need_new_number)
+  {
+    GetUserNumber();
+    msg.number = current_number;
+  }
   return msg;
 }
 
-int Wolf::GetRand()
+void Wolf::GetUserNumber()
 {
-  std::random_device rd;
-  std::mt19937 mt(rd());
-  std::uniform_int_distribution<int> dist(1, 100);
-  return dist(mt);
+  std::cout << "Enter wolf new number: ";
+  std::cin >> current_number;
+  while (current_number < 1 || current_number > 100)
+  {
+    std::cout << "Wrong number, should be 1 <= num <= 100, try again: ";
+    std::cin >> current_number;
+  }
 }
 
 void Wolf::Terminate(int signum)
