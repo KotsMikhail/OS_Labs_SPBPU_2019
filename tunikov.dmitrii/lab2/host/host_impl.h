@@ -2,8 +2,8 @@
 // Created by dmitrii on 19.11.2019.
 //
 
-#ifndef LAB2_HOST_H
-#define LAB2_HOST_H
+#ifndef LAB2_HOST_IMPL_H
+#define LAB2_HOST_IMPL_H
 #include <semaphore.h>
 #include <csignal>
 #include <conn.h>
@@ -36,4 +36,4 @@ private:
     Host();
 };
 
-#endif //LAB2_HOST_H
+#endif //LAB2_HOST_IMPL_H

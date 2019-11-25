@@ -2,8 +2,8 @@
 // Created by dmitrii on 23.11.2019.
 //
 
-#ifndef LAB2_CLIENT_H
-#define LAB2_CLIENT_H
+#ifndef LAB2_CLIENT_IMPL_H
+#define LAB2_CLIENT_IMPL_H
 
 #include <semaphore.h>
 #include <conn.h>
@@ -22,10 +22,12 @@ private:
     int host_pid;
 
     explicit Client(int host_pid);
+    Client& operator=(const Client&h) = delete;
+    Client(const Client& h) = default;
     void close(int signum);
     static int getRandTemp(const Date& date);
     static void signalHandler(int sig, siginfo_t *info, void *context);
 };
 
 
-#endif //LAB2_CLIENT_H
+#endif //LAB2_CLIENT_IMPL_H

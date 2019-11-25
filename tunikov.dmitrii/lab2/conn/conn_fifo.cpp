@@ -13,93 +13,93 @@
 #include <sys/stat.h>
 #include <zconf.h>
 
-int Conn::desc;
-const char* Conn::channel_name;
 
-Conn::Conn()
+Conn::Conn() : is_open(false)
 {
-    channel_name = "/tmp/fifo_pipe";
+    desc = new (std::nothrow) int (-1);
+    channel_name = "/tmp/fifo_pipe1";
+}
+
+Conn::~Conn()
+{
+    delete desc;
 }
 
 bool Conn::Open(size_t id, bool create)
 {
-    bool res = false;
+    if (desc == nullptr)
+        return false;
+
+    if (is_open)
+        return true;
+
     is_host = create;
-    int fifoflg = 0777;
 
     if (create)
     {
-        std::cout << "Creating connection with id = " << id << std::endl;
         unlink(channel_name);
-    }
-    else
-    {
-        std::cout << "Getting connection with id = " << id << std::endl;
+        if (mkfifo(channel_name, 0666) == -1)
+        {
+            return (is_open = false);
+        }
     }
 
-    if (is_host && mkfifo(channel_name, fifoflg) == -1)
-    {
-        std::cout << "ERROR: mkfifo failed, error = " << strerror(errno) << std::endl;
-    }
+    *desc = open(channel_name, O_RDWR);
+
+    is_open = (*desc != -1);
+    if (is_open)
+        std::cout << "fifo open connection with id " << id << std::endl;
     else
     {
-        res = true;
+        std::cout << "fifo get connection with id " << id << std::endl;
+        if (is_host)
+            unlink(channel_name);
     }
-    return res;
+
+    return is_open;
 }
 
 bool Conn::Read(void* buf, size_t count)
 {
-    Message shm_buf;
-    bool success = false;
-    if ((desc = open(channel_name, O_RDONLY)) == -1)
+    if (!is_open)
     {
-        std::cout << "ERROR: can't open fifo pipe for reading, error = " << strerror(errno) << std::endl;
+        std::cout << "ERROR: can't read bacause fifo not opened" << std::endl;
+        return false;
     }
-    else
+
+    if (read(*desc, buf, count) == -1)
     {
-        if (read(desc, &shm_buf, count) == -1)
-        {
-            std::cout << "ERROR: reading failed with error = " << strerror(errno) << std::endl;
-        }
-        else
-        {
-            *((Message*) buf) = shm_buf;
-            success = true;
-        }
-        close(desc);
+        std::cout << "ERROR: reading failed with error = " << strerror(errno) << std::endl;
+        return false;
     }
-    return success;
+
+    return true;
 }
 
 bool Conn::Write(void* buf, size_t count)
 {
-    bool success = false;
-    if ((desc = open(channel_name, O_WRONLY)) == -1)
+    if (!is_open)
     {
-        std::cout << "ERROR: can't open pipe for writing, error = " << strerror(errno) << std::endl;
+        std::cout << "ERROR: can't write bacause fifo not opened" << std::endl;
+        return false;
     }
-    else
+
+    if (write(*desc, buf, count) == -1)
     {
-        if (write(desc, buf, count) == -1)
-        {
-            std::cout << "ERROR: writing failed with error = " << strerror(errno) << std::endl;
-        }
-        else
-        {
-            success = true;
-        }
-        close(desc);
+        std::cout << "ERROR: writing failed with error = " << strerror(errno) << std::endl;
+        return false;
     }
-    return success;
+
+    return true;
 }
 
 bool Conn::Close()
 {
-    bool res = true;
-    if (is_host && remove(channel_name) < 0)
+    if (is_open && !close(*desc) && (!is_host || !unlink(channel_name)))
     {
-        res = false;
+        std::cout << "fifo closed" << std::endl;
+        is_open = false;
     }
-    return res;
+
+    return !is_open;
 }

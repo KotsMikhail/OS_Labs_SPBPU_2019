@@ -10,11 +10,11 @@ all: build_sources
 define build
 	#build host
 	g++ $(CFLAGS) -Dhost_$(1) ./host/* ./interfaces/* $(CONN_PREFIX)$(1).cpp -o host_$(1) $(PFLAGS);
-	echo host_$(1) was builded;
+	echo host_$(1) have built;
 
 	#build client
 	g++ $(CFLAGS) -Dclient_$(1) ./client/* ./interfaces/* $(CONN_PREFIX)$(1).cpp -o client_$(1) $(PFLAGS);
-	echo client_$(1) was builded;
+	echo client_$(1) have built;
 endef
 
 build_sources:

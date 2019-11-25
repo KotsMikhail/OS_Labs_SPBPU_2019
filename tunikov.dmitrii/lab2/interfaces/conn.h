@@ -19,12 +19,12 @@ public:
     bool Read(void *buf, size_t count = sizeof(Message));
     bool Write(void *buf, size_t count = sizeof(Message));
     bool Close();
+    ~Conn();
 private:
     bool is_host;
-    static const char* channel_name;
-    static bool is_created;
-    static int desc;
-    static int listener;
+    bool is_open;
+    const char* channel_name;
+    int* desc;
 };
 
 #endif //LAB2_CONN_H

@@ -10,14 +10,15 @@
 #include <message.h>
 #include <unistd.h>
 
-bool Conn::is_created;
-int Conn::desc;
-int Conn::listener;
-const char* Conn::channel_name;
-
-Conn::Conn()
+Conn::Conn() : is_open(false)
 {
     channel_name = "/tmp/sock_server";
+    desc = new (std::nothrow) int[2]();
+}
+
+Conn::~Conn()
+{
+    delete[] desc;
 }
 
 void printErrMsg(const std::string& who, const std::string& msg)
@@ -27,21 +28,24 @@ void printErrMsg(const std::string& who, const std::string& msg)
 
 bool Conn::Open(size_t id, bool create)
 {
+    if (desc == nullptr)
+        return false;
+
     std::cout << "start open socket with address: " << channel_name << std::endl;
     struct sockaddr_un saddr{};
     saddr.sun_family = AF_UNIX;
     strcpy(saddr.sun_path, channel_name);
 
     is_host = create;
-    if (is_created)
+    if (is_open)
     {
         if (is_host)
         {
-            desc = accept(listener, NULL, NULL);
-            if (desc == -1)
+            desc[1] = accept(desc[0], NULL, NULL);
+            if (desc[1] == -1)
             {
                 printErrMsg("host", "fail to accept the socket");
-                close(listener);
+                close(desc[0]);
                 unlink(channel_name);
                 return false;
             }
@@ -49,10 +53,10 @@ bool Conn::Open(size_t id, bool create)
         }
         else
         {
-            if (connect(desc, (struct sockaddr *)&saddr, SUN_LEN(&saddr)) == -1)
+            if (connect(desc[1], (struct sockaddr *)&saddr, SUN_LEN(&saddr)) == -1)
             {
                 printErrMsg("client", "fail to connect to socket");
-                close(desc);
+                close(desc[1]);
                 return false;
             }
         }
@@ -60,46 +64,46 @@ bool Conn::Open(size_t id, bool create)
         return true;
     }
 
-    if (create)
+    if (is_host)
     {
         if (unlink(channel_name) == -1)
             std::cout << "WARNING: can't unlink " << channel_name << std::endl;
 
         // create listener socket
         std::cout << "create listener starting" << std::endl;
-        listener = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (listener == -1) {
+        desc[0] = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (desc[0] == -1) {
             printErrMsg("host", "fail to create listener");
             return false;
         }
-        std::cout << "listener started" << std::endl;
+        std::cout << "desc[0] started" << std::endl;
 
-        // bind listener socket
+        // bind desc[0] socket
         std::cout << "bind listener starting" << std::endl;
-        if (bind(listener, (struct sockaddr *)&saddr, SUN_LEN(&saddr)) < 0)
+        if (bind(desc[0], (struct sockaddr *)&saddr, SUN_LEN(&saddr)) < 0)
         {
             printErrMsg("host", "fail to bind listener");
-            close(listener);
+            close(desc[0]);
             return false;
         }
         std::cout << "listener binded" << std::endl;
 
         std::cout << "listening starting" << std::endl;
-        if (listen(listener, 1) == -1)
+        if (listen(desc[0], 1) == -1)
         {
             printErrMsg("host", "fail to listen");
-            close(listener);
+            close(desc[0]);
             unlink(channel_name);
             return false;
         }
         std::cout << "listening started" << std::endl;
 
         std::cout << "accept listener starting" << std::endl;
-        desc = accept(listener, NULL, NULL);
-        if (desc == -1)
+        desc[1] = accept(desc[0], NULL, NULL);
+        if (desc[1] == -1)
         {
             printErrMsg("host", "fail to accept listener");
-            close(listener);
+            close(desc[0]);
             unlink(channel_name);
             return false;
         }
@@ -107,23 +111,23 @@ bool Conn::Open(size_t id, bool create)
     }
     else
     {
-        listener = -1;
-        desc = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (desc == -1)
+        desc[0] = -1;
+        desc[1] = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (desc[1] == -1)
         {
             printErrMsg("client", "fail to create socket");
             return false;
         }
 
-        if (connect(desc, (struct sockaddr *)&saddr, SUN_LEN(&saddr)) == -1)
+        if (connect(desc[1], (struct sockaddr *)&saddr, SUN_LEN(&saddr)) == -1)
         {
             printErrMsg("client", "fail to connect socket");
-            close(desc);
+            close(desc[1]);
             return false;
         }
     }
 
-    is_created = true;
+    is_open = true;
     std::cout << "Socket connection successfully created." << std::endl;
     return true;
 }
@@ -131,13 +135,13 @@ bool Conn::Open(size_t id, bool create)
 
 bool Conn::Close()
 {
-    if (is_created && close(desc) == 0)
+    if (is_open && close(desc[1]) == 0)
     {
-        if (listener != -1)
+        if (desc[0] != -1)
         {
-            if (close(listener) == -1)
+            if (close(desc[0]) == -1)
             {
-                std::cout << "ERROR: Failed to close listener, error: " << strerror(errno) << std::endl;
+                std::cout << "ERROR: Failed to close desc[0], error: " << strerror(errno) << std::endl;
                 return false;
             }
         }
@@ -145,7 +149,7 @@ bool Conn::Close()
         if (!is_host || (is_host && unlink(channel_name) == 0))
         {
             std::cout << "Connection closed." << std::endl;
-            is_created = false;
+            is_open = false;
             return true;
         }
 
@@ -158,7 +162,7 @@ bool Conn::Close()
 
 bool Conn::Read(void *buf, size_t count)
 {
-    if (recv(desc, buf, count, 0) == -1)
+    if (recv(desc[1], buf, count, 0) == -1)
     {
         std::cout << "ERROR: failed to read message, error: " << strerror(errno) << std::endl;
         return false;
@@ -170,7 +174,7 @@ bool Conn::Read(void *buf, size_t count)
 
 bool Conn::Write(void *buf, size_t count)
 {
-    if (send(desc, buf, count, MSG_NOSIGNAL) == -1)
+    if (send(desc[1], buf, count, MSG_NOSIGNAL) == -1)
     {
         std::cout << "ERROR: failed to send message, error: " << strerror(errno) << std::endl;
         return false;
