@@ -13,9 +13,7 @@
 #include <sys/stat.h>
 #include <zconf.h>
 
-bool Conn::is_created;
 int Conn::desc;
-int Conn::listener;
 const char* Conn::channel_name;
 
 Conn::Conn()
