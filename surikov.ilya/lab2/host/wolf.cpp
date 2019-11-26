@@ -8,6 +8,7 @@
 #include "../utils/utils.h"
 #include <unistd.h>
 #include <cerrno>
+#include <string>
 
 
 void Wolf::Start()
@@ -26,13 +27,6 @@ void Wolf::Start()
                 pause();
             }
             std::cout << "Client attached!" << std::endl;
-            do {
-                std::cout << "Enter the number from 1 to 100" << std::endl;
-                std::cin >> curr_num;
-            } while (curr_num < 1 || curr_num > RAND_LIMIT);
-            std::cout << "Wolf current number: " << curr_num << std::endl;
-            msg = Message(Status::ALIVE, curr_num);
-            connection.Write(&msg, sizeof(msg));
             sem_post(semaphore_client);
         }
         else
@@ -49,8 +43,8 @@ void Wolf::Start()
             {
                 std::cout << "--------------------------------" << std::endl;
                 std::cout << "Goat current status: " << ((msg.status == Status::ALIVE) ? "alive" : "dead") << std::endl;
-                std::cout << "Wolf number: " << curr_num << std::endl;
                 std::cout << "Goat number: " << msg.number << std::endl;
+                GetNumber();
                 msg = Step(msg);
                 if (msg.number == 0) {
                     std::cout << "Game is over!" << std::endl;
@@ -139,12 +133,42 @@ Message Wolf::Step(Message &ans)
             return msg;
         }
     }
-    do {
-        std::cout << "Enter the number from 1 to 100" << std::endl;
-        std::cin >> curr_num;
-    } while (curr_num < 1 || curr_num > RAND_LIMIT);
     msg.number = curr_num;
     return msg;
+}
+
+void Wolf::GetNumber()
+{
+    std::cout << "Enter number from 1 to 100: " << std::endl;
+    std::string s;
+    bool is_correct = false;
+    while (!is_correct)
+    {
+        std::getline(std::cin, s);
+        if(s.empty() || s.find_first_not_of("0123456789") != std::string::npos)
+        {
+            std::cout << "Wrong input type, expected integer" << std::endl;
+        }
+        else {
+            try
+            {
+                curr_num = std::stoi(s);
+                if (curr_num < 1 || curr_num > RAND_LIMIT)
+                {
+                    std::cout << "Input number must be from 1 to 100" << std::endl;
+                }
+                else
+                {
+                    is_correct = true;
+                }
+            }
+            catch (const std::invalid_argument& exp)
+            {
+                std::cout << "Can't get integer from input" << std::endl;
+            }
+        }
+    }
+
 }
 
 void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr)
@@ -165,9 +189,8 @@ void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr)
             }
             break;
         }
-        case SIGUSR2: // client terminated
+        case SIGUSR2:
         {
-            std::cout << "Client terminated" << std::endl;
             if (instance.client_info.pid == info->si_pid)
             {
                 instance.client_info = ClientInfo(0);
@@ -178,7 +201,7 @@ void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr)
         {
             if (instance.client_info.attached)
             {
-                kill(instance.client_info.pid, SIGTERM);
+                kill(instance.client_info.pid, signum);
                 instance.client_info = ClientInfo(0);
             }
             instance.Terminate(signum);

@@ -10,17 +10,20 @@
 
 void Goat::Start()
 {
-    struct timespec ts;
     Message msg;
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_sec += TIMEOUT;
+    if (sem_timedwait(semaphore_client, &ts) == -1)
+    {
+        Terminate(errno);
+    }
+    msg.number = GetRand(RAND_LIMIT_ALIVE);
+    connection.Write(&msg, sizeof(msg));
+    sem_post(semaphore_host);
     while (true)
     {
-        clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += TIMEOUT;
-        if (sem_timedwait(semaphore_client, &ts) == -1)
-        {
-            std::cout << "Timeout: terminating..." << std::endl;
-            Terminate(errno);
-        }
+        sem_wait(semaphore_client);
         if (connection.Read(&msg, sizeof(Message)))
         {
             std::cout << "--------------------------------" << std::endl;
