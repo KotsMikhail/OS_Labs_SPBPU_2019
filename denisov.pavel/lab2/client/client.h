@@ -29,7 +29,7 @@ private:
 
     sem_t *semaphore_host, *semaphore_client;
 
-    explicit Client (pid_t pid);
+    Client (pid_t pid);
 
     static int GetNewRandomNumber (int rightRandEdge);
 };

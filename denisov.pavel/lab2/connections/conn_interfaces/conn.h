@@ -22,9 +22,9 @@ public:
     bool Close ();
 
 private:
-    bool isHost, wasCreated;
+    bool isHost;
     int descID;
-    int *additionalArgs;
+    void *pmem; // pointer to memory, where structure of additional args will be
 };
 
 #endif //__CONN_H__

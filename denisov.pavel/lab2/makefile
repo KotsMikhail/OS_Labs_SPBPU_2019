@@ -13,7 +13,7 @@ all: build_all
 
 define build_one_connection
 	echo building host_$(1) ... ;
-	g++ $(COMPILEFLAGS) ./host/* $(CONNECTIONINTERFACES)* $(CONNECTIONPREFIX)$(1).cpp -o host_$(1) $(PFLAGS) ;
+	g++ $(COMPILEFLAGS) -Dhost_$(1) ./host/* $(CONNECTIONINTERFACES)* $(CONNECTIONPREFIX)$(1).cpp -o host_$(1) $(PFLAGS) ;
 	echo building host_$(1) success ;
 
 	echo building client_$(1) ... ;

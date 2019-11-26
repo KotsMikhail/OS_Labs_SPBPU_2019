@@ -4,13 +4,6 @@
 const int TIMEOUT = 5;
 
 
-enum MSG_OWNER
-{
-    HOST,
-    CLIENT
-};
-
-
 enum MSG_STATUS
 {
     ALIVE,
@@ -20,13 +13,11 @@ enum MSG_STATUS
 
 struct Message
 {
-    MSG_OWNER  owner;
     MSG_STATUS status;
     int        number;
 
-    Message (MSG_OWNER ow = MSG_OWNER::HOST, MSG_STATUS st = MSG_STATUS::ALIVE, int num = 0)
-    : owner(ow)
-    , status(st)
+    Message (MSG_STATUS st = MSG_STATUS::ALIVE, int num = 0)
+    : status(st)
     , number(num)
     {
     }

@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <new>
 
 #include <conn.h>
 #include <message.h>
@@ -10,21 +11,33 @@
 const char * const FIFO_PATH = "/tmp/lab2_fifo_path";
 
 
+struct ConnFifoArgs
+{
+    bool wasCreated;
+};
+
+
 Conn::Conn ()
 {
-    additionalArgs = NULL;
-    wasCreated = false;
+    pmem = new (std::nothrow) ConnFifoArgs();
 }
 
 
 Conn::~Conn ()
 {
+    delete (ConnFifoArgs *)pmem;
 }
 
 
 bool Conn::Open (size_t id, bool create)
 {
-    if (wasCreated) {
+    ConnFifoArgs *fifoArgs = (ConnFifoArgs *)pmem;
+    if (fifoArgs == NULL) {
+        std::cout << "[ERROR]: FIFO connection's arguments invalid." << std::endl;
+        return false;
+    }
+
+    if (fifoArgs->wasCreated) {
         return true;
     }
 
@@ -50,14 +63,20 @@ bool Conn::Open (size_t id, bool create)
     }
     std::cout << "Fifo succeeded." << std::endl;
 
-    wasCreated = true;
+    fifoArgs->wasCreated = true;
     return true;
 }
 
 
 bool Conn::Close ()
 {
-    if (wasCreated) {
+    ConnFifoArgs *fifoArgs = (ConnFifoArgs *)pmem;
+    if (fifoArgs == NULL) {
+        std::cout << "[ERROR]: FIFO connection's arguments invalid." << std::endl;
+        return false;
+    }
+
+    if (fifoArgs->wasCreated) {
         if (close(descID) == -1) {
             std::cout << "[ERROR]: Connection closing failed, error: " << strerror(errno) << std::endl;
             return false;
@@ -65,7 +84,7 @@ bool Conn::Close ()
 
         if (!isHost || (isHost && unlink(FIFO_PATH) == 0)) {
             std::cout << "Connection closed." << std::endl;
-            wasCreated = false;
+            fifoArgs->wasCreated = false;
             return true;
         }
     }

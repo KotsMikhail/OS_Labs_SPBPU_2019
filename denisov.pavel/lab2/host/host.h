@@ -55,8 +55,9 @@ private:
 
     Host ();
 
-    void SendFirstMessageToClient ();
-    Message CountClientStatus     (const Message& curClientMessage);
+    void    ReopenConnection  ();
+    void    ReadNewUserNumber ();
+    Message CountClientStatus (const Message& curClientMessage);
 };
 
 #endif //__HOST_H__

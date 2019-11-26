@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include <message.h>
+#include <algorithm>
 
 #include "host.h"
 
@@ -32,13 +33,10 @@ static void HostSignalHandler (int signalNum, siginfo_t* info, void* ptr)
             break;
 
         case SIGTERM:
+        case SIGINT:
             if (host.IsClientAttached()) {
                 host.DeattachClient();
             }
-            host.Terminate();
-            break;
-
-        case SIGINT:
             host.Terminate();
             break;
     }
@@ -94,12 +92,12 @@ pid_t Host::GetClientPid ()
 bool Host::OpenConnection ()
 {
     if ((semaphore_host = sem_open(HOST_SEM_NAME, O_CREAT, 0666, 0)) == SEM_FAILED) {
-        std::cout << "[ERROR]: failed to create host semaphore, error: " << strerror(errno) << std::endl;
+        std::cout << "[ERROR]: Failed to create host semaphore, error: " << strerror(errno) << std::endl;
         return false;
     }
 
     if ((semaphore_client = sem_open(CLIENT_SEM_NAME, O_CREAT, 0666, 0)) == SEM_FAILED) {
-        std::cout << "[ERROR]: failed to create client semaphore, error: " << strerror(errno) << std::endl;
+        std::cout << "[ERROR]: Failed to create client semaphore, error: " << strerror(errno) << std::endl;
         sem_unlink(HOST_SEM_NAME);
         return false;
     }
@@ -116,12 +114,43 @@ bool Host::OpenConnection ()
 }
 
 
-void Host::SendFirstMessageToClient ()
+static bool IsStringNumber (const std::string &str)
 {
-    std::cout << "Input new host number: ";
-    std::cin >> curNumber;
-    Message msg(MSG_OWNER::HOST, MSG_STATUS::ALIVE, curNumber);
-    conn.Write((void *) &msg);
+    return !str.empty() &&
+            (std::find_if(str.begin(), str.end(), [](char c){ return !std::isdigit(c); }) == str.end());
+}
+
+
+void Host::ReadNewUserNumber ()
+{
+    std::cout << "Input new host number: " << std::endl;
+    std::string line;
+
+    while (true) {
+        std::getline(std::cin, line);
+
+        if (!IsStringNumber(line)) {
+            std::cout << "Input should be an integer in range [1; 100]. Please, try again..." << std::endl;
+            continue;
+        }
+
+        curNumber = atoi(line.c_str());
+        if (curNumber < 1 || curNumber > 100) {
+            std::cout << "Input number should be in range [1; 100], but received: " << curNumber << ". Please try again..." << std::endl;
+            continue;
+        }
+
+        break;
+    }
+}
+
+
+void Host::ReopenConnection ()
+{
+    sleep(1);
+    conn.Close();
+    conn.Open(getpid(), true);
+    pause();
 }
 
 
@@ -132,7 +161,6 @@ void Host::Start ()
     // Waiting while client will be attached - signal SIGUSR1
     std::cout << "Wait client..." << std::endl;
     pause();
-    SendFirstMessageToClient();
 
     Message msg;
     // Job loop
@@ -144,7 +172,6 @@ void Host::Start ()
             // Waiting while client will be attached - signal SIGUSR1
             std::cout << "Wait client..." << std::endl;
             pause();
-            SendFirstMessageToClient();
             continue;
         }
 
@@ -154,34 +181,44 @@ void Host::Start ()
         if (sem_timedwait(semaphore_host, &ts) == -1) {
             std::cout << "Client timeouted. Terminating client..." << std::endl;
             DeattachClient();
+#ifdef host_sock
+            ReopenConnection();
+#endif
             continue;
         }
 
-        if (conn.Read(&msg)) {
-            std::cout << "------------HOST-----------" << std::endl;
-            std::cout << "Host's number: " << curNumber << std::endl;
-            std::cout << "Client's number: " << msg.number << std::endl;
-            std::cout << "Client's status in begin of round: " << ((msg.status == MSG_STATUS::ALIVE) ? "ALIVE" : "DEAD") << std::endl;
-
-            msg = CountClientStatus(msg);
-
-            if (IsClientAttached()) {
-                std::cout << "Client's status after round: " << ((msg.status == MSG_STATUS::ALIVE) ? "ALIVE" : "DEAD") << std::endl;
-                conn.Write((void *) &msg);
-
-                std::cout << "Input new number: ";
-                std::cin >> curNumber;
-            }
-
-            std::cout << "------------HOST-----------" << std::endl;
+        if (!conn.Read(&msg)) {
+            std::cout << "[ERROR]: Failed to read message from connection interface. Terminating host..." << std::endl;
+            exit(SIGTERM);
         }
+
+        std::cout << "------------HOST ROUND START-----------" << std::endl;
+        std::cout << "Client's number: " << msg.number << std::endl;
+        ReadNewUserNumber();
+
+        msg = CountClientStatus(msg);
+
+        if (IsClientAttached()) {
+            std::cout << "Client's status: " << ((msg.status == MSG_STATUS::ALIVE) ? "ALIVE" : "DEAD") << std::endl;
+            if (!conn.Write(&msg)) {
+                std::cout << "[ERROR]: Failed to write message in connection interface. Terminating host..." << std::endl;
+                exit(SIGTERM);
+            }
+        }
+        std::cout << "------------HOST ROUND END-------------" << std::endl;
+
+#ifdef host_sock
+        if (!IsClientAttached()) {
+            ReopenConnection();
+        }
+#endif
     }
 }
 
 
 Message Host::CountClientStatus (const Message& curClientMessage)
 {
-    Message hostMsg(MSG_OWNER::HOST, MSG_STATUS::ALIVE, 0);
+    Message hostMsg(MSG_STATUS::ALIVE, 0);
 
     if ((curClientMessage.status == MSG_STATUS::ALIVE && abs(curClientMessage.number - curNumber) <= 70) ||
         (curClientMessage.status == MSG_STATUS::DEAD && abs(curClientMessage.number - curNumber) <= 20)) {
@@ -190,11 +227,9 @@ Message Host::CountClientStatus (const Message& curClientMessage)
         hostMsg.status = MSG_STATUS::DEAD;
         curClientInfo.numOfFails++;
         if (curClientInfo.numOfFails == 2) {
+            std::cout << "Client's status: DEAD" << std::endl;
             std::cout << "Client fails 2 times. Deattaching client..." << std::endl;
-            std::cout << "Client's status after round: DEAD" << std::endl;
             DeattachClient();
-
-            hostMsg.status = MSG_STATUS::ALIVE;
         }
     }
 

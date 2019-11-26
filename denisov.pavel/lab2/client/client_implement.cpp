@@ -28,22 +28,23 @@ Client::Client (pid_t pid)
 {
     std::cout << "Client::Client(). Host pid: " << pid << std::endl;
     signal(SIGTERM, ClientSignalHandler);
+    signal(SIGINT, ClientSignalHandler);
 }
 
 
 bool Client::OpenConnection ()
 {
     if ((semaphore_host = sem_open(HOST_SEM_NAME, O_CREAT)) == SEM_FAILED) {
-        std::cout << "[ERROR]: failed to create host semaphore, error: " << strerror(errno) << std::endl;
+        std::cout << "[ERROR]: Failed to create host semaphore, error: " << strerror(errno) << std::endl;
         return false;
     }
 
     if ((semaphore_client = sem_open(CLIENT_SEM_NAME, O_CREAT)) == SEM_FAILED) {
-        std::cout << "[ERROR]: failed to create client semaphore, error: " << strerror(errno) << std::endl;
+        std::cout << "[ERROR]: Failed to create client semaphore, error: " << strerror(errno) << std::endl;
         sem_unlink(HOST_SEM_NAME);
         return false;
     }
-
+                                              4
     std::cout << "Semaphores created. Client's pid: " << getpid() << std::endl;
     if (!conn.Open(getpid(), false)) {
         std::cout << "[ERROR]: Failed to open connection." << std::endl;
@@ -92,26 +93,43 @@ int Client::GetNewRandomNumber (int rightRandEdge)
 void Client::Start ()
 {
     Message msg;
+
+    // Send first message
+    sem_wait(semaphore_client);
+    msg.status = MSG_STATUS ::ALIVE;
+    msg.number = GetNewRandomNumber(ALIVE_MAX_RAND);
+    std::cout << "------------CLIENT ROUND START-----------" << std::endl;
+    std::cout << "Status: ALIVE" << std::endl;
+    std::cout << "Client new number: " << msg.number << std::endl;
+    std::cout << "------------CLIENT ROUND END-------------" << std::endl;
+    if (!conn.Write(&msg)) {
+        std::cout << "[ERROR]: Failed to write message in connection interface. Terminating client..." << std::endl;
+        Terminate();
+    }
+    sem_post(semaphore_host);
+
     while (true) {
         sem_wait(semaphore_client);
-
         if (conn.Read(&msg)) {
-            std::cout << "------------CLIENT-----------" << std::endl;
-            std::cout << "Status: " << ((msg.status == MSG_STATUS::ALIVE) ? "ALIVE" : "DEAD") << std::endl;
-
             if (msg.status == MSG_STATUS::ALIVE) {
                 msg.number = GetNewRandomNumber(ALIVE_MAX_RAND);
             } else {
                 msg.number = GetNewRandomNumber(DEAD_MAX_RAND);
             }
 
+            std::cout << "------------CLIENT ROUND START-----------" << std::endl;
+            std::cout << "Status: " << ((msg.status == MSG_STATUS::ALIVE) ? "ALIVE" : "DEAD") << std::endl;
             std::cout << "Client new number: " << msg.number << std::endl;
-            std::cout << "------------CLIENT-----------" << std::endl;
+            std::cout << "------------CLIENT ROUND END-------------" << std::endl;
 
-            msg.owner = MSG_OWNER::CLIENT;
-            conn.Write((void *)&msg);
+            if (!conn.Write(&msg)) {
+                std::cout << "[ERROR]: Failed to write message in connection interface. Terminating client..." << std::endl;
+                exit(SIGTERM);
+            }
+        } else {
+            std::cout << "[ERROR]: Failed to read message from connection interface. Terminating client..." << std::endl;
+            exit(SIGTERM);
         }
-
         sem_post(semaphore_host);
     }
 }

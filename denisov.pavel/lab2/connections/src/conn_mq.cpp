@@ -14,7 +14,7 @@ const size_t       QUEUE_MSGSIZE = sizeof(Message);
 
 Conn::Conn ()
 {
-    additionalArgs = NULL;
+    pmem = NULL;
 }
 
 
