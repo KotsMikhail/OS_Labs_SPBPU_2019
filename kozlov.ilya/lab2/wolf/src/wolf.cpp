@@ -124,35 +124,41 @@ void Wolf::GetUserNumber()
   std::cout << "Enter wolf new number: ";
   bool is_set = false;
   std::string input;
-  while (!is_set)
+  while (client_info.attached && !is_set)
   {
-    std::getline(std::cin, input);
-    if (input.find_last_not_of("0123456789") != std::string::npos)
+    std::getline(std::cin, input, '\n');
+    if (!client_info.attached)
     {
-      std::cout << "Wrong input format, should be only one integer!" << std::endl;
+      std::cin.clear();
+      std::cout << std::endl;
     }
     else
     {
-      try
+      if (input.find_last_not_of("0123456789") != std::string::npos)
       {
-        current_number = std::stoi(input);
-        if (current_number < 1 || current_number > 100)
+        std::cout << "Wrong input format, should be only one integer!" << std::endl;
+      } else
+      {
+        try
         {
-          std::cout << "Wrong number, should be 1 <= num <= 100!" << std::endl;
+          current_number = std::stoi(input);
+          if (current_number < 1 || current_number > 100)
+          {
+            std::cout << "Wrong number, should be 1 <= num <= 100!" << std::endl;
+          } else
+          {
+            is_set = true;
+          }
         }
-        else
+        catch (const std::invalid_argument& exp)
         {
-          is_set = true;
+          std::cout << "Can't get integer from input!" << std::endl;
         }
       }
-      catch (const std::invalid_argument& exp)
+      if (!is_set)
       {
-        std::cout << "Can't get integer from input!" << std::endl;
+        std::cout << "Try again: ";
       }
-    }
-    if (!is_set)
-    {
-      std::cout << "Try again: ";
     }
   }
 }
