@@ -44,7 +44,7 @@ bool Client::OpenConnection ()
         sem_unlink(HOST_SEM_NAME);
         return false;
     }
-                                              4
+
     std::cout << "Semaphores created. Client's pid: " << getpid() << std::endl;
     if (!conn.Open(getpid(), false)) {
         std::cout << "[ERROR]: Failed to open connection." << std::endl;
