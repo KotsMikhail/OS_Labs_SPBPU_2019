@@ -14,6 +14,8 @@ public:
   bool OpenConnection();
   void Start();
   Wolf(Wolf&) = delete;
+  Wolf(const Wolf&) = delete;
+  Wolf& operator=(const Wolf&) = delete;
 private:
   Conn connection;
   sem_t* semaphore_host;

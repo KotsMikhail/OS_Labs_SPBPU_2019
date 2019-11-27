@@ -13,6 +13,8 @@ public:
   void Start();
   bool OpenConnection();
   Goat(Goat&) = delete;
+  Goat(const Goat&) = delete;
+  Goat& operator=(const Goat&) = delete;
 private:
   static int const ALIVE_MAX;
   static int const DEAD_MAX;
