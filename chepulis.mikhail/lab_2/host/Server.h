@@ -6,11 +6,10 @@
 #define SERVER_SERVER_H
 
 #include <string>
-#include <bits/types/siginfo_t.h>
 #include <vector>
 #include "Server_conn.h"
 #include "../interfaces/message.h"
-
+#include <signal.h>
 
 class Server {
 public:

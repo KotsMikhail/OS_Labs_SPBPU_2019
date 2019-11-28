@@ -6,13 +6,9 @@
 #define LAB_2_SEVER__CLIENTHANDLER_H
 
 #include <string>
-#include <bits/types/siginfo_t.h>
+//#include <bits/types/siginfo_t.h>
 #include <semaphore.h>
 #include "client_info.h"
-//#include "conn_fifo.h"
-//#include "conn_pipe.h"
-//#include "conn_mq.h"
-//#include "conn_shm_mem.h"
 #include "../interfaces/Conn.h"
 #include "../interfaces/message.h"
 #include "Server_conn.h"

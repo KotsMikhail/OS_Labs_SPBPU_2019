@@ -9,7 +9,6 @@
 #include <fcntl.h>
 #include <cstring>
 #include <unistd.h>
-#include <csignal>
 #include <semaphore.h>
 #include <syslog.h>
 #include <wait.h>

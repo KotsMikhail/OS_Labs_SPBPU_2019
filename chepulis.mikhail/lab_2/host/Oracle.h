@@ -8,10 +8,6 @@
 
 #include "../interfaces/message.h"
 #include "semaphore.h"
-//#include "conn_fifo.h"
-//#include "conn_pipe.h"
-//#include "conn_mq.h"
-//#include "conn_shm_mem.h"
 #include "../interfaces/Conn.h"
 
 class Oracle {
