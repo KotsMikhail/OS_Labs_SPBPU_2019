@@ -26,6 +26,8 @@ ClientHandler::ClientHandler(): client_info(0){
     signal(SIGTERM, SignalHandler);
 }
 
+ClientHandler::ClientHandler(ClientHandler&): client_info(0){}
+
 
 bool ClientHandler::OpenConnection(){
     if (connection.Open(getpid(), true))

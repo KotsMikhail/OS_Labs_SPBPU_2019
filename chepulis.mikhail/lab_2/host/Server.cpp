@@ -37,9 +37,9 @@ Server::Server(){
     act.sa_flags = SA_SIGINFO;
     sigaction(SIGTERM, &act, nullptr);
     sigaction(SIGCLD, &act, nullptr);
-
-
 }
+
+Server::Server(Server& other){}
 
 void Server::Start() {
     //std::cout << "I am server!" << std::endl;

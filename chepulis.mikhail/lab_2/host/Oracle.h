@@ -29,6 +29,7 @@ private:
     int rand_offset;
 
     Oracle(int host_pid);
+    Oracle(Oracle& other);
     void Terminate(int signum);
     int GetWeather(int day, int month, int year);
     static void SignalHandler(int signum);

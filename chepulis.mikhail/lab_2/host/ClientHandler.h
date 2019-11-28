@@ -35,7 +35,7 @@ private:
     Server_conn serv_con;
     ClientInfo client_info;
     ClientHandler();
-    //ClientHandler(ClientHandler&);
+    ClientHandler(ClientHandler&);
     bool GetTask(Message& mes);
     void KillClient();
     void Terminate(int signum);

@@ -20,8 +20,8 @@ Oracle::Oracle(int host_pid_) {
     srand(time(NULL) + host_pid_);
     rand_offset = rand();
     signal(SIGTERM, SignalHandler);
-
 }
+Oracle::Oracle(Oracle& other){}
 
 
 Oracle* Oracle::GetInstance(int host_pid_) {

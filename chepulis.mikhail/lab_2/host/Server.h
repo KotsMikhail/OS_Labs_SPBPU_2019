@@ -17,7 +17,7 @@ public:
     void Start();
 private:
     Server();
-    //Server(Server&);
+    Server(Server& other);
     void Terminate(int signum);
     static void SignalHandler(int signum, siginfo_t* info, void* ptr);
 
