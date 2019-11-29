@@ -150,28 +150,18 @@ void Host::ReopenConnection ()
     sleep(1);
     conn.Close();
     conn.Open(getpid(), true);
-    pause();
 }
 
 
 void Host::Start ()
 {
     struct timespec ts;
-
-    // Waiting while client will be attached - signal SIGUSR1
-    std::cout << "Wait client..." << std::endl;
-    pause();
-
     Message msg;
     // Job loop
     while (true) {
         if (!IsClientAttached()) {
-            // this 'sleep' guaranteed that client will send SIGUSR2 before 'pause()'
+	    // Waiting while client will be attached - signal SIGUSR1
             sleep(1);
-
-            // Waiting while client will be attached - signal SIGUSR1
-            std::cout << "Wait client..." << std::endl;
-            pause();
             continue;
         }
 
