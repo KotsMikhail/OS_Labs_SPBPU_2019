@@ -55,6 +55,13 @@ Goat* Goat::GetInstance (int host_pid)
    static Goat* goat = new Goat(host_pid);  
          
    if (goat->sem_host == SEM_FAILED || goat->sem_client == SEM_FAILED || goat->conn->HasError()) { 
+      std::cout << "Creation goat instance failed" << std::endl;
+      if (goat->sem_host == SEM_FAILED || goat->sem_client == SEM_FAILED) {
+         std::cout << "Sem open fails" << std::endl;
+      }
+      if (goat->conn->HasError()) {
+         std::cout << "Conn create fails" << std::endl;
+      }
       delete goat;
       return nullptr;
    }

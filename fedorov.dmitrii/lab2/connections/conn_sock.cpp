@@ -73,7 +73,6 @@ Conn::Conn (int host_pid_, bool create) {
 
 Conn::~Conn() {
    std::string socketpath = std::string("/tmp/" + std::to_string(host_pid));
-   //std::cout << socketpath << std::endl;
    if (!owner) {
       if (close(internal_data[1]) < 0) {
          perror("close(csocket) ");
@@ -81,12 +80,6 @@ Conn::~Conn() {
    }
 
    if (owner) {
-      //if (internal_data[1] != -1) {
-      //   if (close(internal_data[1]) < 0) {
-      //      perror("close(csocket) ");
-      //   }
-      //}
-
       if (internal_data[0] != -1) {
          if (close(internal_data[0]) < 0) {
             perror("close(hsocket) ");
