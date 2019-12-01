@@ -18,11 +18,11 @@ std::vector<int> split(const std::string &str, char delim);
 std::vector<int> dateFromStr(std::string date);
 bool CheckDate(std::string date);
 bool MessFromDate(std::string date, Message &mes);
+bool IsRealDate(int day, int month, int year);
 template <typename T>
-std::string toString(T val)
-{
+std::string toString(T val) {
     std::ostringstream oss;
-    oss<< val;
+    oss << val;
     return oss.str();
 }
 

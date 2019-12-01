@@ -22,7 +22,9 @@ Oracle::Oracle(int host_pid_) {
     signal(SIGTERM, SignalHandler);
 }
 Oracle::Oracle(Oracle& other){}
-
+Oracle& Oracle::operator=(Oracle& other) {
+    return other;
+}
 
 Oracle* Oracle::GetInstance(int host_pid_) {
     static Oracle self(host_pid_);
@@ -38,7 +40,7 @@ void Oracle::Start() {
     //int i = 1;
     while (true) {
         sem_wait(semaphore_client);
-        if(connection.Read(&buf, sizeof(buf))){
+        if (connection.Read(&buf, sizeof(buf))) {
             msg.number = GetWeather(buf.day, buf.month, buf.year);
             //sleep(i++);
             connection.Write((void *) &msg, sizeof(msg));
@@ -49,34 +51,26 @@ void Oracle::Start() {
 
 
 bool Oracle::OpenConnection() {
-    if (connection.Open(host_pid, false))
-    {
-        semaphore_name = sem_name + "_" + toString(host_pid);
-        sem_client_name = sem_name +"_client_" + toString(host_pid);
+    if (connection.Open(host_pid, false)) {
+        sem_client_name = sem_name + "_client_" + toString(host_pid);
         sem_host_name = sem_name + "_host_" + toString(host_pid);
 
-        semaphore = sem_open(semaphore_name.c_str(), 0);
-        if (semaphore == SEM_FAILED)
-        {
-            //std::cout << "ERROR: sem_open failed ("<< semaphore_name << ") with error = " << strerror(errno) << std::endl;
-            syslog(LOG_ERR, "ERROR: sem_open failed (%s) with error %s", semaphore_name.c_str(), strerror(errno));
-        }
-        //std::cout << "client: semaphore opened (" << semaphore_name << ")" << std::endl;
-        syslog(LOG_NOTICE, "client: semaphore opened (%s)", semaphore_name.c_str());
 
         semaphore_host = sem_open(sem_host_name.c_str(), 0);
-        if(semaphore_host == SEM_FAILED){
+        if (semaphore_host == SEM_FAILED) {
             //std::cout << "ERROR: client: can`t open host semaphore ("<< sem_host_name << ") error = " << strerror(errno) << std::endl;
-            syslog(LOG_ERR, "ERROR: client: can`t open host semaphore (%s) with error %s", sem_host_name.c_str(), strerror(errno));
+            syslog(LOG_ERR, "ERROR: client: can`t open host semaphore (%s) with error %s", sem_host_name.c_str(),
+                   strerror(errno));
             return false;
         }
         //std::cout << "client: host semaphore opened (" << sem_host_name << ")" << std::endl;
         syslog(LOG_NOTICE, "client: host semaphore opened (%s)", sem_host_name.c_str());
 
         semaphore_client = sem_open(sem_client_name.c_str(), 0);
-        if(semaphore_client == SEM_FAILED){
+        if (semaphore_client == SEM_FAILED) {
             //std::cout << "ERROR: client: can`t open client semaphore ("<< sem_client_name << ") error = " << strerror(errno) << std::endl;
-            syslog(LOG_ERR, "ERROR: client: can`t open client semaphore (%s) with error %s", sem_client_name.c_str(), strerror(errno));
+            syslog(LOG_ERR, "ERROR: client: can`t open client semaphore (%s) with error %s", sem_client_name.c_str(),
+                   strerror(errno));
             return false;
         }
         //std::cout << "client: client semaphore opened (" << sem_client_name << ")" << std::endl;
@@ -92,11 +86,14 @@ bool Oracle::OpenConnection() {
 void Oracle::Terminate(int signum) {
     //std::cout << "Client::Terminate("<< getpid() << ")" << std::endl;
     syslog(LOG_NOTICE, "Client::Terminate(%d)", getpid());
-    if (connection.Close())
-    {
-        if ((sem_close(semaphore_client) == -1) && (sem_close(semaphore_host) == -1))
-        {
-            exit(errno);
+    if (connection.Close()) {
+        if (semaphore_host != SEM_FAILED) {
+            semaphore_host = SEM_FAILED;
+            sem_close(semaphore_host);
+        }
+        if (semaphore_client != SEM_FAILED) {
+            semaphore_client = SEM_FAILED;
+            sem_close(semaphore_client);
         }
         exit(signum);
     }
@@ -107,9 +104,9 @@ void Oracle::Terminate(int signum) {
 
 
 int Oracle::GetWeather(int day, int month, int year) {
-    srand((day * 31 + month * 12 + year * 366 + rand_offset)%INTMAX_MAX);
+    srand((day * 31 + month * 12 + year * 366 + rand_offset) % INTMAX_MAX);
     int temp = rand() % 50;
-    int sig = (rand() % 2 ==0)?-1:1;
+    int sig = (rand() % 2 == 0) ? -1 : 1;
     return temp * sig;
 }
 
@@ -121,8 +118,6 @@ void Oracle::SignalHandler(int signum) {
             instance->Terminate(signum);
         }
     }
-
-
 }
 
 void Oracle::SetPipe(Conn connection_) {

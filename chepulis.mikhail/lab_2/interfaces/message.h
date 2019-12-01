@@ -9,15 +9,14 @@
 
 static std::string sem_name = "LAB2";
 
-struct Message
-{
+struct Message {
     int number;
     int day;
     int month;
     int year;
 
-    Message(int num = 0) :number(num), day(0), month(0), year(0)
-    {}
+    Message(int num = 0) : number(num), day(0), month(0), year(0) {
+    }
 };
 
 const int TIMEOUT = 5;

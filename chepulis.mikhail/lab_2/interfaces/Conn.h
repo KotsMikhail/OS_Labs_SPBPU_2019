@@ -9,16 +9,20 @@
 #include <stdlib.h>
 #include <string>
 
-class Conn
-{
+class Conn {
 public:
     Conn() = default;
+
     ~Conn() = default;
 
     bool Open(size_t id, bool create);
+
     bool Close();
+
     bool Read(void *buf, size_t count);
+
     bool Write(void *buf, size_t count);
+
 private:
     std::string filename;
     bool owner;

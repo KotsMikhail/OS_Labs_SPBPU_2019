@@ -9,9 +9,11 @@
 #include <unistd.h>
 #include "Server.h"
 
+
 int main() {
+
     openlog("lab2", LOG_NOWAIT | LOG_PID, LOG_LOCAL1);
-    Server* server = Server::GetInstance();
+    Server *server = Server::GetInstance();
     syslog(LOG_NOTICE, "host: started with pid %d.", getpid());
     server->Start();
     syslog(LOG_NOTICE, "host: stopped.");

@@ -12,16 +12,18 @@
 
 class Oracle {
 public:
-    static Oracle* GetInstance(int host_pid);
+    static Oracle *GetInstance(int host_pid);
+
     void Start();
+
     bool OpenConnection();
+
     void SetPipe(Conn connection_);
+
 private:
     Conn connection;
-    sem_t* semaphore_host;
-    sem_t* semaphore;
-    sem_t* semaphore_client;
-    std::string semaphore_name;
+    sem_t *semaphore_host;
+    sem_t *semaphore_client;
     std::string sem_client_name;
     std::string sem_host_name;
 
@@ -29,9 +31,15 @@ private:
     int rand_offset;
 
     Oracle(int host_pid);
-    Oracle(Oracle& other);
+
+    Oracle(Oracle &other);
+
+    Oracle &operator=(Oracle &other);
+
     void Terminate(int signum);
+
     int GetWeather(int day, int month, int year);
+
     static void SignalHandler(int signum);
 };
 

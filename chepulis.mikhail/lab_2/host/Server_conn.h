@@ -12,18 +12,27 @@ class Server_conn {
 
 public:
     Server_conn() = default;
+
     ~Server_conn() = default;
 
     bool Create();
+
     bool Open(size_t id);
+
     bool Close();
+
     bool Read(void *buf, size_t count);
+
     bool Write(void *buf, size_t count);
+
     int GetClientID();
+
+    bool IsClosed();
 
 private:
     bool owner;
     int client_pid;
+    bool is_closed;
     int fd[2];
 
 };

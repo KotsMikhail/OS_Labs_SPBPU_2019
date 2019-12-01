@@ -69,10 +69,12 @@ bool Conn::Write(void *buf, size_t count) {
 
 bool Conn::Close() {
     if (!mq_close(*fd)) {
+
         free(fd);
         if (owner && mq_unlink(filename.c_str())) {
             return false;
         }
+        return true;
     }
     free(fd);
     return true;
