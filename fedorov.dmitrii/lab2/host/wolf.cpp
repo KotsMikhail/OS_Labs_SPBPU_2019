@@ -13,13 +13,15 @@
 
 #include "../connections/conn.h"
 #include "../support/message_types.h"
+#include "../support/game_consts.h"
 
 static const int g_timeout = 5;
 
 
-Wolf::Wolf (int host_pid) {
+Wolf::Wolf (int host_pid_) {
    is_client_connected = false;
    client_pid = 0;
+   host_pid = host_pid_;
 
    conn = new Conn(host_pid, true);
    sem_host = sem_open(std::string("host_" + std::to_string(host_pid)).c_str(), O_CREAT, 0666, 0);
@@ -29,21 +31,34 @@ Wolf::Wolf (int host_pid) {
 } 
 
 
-void Wolf::Terminate () {
+Wolf::~Wolf () {
    if (is_client_connected) {
       kill(client_pid, SIGTERM);
    }
+
+   if (sem_host != SEM_FAILED) {
+      sem_unlink(std::string("host_" + std::to_string(host_pid)).c_str());
+   }
+   
+   if (sem_client != SEM_FAILED) {
+      sem_unlink(std::string("client_" + std::to_string(host_pid)).c_str());
+   }
+    
    delete conn;
+   
    std::cout << "Wolf terminated" << std::endl; 
 } 
 
 
-Wolf& Wolf::GetInstance (int host_pid)
+Wolf* Wolf::GetInstance (int host_pid)
 {
-   static Wolf wolf = Wolf(host_pid);
-   if (wolf.sem_host == SEM_FAILED || wolf.sem_client == SEM_FAILED) {
-      exit(EXIT_FAILURE);
+   static Wolf* wolf = new Wolf(host_pid);
+   
+   if (wolf->sem_host == SEM_FAILED || wolf->sem_client == SEM_FAILED || wolf->conn->HasError()) {
+      delete wolf;
+      return nullptr;
    }
+
    return wolf;
 }
 
@@ -56,47 +71,42 @@ void Wolf::PrepareGame () {
    sigaction(SIGTERM, &sa, nullptr);
    sigaction(SIGUSR1, &sa, nullptr);
    sigaction(SIGUSR2, &sa, nullptr);
+   sigaction(SIGINT, &sa, nullptr);
    pause();
 }
 
 
 void Wolf::StartGame () {
    std::cout << "START GAME AS WOLF" << std::endl;
-   bool is_first_step = true;
-
+  
    while (true) {
       Msg msg;
 
-      if (!is_first_step) {
-         if (!SemWait(sem_host)) {
-            Terminate();
-            return;
-         }      
+      if (!SemWait(sem_host)) {
+         return;
+      }      
 
-         if (!conn->Read(&msg, sizeof(msg))) {
-            std::cout << "Error in conn->read: terminate host" << std::endl;
-            exit(EXIT_FAILURE);
-         }
+      std::cout << "___________GAME_STEP___________" << std::endl;
 
-         std::cout << "___________GAME_STEP___________" << std::endl;
-         int cur_val = GetValue();
-         std::cout << "Wolf: num is " << cur_val << std::endl;
-  
-         int goat_val = msg.data;
-         std::cout << "Goat num: " << goat_val << std::endl;   
-     
-         if (goat_state == 0 && abs(goat_val - cur_val) > 70) {
-            goat_state++;
-         } else if (goat_state != 0) {
-            if (goat_state == 1 && abs(goat_val - cur_val) > 20) {
-               goat_state++;
-            } else {
-               goat_state--;
-            }
-         }
+      if (!conn->Read(&msg, sizeof(msg))) {
+         return;
       }
 
-      is_first_step = false;
+      int goat_val = msg.data;
+      std::cout << "Goat num: " << goat_val << std::endl;   
+     
+      int cur_val = GetValue();
+      std::cout << "Wolf: num is " << cur_val << std::endl;
+      
+      if (goat_state == 0 && abs(goat_val - cur_val) > g_alive_deviation) {
+         goat_state++;
+      } else if (goat_state != 0) {
+         if (goat_state == 1 && abs(goat_val - cur_val) > g_dead_deviation) {
+            goat_state++;
+         } else {
+            goat_state--;
+         }
+      }
 
       if (goat_state == 0) {
          std::cout << "Goat: I am alive with full hp" << std::endl;
@@ -109,14 +119,13 @@ void Wolf::StartGame () {
       msg.type = 1;
       msg.data = goat_state;
       if (!conn->Write(&msg, sizeof(msg))) {
-         std::cout << "Error in conn->write: terminate host" << std::endl;
-         Terminate();
-         exit(EXIT_FAILURE);
+         return;
       }
 
       if (goat_state == 2) {
-         std::cout << "_Goat__is__dead______END_GAME__" << std::endl;   
-         Terminate();
+         std::cout << "Kill client" << std::endl;
+         kill(client_pid, SIGTERM);
+         pause();
          return;
       }
 
@@ -130,21 +139,17 @@ void Wolf::StartGame () {
 int Wolf::GetValue ()
 {
    int res;
-   std::cout << "Enter number from 1 to 100" << std::endl;
+   std::cout << "Enter number from " << g_min_wolf_val << " to " << g_max_wolf_val << std::endl;
 
    do {
       std::cin >> res;
-   } while (res < 1 || res > 100);
+   } while (res < g_min_wolf_val || res > g_max_wolf_val);
    return res;
 }
 
 
 bool Wolf::SemWait (sem_t* sem)
 {
-   if (Conn::GetType() == "conn_fifo") {
-      return true;
-   }
-
    struct timespec ts;
    clock_gettime(CLOCK_REALTIME, &ts);
    ts.tv_sec += g_timeout;
@@ -159,10 +164,6 @@ bool Wolf::SemWait (sem_t* sem)
 
 bool Wolf::SemSignal (sem_t* sem)
 {
-   if (Conn::GetType() == "conn_fifo") {
-      return true;
-   }
-
    if (sem_post(sem) == -1) {
       perror("sem_post() ");
       return false;
@@ -175,34 +176,36 @@ bool Wolf::SemSignal (sem_t* sem)
 
 void Wolf::HandleSignal (int sig, siginfo_t* info, void* ptr)
 {
-   static Wolf& wolf = GetInstance(0);
+   static Wolf* wolf = GetInstance(0);
    switch (sig) {
       case SIGUSR1:
       { 
-         if (wolf.is_client_connected) {
+         if (wolf->is_client_connected) {
             std::cout << "Ignore handshake, client already connected" << std::endl; 
          } else {
             std::cout << "Client connected: pid is " << info->si_pid << std::endl; 
-            wolf.is_client_connected = true;
-  	    wolf.client_pid = info->si_pid;
+            wolf->is_client_connected = true;
+  	    wolf->client_pid = info->si_pid;
          }
          break;       
       }
       case SIGUSR2:
       { 
          std::cout << "Client has error, disconnect him" << std::endl; 
-         wolf.is_client_connected = false;
-         wolf.client_pid = 0;
+         wolf->is_client_connected = false;
+         wolf->client_pid = 0;
          break;       
       }
       case SIGTERM:
+      case SIGINT:
       {
          std::cout << "Terminate host" << std::endl; 
-         if (wolf.is_client_connected) {
-            wolf.is_client_connected = false;
-            wolf.client_pid = 0;
+         if (wolf->is_client_connected) {
+            wolf->is_client_connected = false;
+            wolf->client_pid = 0;
          }
-         wolf.Terminate();
+
+         delete wolf;
          exit(EXIT_SUCCESS);
          break;
       }

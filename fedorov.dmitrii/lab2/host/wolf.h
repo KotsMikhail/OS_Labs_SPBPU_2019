@@ -6,12 +6,17 @@ class Conn;
 
 class Wolf {
 public:
-   static Wolf& GetInstance(int host_pid);
+   ~Wolf ();
+
+   static Wolf* GetInstance(int host_pid);
+   
    void StartGame ();
    void PrepareGame ();
 private:
    Wolf (int host_pid);
-   void Terminate ();   
+   
+   Wolf (Wolf& w) = delete;
+   Wolf& operator= (const Wolf& w) = delete;
 
    int GetValue ();
    bool SemWait (sem_t* sem);   
@@ -27,4 +32,5 @@ private:
 
    bool is_client_connected;
    int client_pid;
+   int host_pid;
 };

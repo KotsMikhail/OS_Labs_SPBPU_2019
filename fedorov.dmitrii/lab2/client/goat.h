@@ -5,16 +5,24 @@ class Conn;
 
 class Goat {
 public:
-   static Goat& GetInstance (int host_pid);
+   ~Goat ();   
+
+
+   static Goat* GetInstance (int host_pid);
+
    void PrepareGame ();
    void StartGame ();
 
 private:
-   Goat (int host_pid);
-   void Terminate ();   
+   Goat (int host_pid);   
+
+   Goat (Goat& w) = delete;
+   Goat& operator= (const Goat& w) = delete;  
 
    int GenerateValue ();
-   int IsAlive () { return status == 1; }   
+   bool GenAndWriteValue ();
+
+   int IsAlive () { return status == 0; }   
 
    bool SemWait (sem_t* sem);   
    bool SemSignal (sem_t* sem);  

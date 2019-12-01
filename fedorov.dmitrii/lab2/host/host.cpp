@@ -12,9 +12,14 @@ int main (int argc, char* argv[]) {
    cout << "Launch host with pid: ";
    cout << getpid() << endl;
 
-   Wolf& wolf = Wolf::GetInstance(getpid());
-   wolf.PrepareGame();
-   wolf.StartGame();
+   Wolf* wolf = Wolf::GetInstance(getpid());
+   
+   if (wolf != nullptr) {
+      wolf->PrepareGame();
+      wolf->StartGame();
+      delete wolf;
+      return 0;
+   }
 
-   return 0;
+   return 1;
 }

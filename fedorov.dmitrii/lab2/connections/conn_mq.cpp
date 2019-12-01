@@ -17,13 +17,17 @@ std::string Conn::GetType ()
    return std::string("conn_mq");
 }
 
+bool Conn::HasError ()
+{
+   return has_error;
+}
 
 Conn::Conn (int msgkey, bool create) {
    owner = create;
    desc = msgget(msgkey, IPC_CREAT | 0666);
    if (desc == -1) {
       perror("msgget() ");
-      exit(EXIT_FAILURE);
+      RETURN_WITH_ERROR;
    }
    if (owner) {
       std::cout << "Connection: msg queue created with qid " << desc << std::endl;
@@ -39,6 +43,7 @@ Conn::~Conn() {
   
    if (msgctl(desc, IPC_RMID, 0) == -1) {
       perror("msqctl() ");
+      RETURN_WITH_ERROR;
    }
    
    std::cout << "Connection: msgqueue closed qid: " << desc << std::endl;
@@ -47,7 +52,7 @@ Conn::~Conn() {
 bool Conn::Read (void* buf, size_t count) {
    if (msgrcv(desc, buf, count - sizeof(long), 0, SA_RESTART) == -1) {
       perror("msgrcv() ");
-      return false;
+      RETURN_FALSE_WITH_ERROR;
    } 
    return true;
 }
@@ -55,7 +60,7 @@ bool Conn::Read (void* buf, size_t count) {
 bool Conn::Write (void* buf, size_t count) {
    if (msgsnd(desc, buf, count - sizeof(long), 0) == -1) {
       perror("msgsnd() ");
-      return false;
+      RETURN_FALSE_WITH_ERROR;
    } 
 
    return true;
