@@ -46,7 +46,7 @@ bool Conn::Read(void* buf, size_t count)
     {
         std::cout << "ERROR: reading failed: " << strerror(errno) << std::endl;
     } else {
-        memcpy(buf, (void*)&fifo_buf, count);
+        memcpy(buf, &fifo_buf, count);
         success = true;
     }
     return success;

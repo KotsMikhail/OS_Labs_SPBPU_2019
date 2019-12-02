@@ -9,6 +9,9 @@ public:
     void Start();
     bool OpenConnection();
     static Goat& GetInstance(int host_pid);
+    Goat(Goat&) = delete;
+    Goat(const Goat&) = delete;
+    Goat& operator=(const Goat&) = delete;
 private:
     int host_pid;
     static const int RAND_LIMIT_ALIVE = 100;
@@ -17,7 +20,6 @@ private:
     void Terminate(int signum);
 
     Goat(int host_pid);
-    Goat(const Goat&);
     static void SignalHandler(int signum);
 };
 

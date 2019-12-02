@@ -12,7 +12,9 @@ public:
     bool OpenConnection();
 
     static Wolf& GetInstance();
-
+    Wolf(Wolf&) = delete;
+    Wolf(const Wolf&) = delete;
+    Wolf& operator=(const Wolf&) = delete;
 private:
     ClientInfo client_info;
     int curr_num;
@@ -21,7 +23,6 @@ private:
     void Terminate(int signum);
 
     Wolf();
-    Wolf(const Wolf&);
     Message Step(Message& msg);
     void GetNumber();
     static void SignalHandler(int signum, siginfo_t* info, void *ptr);

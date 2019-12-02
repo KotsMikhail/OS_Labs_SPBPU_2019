@@ -67,7 +67,7 @@ bool Goat::OpenConnection()
 
 Goat& Goat::GetInstance(int host_pid)
 {
-    static Goat instance = Goat(host_pid);
+    static Goat instance(host_pid);
     return instance;
 }
 
