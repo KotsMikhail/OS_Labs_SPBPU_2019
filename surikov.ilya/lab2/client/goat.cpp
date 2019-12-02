@@ -93,6 +93,7 @@ Goat::Goat(int pid)
     std::cout << "host pid: " << pid << std::endl;
     host_pid = pid;
     signal(SIGTERM, SignalHandler);
+    signal(SIGINT, SignalHandler);
 }
 
 void Goat::SignalHandler(int signum)

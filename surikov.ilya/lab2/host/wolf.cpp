@@ -109,6 +109,7 @@ Wolf::Wolf() : client_info(0), curr_num(0)
     act.sa_sigaction = SignalHandler;
     act.sa_flags = SA_SIGINFO;
     sigaction(SIGTERM, &act, nullptr);
+    sigaction(SIGINT, &act, nullptr);
     sigaction(SIGUSR1, &act, nullptr);
     sigaction(SIGUSR2, &act, nullptr);
 }
