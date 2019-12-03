@@ -77,16 +77,13 @@ void ClientHandler::Start() {
             continue;
         }
         if (connection.Write(&mes, sizeof(mes))) {
-
             sem_post(semaphore_client);
             clock_gettime(CLOCK_REALTIME, &ts);
             ts.tv_sec += TIMEOUT;
             while ((s = sem_timedwait(semaphore_host, &ts)) == -1 && errno == EINTR)
                 continue;
             if (s == -1) {
-                //TODO "убить" себя и клиента
-                //std::cout << "KILL KILL KILL KILL KILL KILL KILL" << std::endl;
-                syslog(LOG_NOTICE, "KILL KILL KILL KILL KILL KILL KILL");
+                // если клиент завис, то "убиваемм" клиента и закрываем соединение
                 KillClient();
                 Terminate(errno);
                 return;

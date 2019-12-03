@@ -41,6 +41,8 @@ private:
 
     void CloseConnection(int pid);
 
+    void Run();
+
 };
 
 

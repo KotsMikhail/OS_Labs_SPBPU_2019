@@ -26,12 +26,22 @@ bool Conn::Open(size_t id, bool create) {
         syslog(LOG_NOTICE, "Creating connection with id = %i, file = %s", (int)id, filename.c_str());
 
         struct mq_attr attr = {0, 1, sizeof(Message), 0, {0}};
-        *fd = mq_open(filename.c_str(), O_CREAT | O_RDWR, mode, &attr);
+        if((*fd = mq_open(filename.c_str(), O_CREAT | O_RDWR, mode, &attr)) == -1)
+        {
+            //std::cout << "can`t create = " << id << ", file = " << filename << "\twith error = " << strerror(errno) << std::endl;
+            syslog(LOG_ERR, "ERROR: can`t create connection with id = %i, file = %s, error = %s", (int)id, filename.c_str(), strerror(errno));
+            return false;
+        }
 
     } else {
         //std::cout << "Getting connection with id = " << id << ", file = " << filename << std::endl;
         syslog(LOG_NOTICE, "Getting connection with id = %i, file = %s", (int)id, filename.c_str());
-        *fd = mq_open(filename.c_str(), O_RDWR);
+        if((*fd = mq_open(filename.c_str(), O_RDWR)) == -1)
+        {
+            //std::cout << "can`t open = " << id << ", file = " << filename << "\twith error = " << strerror(errno) << std::endl;
+            syslog(LOG_ERR, "ERROR: can`t open connection with id = %i, file = %s, error = %s", (int)id, filename.c_str(), strerror(errno));
+            return false;
+        }
     }
     return true;
 }
@@ -45,7 +55,7 @@ bool Conn::Read(void *buf, size_t count) {
 
     if (mq_receive(*fd, (char *)buf, count, nullptr) == -1)
     {
-        //std::cout << "ERROR: reading failed with error = " << strerror(errno) << std::endl;
+        std::cout << "ERROR: reading failed with error = " << strerror(errno) << std::endl;
         syslog(LOG_ERR, "ERROR: reading failed with error = %s", strerror(errno));
         return false;
     }
@@ -60,7 +70,7 @@ bool Conn::Write(void *buf, size_t count) {
     }
     if (mq_send(*fd, (char *)buf, count, 0) == -1)
     {
-        //std::cout << "ERROR: writing failed with error = " << strerror(errno) << std::endl;
+        std::cout << "ERROR: writing failed with error = " << strerror(errno) << std::endl;
         syslog(LOG_ERR, "ERROR: writing failed with error = %s", strerror(errno));
         return false;
     }

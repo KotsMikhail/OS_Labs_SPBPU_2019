@@ -47,15 +47,27 @@ void* routine(void * arg) {
     return nullptr;
 }
 
-void Server::Start() {
-    //std::cout << "I am server!" << std::endl;
-    syslog(LOG_NOTICE, "I am server!");
 
-    Message buf;
-    Message msg;
-    msg.number = 0;
+void CreateClient(ClientHandler *handler) {
+    int client_pid;
+    client_pid = fork();
+    if (client_pid == 0) {
+        Oracle *client = Oracle::GetInstance(handler->GetId());
+        client->SetPipe(handler->GetPipe());
+        if(!client->OpenConnection()) {
+            std::cout << "Can`t create client. Error:" << strerror(errno)<< std::endl;
+            exit(errno);
+        }
+        client->Start();
+        //std::cout << "client work is over" << std::endl;
+        syslog(LOG_NOTICE, "client work is over");
+        return;
+    }
+    handler->SetClient(client_pid);
+    return;
+}
 
-
+int ReadClientCount() {
     int client_count = 1;
     std::cout << "Server`s pid is " << getpid() << std::endl;
     std::cout << "Enter number of Weather Prophets" << std::endl;
@@ -67,42 +79,47 @@ void Server::Start() {
         std::cin >> client_count;
     }
     std::cout << "Number = " << client_count << std::endl;
+    return client_count;
+}
 
-    int handler_id, client_pid;
+
+void StartHandlerActivity(ClientHandler *handler) {
+    pthread_t tid;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    void *(*function)(void *) = routine;
+    pthread_create(&tid, &attr, function, handler);
+    handler->SetTID(tid);
+}
+
+void Server::Start() {
+    //std::cout << "I am server!" << std::endl;
+    syslog(LOG_NOTICE, "I am server!");
+
+    int client_count = ReadClientCount();
     Server_conn new_connection;
-
     for (int i = 0; i < client_count; i++) {
         new_connection.Create();
 
         ClientHandler *handler = new ClientHandler(i);
         handler->SetServerConnection(new_connection);
-        handler->OpenConnection();
-        handler_id = handler->GetId();
-
-        client_pid = fork();
-        if (client_pid == 0) {
-            Oracle *client = Oracle::GetInstance(handler_id);
-            client->SetPipe(handler->GetPipe());
-            client->OpenConnection();
-            client->Start();
-            //std::cout << "client work is over" << std::endl;
-            syslog(LOG_NOTICE, "client work is over");
-            return;
+        if(!handler->OpenConnection()) {
+            std::cout << "Can`t create handler(" << i << "). Error: " << strerror(errno)<< std::endl;
+            continue;
         }
-        handler->SetClient(client_pid);
 
-        new_connection.Open(handler_id);
+        CreateClient(handler);
 
-
-        pthread_t tid;
-        pthread_attr_t attr;
-        pthread_attr_init(&attr);
-        void *(*function)(void *) = routine;
-        pthread_create(&tid, &attr, function, handler);
-        handler->SetTID(tid);
+        new_connection.Open(handler->GetId());
+        StartHandlerActivity(handler);
         OpenConnection(new_connection, handler);
     }
 
+    Run();
+}
+
+void Server::Run()
+{
     std::string new_date;
     Message mes;
     bool flag;
@@ -115,7 +132,6 @@ void Server::Start() {
 
             if (std::cin.fail()) {
                 std::cin.clear(); // то возвращаем cin в 'обычный' режим работы
-                //std::cin.ignore(32767, '\n'); // и удаляем значения предыдущего ввода из входного буфера
                 //std::cout << "clear cin" << std::endl;
                 new_date = "";
             } else {
@@ -139,7 +155,6 @@ void Server::Start() {
         SendTask(mes);
         //sleep(1);
     }
-
 }
 
 
