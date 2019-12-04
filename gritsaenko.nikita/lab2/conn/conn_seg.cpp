@@ -6,19 +6,23 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <sys/shm.h>
+#include <sys/ipc.h>
 #include <cstring>
 #include <iostream>
 
 static void *shared_memory;
-static key_t MESSAGE_KEY = 1;
+const key_t key = 2;
 
 int conn_t::create_connection(bool isHost, bool create) {
 	is_owner = isHost;
 	id = -1;
 
-	int shm_flags = 0666 | isHost ? IPC_CREAT : 0;
+	int shm_flags = 0666;
+	if (is_owner) {
+		shm_flags |= IPC_CREAT;
+	}
 	
-	if ((id = shmget(MESSAGE_KEY, sizeof(message_t), shm_flags)) < 0) {
+	if ((id = shmget(key, sizeof(message_t), shm_flags)) < 0) {
 		syslog(LOG_ERR, "Error: failed to create shared memory segment");
 		syslog(LOG_ERR, "Error: %s", strerror(errno));
 

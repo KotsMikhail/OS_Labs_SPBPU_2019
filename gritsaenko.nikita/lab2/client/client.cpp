@@ -1,6 +1,5 @@
 #include "client.h"
 #include <syslog.h>
-#include <sys/stat.h>
 #include <iostream>
 
 int main(int argc, char* argv[]) {
@@ -13,16 +12,13 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
     
-    int host_pid = std::stoi(argv[1]);
-
-    std::string proc = "/proc/" + std::to_string(host_pid);
-
-    struct stat s;
-
-    if (stat(proc.c_str(), &s) || !S_ISDIR(s.st_mode)) {
-        std::cout << "Error: Invalid host pid" << std::endl;
-        syslog(LOG_ERR, "Error: host with pid %d doesn't exist!", host_pid);
-        closelog();
+    int host_pid;
+    try {
+        host_pid = std::stoi(argv[1]);
+    }
+    catch (std::exception &e) {
+        std::cout << "Error: Incorrect host pid format" << std::endl;
+        syslog(LOG_ERR, "Error: Incorrect host pid format");
         return EXIT_FAILURE;
     }
 

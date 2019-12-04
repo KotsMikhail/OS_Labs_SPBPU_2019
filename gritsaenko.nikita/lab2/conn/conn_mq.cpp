@@ -9,7 +9,7 @@
 #include <cerrno>
 #include <string.h>
 
-const char* Q_NAME = "/mq";
+const char* Q_NAME = "/mqname";
 
 int conn_t::create_connection(bool isHost, bool create) {
 	is_owner = isHost;

@@ -24,6 +24,7 @@ private:
     client_t(int host_pid);
     client_t();
     client_t(client_t&) = delete;
+    client_t& operator = (client_t other) = delete;
     ~client_t();
 
     void terminate();

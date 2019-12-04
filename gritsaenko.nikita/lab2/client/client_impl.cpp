@@ -11,12 +11,21 @@
 #include <string>
 #include <vector>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 client_t::client_t() {}
 
 client_t::~client_t() {}
 
 client_t::client_t(int host_pid) : host_pid(host_pid) {
+    std::string proc = "/proc/" + std::to_string(host_pid);
+    struct stat s;
+
+    if (stat(proc.c_str(), &s) || !S_ISDIR(s.st_mode)) {
+        std::cout << "Warning: host with pid " << host_pid << " doesn't exist!" << std::endl;
+        syslog(LOG_WARNING, "Warning: host with pid %d doesn't exist!", host_pid);
+    }
+
     struct sigaction sig_action;
 
     memset(&sig_action, 0, sizeof(sig_action));
