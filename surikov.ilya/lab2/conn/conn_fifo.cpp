@@ -40,13 +40,11 @@ bool Conn::Open(size_t id, bool create)
 
 bool Conn::Read(void* buf, size_t count)
 {
-    Message fifo_buf;
     bool success = false;
-    if (read(_id, &fifo_buf, count) == -1)
+    if (read(_id, buf, count) == -1)
     {
         std::cout << "ERROR: reading failed: " << strerror(errno) << std::endl;
     } else {
-        memcpy(buf, &fifo_buf, count);
         success = true;
     }
     return success;
