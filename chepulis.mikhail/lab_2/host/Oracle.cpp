@@ -52,8 +52,8 @@ void Oracle::Start() {
 
 bool Oracle::OpenConnection() {
     if (connection.Open(host_pid, false)) {
-        sem_client_name = sem_name + "_client_" + toString(host_pid);
-        sem_host_name = sem_name + "_host_" + toString(host_pid);
+        sem_client_name = sem_name + "_client_" + std::to_string(host_pid);
+        sem_host_name = sem_name + "_host_" + std::to_string(host_pid);
 
 
         semaphore_host = sem_open(sem_host_name.c_str(), 0);

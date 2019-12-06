@@ -19,7 +19,7 @@ static std::string mem_filename = "/lab2_shm_mem";
 bool Conn::Open(size_t id, bool create) {
     owner = create;
     int mode = 0777;
-    filename = mem_filename + "_" + toString(id);
+    filename = mem_filename + "_" + std::to_string(id);
     int shm;
     if (create) {
         //std::cout << "Creating connection with id = " << id << ", file = " << filename << std::endl;

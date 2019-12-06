@@ -19,12 +19,6 @@ std::vector<int> dateFromStr(std::string date);
 bool CheckDate(std::string date);
 bool MessFromDate(std::string date, Message &mes);
 bool IsRealDate(int day, int month, int year);
-template <typename T>
-std::string toString(T val) {
-    std::ostringstream oss;
-    oss << val;
-    return oss.str();
-}
 
 
 #endif //LAB_2_SEVER__MY_FUNCTIONS_H

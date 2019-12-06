@@ -41,14 +41,14 @@ Server& Server::operator=(Server& other) {
 }
 
 
-void* routine(void * arg) {
+void* Server::routine(void * arg) {
     ClientHandler *handler = (ClientHandler *) arg;
     handler->Start();
     return nullptr;
 }
 
 
-void CreateClient(ClientHandler *handler) {
+void Server::CreateClient(ClientHandler *handler) {
     int client_pid;
     client_pid = fork();
     if (client_pid == 0) {
@@ -67,7 +67,7 @@ void CreateClient(ClientHandler *handler) {
     return;
 }
 
-int ReadClientCount() {
+int Server::ReadClientCount() {
     int client_count = 1;
     std::cout << "Server`s pid is " << getpid() << std::endl;
     std::cout << "Enter number of Weather Prophets" << std::endl;
@@ -83,7 +83,7 @@ int ReadClientCount() {
 }
 
 
-void StartHandlerActivity(ClientHandler *handler) {
+void Server::StartHandlerActivity(ClientHandler *handler) {
     pthread_t tid;
     pthread_attr_t attr;
     pthread_attr_init(&attr);

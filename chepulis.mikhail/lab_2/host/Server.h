@@ -43,6 +43,15 @@ private:
 
     void Run();
 
+    static void* routine(void* arg);
+
+    void CreateClient(ClientHandler *handler);
+
+    int ReadClientCount();
+
+    void StartHandlerActivity(ClientHandler *handler);
+
+
 };
 
 

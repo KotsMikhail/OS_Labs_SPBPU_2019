@@ -29,8 +29,8 @@ ClientHandler::ClientHandler(ClientHandler&): client_info(0), is_already_closed(
 
 bool ClientHandler::OpenConnection() {
     if (connection.Open(my_id, true)) {
-        sem_client_name = sem_name + "_client_" + toString(my_id);
-        sem_host_name = sem_name + "_host_" + toString(my_id);
+        sem_client_name = sem_name + "_client_" + std::to_string(my_id);
+        sem_host_name = sem_name + "_host_" + std::to_string(my_id);
 
 
         semaphore_host = sem_open(sem_host_name.c_str(), O_CREAT, 0666, 0);

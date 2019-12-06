@@ -19,7 +19,7 @@ static std::string mq_filename = "/lab2_mq";
 bool Conn::Open(size_t id, bool create) {
     fd = (int*) malloc(sizeof(int));
     owner = create;
-    filename = mq_filename + "_" + toString(id);
+    filename = mq_filename + "_" + std::to_string(id);
     int mode = 0666;
     if (create) {
         //std::cout << "Creating connection with id = " << id << ", file = " << filename << std::endl;
