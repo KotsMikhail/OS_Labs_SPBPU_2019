@@ -1,7 +1,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <unistd.h>
-#include <exception>
+#include <stdexcept>
 
 #include "goat.h"
 
@@ -25,10 +25,10 @@ int main (int argc, char* argv[]) {
       Goat& goat = Goat::GetInstance(host_pid);
       goat.PrepareGame();
       goat.StartGame();
-   } catch (std::exception &e) {
+   } catch (std::runtime_error &e) {
       cout << e.what() << endl;
       return 1;
    }
 
-   return 1;
+   return 0;
 }
