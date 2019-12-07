@@ -2,27 +2,24 @@
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <stdexcept>
 
 #include "conn.h"
 
 #include "../support/message_types.h"
 
 
-std::string Conn::GetType ()
-{
-   return std::string("conn_sock");
-}
+struct SockConnData {
+   int hsocket;
+   int csocket;
+};
 
-bool Conn::HasError ()
-{
-   return has_error;
-}
 
 Conn::Conn (int host_pid_, bool create) { 
    owner = create;
    host_pid = host_pid_;
    std::string socketpath = std::string("/tmp/" + std::to_string(host_pid));
-   internal_data = new (std::nothrow) int[2]; 
+   SockConnData socketdata;
 
    struct sockaddr_un serv_addr;
    serv_addr.sun_family = AF_UNIX;
@@ -31,81 +28,86 @@ Conn::Conn (int host_pid_, bool create) {
 
    if (create) {
       std::cout << "Create listener" << std::endl;
-      internal_data[0] = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-      if (internal_data[0] == -1) {
-         perror("socket() ");
-         RETURN_WITH_ERROR;
+      socketdata.hsocket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+      if (socketdata.hsocket == -1) {
+         throw std::runtime_error("hsocket error");
       }
       
       std::cout << "Bind listener" << std::endl;
-      if (bind(internal_data[0], (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
-         perror("bind() ");
-         RETURN_WITH_ERROR;
+      if (bind(socketdata.hsocket, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
+         throw std::runtime_error("bind error");
       }
 
       std::cout << "Listen" << std::endl;
-      if (listen(internal_data[0], 1) < 0 ) {
-         perror("listen() ");
-         RETURN_WITH_ERROR
+      if (listen(socketdata.hsocket, 1) < 0 ) {
+         throw std::runtime_error("listen error");
       }
  
       std::cout << "Accept" << std::endl;
-      internal_data[1] = accept(internal_data[0], NULL, NULL);
-      if (internal_data[1] < 0) {
-         perror("accept() ");
-         RETURN_WITH_ERROR;
+      socketdata.csocket = accept(socketdata.hsocket, NULL, NULL);
+      if (socketdata.csocket < 0) {
+         throw std::runtime_error("accept error");
       }
    } else {
-      internal_data[1] = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-      if (internal_data[1] < 0) { 
-         perror("socket() ");
-         RETURN_WITH_ERROR;
+      socketdata.csocket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+      if (socketdata.csocket < 0) { 
+         throw std::runtime_error("csocket error");
       }
       std::cout << "Socket created" << std::endl;
   
-      if (connect(internal_data[1],(struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-         perror("connect()");
-         RETURN_WITH_ERROR;
+      if (connect(socketdata.csocket,(struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+         throw std::runtime_error("connect error");
       }   
       std::cout << "Socket connected" << std::endl;
    }
+   
+   p_data = new (std::nothrow) SockConnData(socketdata); 
 }
 
-Conn::~Conn() {
+Conn::~Conn () {
+   SockConnData* socketdata = (SockConnData*)p_data;
    std::string socketpath = std::string("/tmp/" + std::to_string(host_pid));
+   
    if (!owner) {
-      if (close(internal_data[1]) < 0) {
-         perror("close(csocket) ");
+      if (socketdata->csocket != -1) {
+         if (close(socketdata->csocket) < 0) {
+            perror("close(csocket) ");
+         }
       }
    }
 
    if (owner) {
-      if (internal_data[0] != -1) {
-         if (close(internal_data[0]) < 0) {
+      if (socketdata->hsocket != -1) {
+         if (close(socketdata->hsocket) < 0) {
             perror("close(hsocket) ");
          }
       } 
 
       unlink(socketpath.c_str());
    }
+
+   delete (SockConnData*)p_data;
    std::cout << "Connection closed" << std::endl;
+   
 }
 
 bool Conn::Read (void* buf, size_t count) {
-    int n = recv(internal_data[1], buf, count, 0);
+    SockConnData* socketdata = (SockConnData*)p_data;
+    int n = recv(socketdata->csocket, buf, count, 0);
     if (n < 0) { 
        perror("read()");
-       RETURN_FALSE_WITH_ERROR;
+       return false;
     }
     return true;
 }
 
 bool Conn::Write (void* buf, size_t count) {
-    int n = send(internal_data[1], buf, count, MSG_NOSIGNAL);
-    if (n < 0) { 
-       perror("write() ");
-       RETURN_FALSE_WITH_ERROR;
-    }
+   SockConnData* socketdata = (SockConnData*)p_data;
+   int n = send(socketdata->csocket, buf, count, MSG_NOSIGNAL);
+   if (n < 0) { 
+      perror("write() ");
+      return false;
+   }
    return true;
 }
 

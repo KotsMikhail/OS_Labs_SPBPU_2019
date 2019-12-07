@@ -10,6 +10,7 @@
 #include <time.h>
 #include <signal.h>
 #include <unistd.h>
+#include <stdexcept>
 
 #include "../connections/conn.h"
 #include "../support/message_types.h"
@@ -18,47 +19,51 @@
 static const int g_timeout = 5;
 
 
-Wolf::Wolf (int host_pid_) {
+Wolf::Wolf (int host_pid_)
+   : conn(host_pid_, true)
+{
+   sem_host_name = std::string("host_" + std::to_string(host_pid));
+   sem_client_name = std::string("client_" + std::to_string(host_pid));
+
    is_client_connected = false;
    client_pid = 0;
    host_pid = host_pid_;
 
-   conn = new Conn(host_pid, true);
-   sem_host = sem_open(std::string("host_" + std::to_string(host_pid)).c_str(), O_CREAT, 0666, 0);
-   sem_client = sem_open(std::string("client_" + std::to_string(host_pid)).c_str(), O_CREAT, 0666, 0);
+   sem_host = sem_open(sem_host_name.c_str(), O_CREAT, 0666, 0);
+   if (sem_host == SEM_FAILED) {
+      std::cout << "sem_host wasn't opened" << std::endl;
+      throw std::runtime_error("sem_host wasn't opened");
+   }
+
+   sem_client = sem_open(sem_client_name.c_str(), O_CREAT, 0666, 0);
+   if (sem_client == SEM_FAILED) {
+      sem_unlink(std::string("host_" + std::to_string(host_pid)).c_str());
+      throw std::runtime_error("sem_client wasn't opened");
+   }
 
    std::cout << "Wolf constructed" << std::endl; 
 } 
 
 
 Wolf::~Wolf () {
-   if (is_client_connected) {
+  if (is_client_connected) {
       kill(client_pid, SIGTERM);
    }
 
    if (sem_host != SEM_FAILED) {
-      sem_unlink(std::string("host_" + std::to_string(host_pid)).c_str());
+      sem_unlink(sem_host_name.c_str());
    }
    
    if (sem_client != SEM_FAILED) {
-      sem_unlink(std::string("client_" + std::to_string(host_pid)).c_str());
+      sem_unlink(sem_client_name.c_str());
    }
-    
-   delete conn;
-   
    std::cout << "Wolf terminated" << std::endl; 
-} 
+}
 
 
-Wolf* Wolf::GetInstance (int host_pid)
+Wolf& Wolf::GetInstance (int host_pid)
 {
-   static Wolf* wolf = new Wolf(host_pid);
-   
-   if (wolf->sem_host == SEM_FAILED || wolf->sem_client == SEM_FAILED || wolf->conn->HasError()) {
-      delete wolf;
-      return nullptr;
-   }
-
+   static Wolf wolf(host_pid);
    return wolf;
 }
 
@@ -88,7 +93,7 @@ void Wolf::StartGame () {
 
       std::cout << "___________GAME_STEP___________" << std::endl;
 
-      if (!conn->Read(&msg, sizeof(msg))) {
+      if (!conn.Read(&msg, sizeof(msg))) {
          return;
       }
 
@@ -118,7 +123,7 @@ void Wolf::StartGame () {
 
       msg.type = 1;
       msg.data = goat_state;
-      if (!conn->Write(&msg, sizeof(msg))) {
+      if (!conn.Write(&msg, sizeof(msg))) {
          return;
       }
 
@@ -176,36 +181,30 @@ bool Wolf::SemSignal (sem_t* sem)
 
 void Wolf::HandleSignal (int sig, siginfo_t* info, void* ptr)
 {
-   static Wolf* wolf = GetInstance(0);
+   static Wolf& wolf = GetInstance(0);
    switch (sig) {
       case SIGUSR1:
       { 
-         if (wolf->is_client_connected) {
+         if (wolf.is_client_connected) {
             std::cout << "Ignore handshake, client already connected" << std::endl; 
          } else {
             std::cout << "Client connected: pid is " << info->si_pid << std::endl; 
-            wolf->is_client_connected = true;
-  	    wolf->client_pid = info->si_pid;
+            wolf.is_client_connected = true;
+  	    wolf.client_pid = info->si_pid;
          }
          break;       
       }
       case SIGUSR2:
       { 
          std::cout << "Client has error, disconnect him" << std::endl; 
-         wolf->is_client_connected = false;
-         wolf->client_pid = 0;
+         wolf.is_client_connected = false;
+         wolf.client_pid = 0;
          break;       
       }
       case SIGTERM:
       case SIGINT:
       {
          std::cout << "Terminate host" << std::endl; 
-         if (wolf->is_client_connected) {
-            wolf->is_client_connected = false;
-            wolf->client_pid = 0;
-         }
-
-         delete wolf;
          exit(EXIT_SUCCESS);
          break;
       }

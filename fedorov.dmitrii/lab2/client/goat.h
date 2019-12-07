@@ -1,5 +1,7 @@
 #pragma once
 #include <semaphore.h>
+#include <memory>
+#include "../connections/conn.h"
 
 class Conn;
 
@@ -7,8 +9,7 @@ class Goat {
 public:
    ~Goat ();   
 
-
-   static Goat* GetInstance (int host_pid);
+   static Goat& GetInstance (int host_pid);
 
    void PrepareGame ();
    void StartGame ();
@@ -29,7 +30,7 @@ private:
    
    static void OnSignalRecieve (int sig);
 
-   Conn* conn;
+   Conn conn;
    sem_t* sem_host;   
    sem_t* sem_client;   
    int host_pid;

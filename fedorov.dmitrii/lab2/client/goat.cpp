@@ -9,6 +9,7 @@
 #include <random>
 #include <signal.h>
 #include <time.h>
+#include <stdexcept>
 
 #include "../connections/conn.h"
 #include "../support/message_types.h"
@@ -17,13 +18,25 @@
 static const int g_timeout = 5;
 
 
-Goat::Goat (int host_pid_) {
+Goat::Goat (int host_pid_)
+   : conn(host_pid_, false)
+{
+   std::string sem_host_name = std::string("host_" + std::to_string(host_pid));
+   std::string sem_client_name = std::string("client_" + std::to_string(host_pid));
+
    host_pid = host_pid_;
    status = 0;
    
-   conn = new Conn(host_pid, false);
-   sem_host = sem_open(std::string("host_" + std::to_string(host_pid)).c_str(), 0);
-   sem_client = sem_open(std::string("client_" + std::to_string(host_pid)).c_str(), 0);
+   sem_host = sem_open(sem_host_name.c_str(), 0);
+   if (sem_host == SEM_FAILED) {
+      throw std::runtime_error("sem_host wasn't opened");
+   }
+
+   sem_client = sem_open(sem_client_name.c_str(), 0);
+   if (sem_client == SEM_FAILED) {
+       sem_close(sem_host);
+       throw std::runtime_error("sem_client wasn't opened");
+   }
 
    signal(SIGTERM, OnSignalRecieve);
    signal(SIGINT, OnSignalRecieve);
@@ -33,7 +46,6 @@ Goat::Goat (int host_pid_) {
 
 
 Goat::~Goat () {
-
    kill(host_pid, SIGTERM);
 
    if (sem_host != SEM_FAILED) {
@@ -43,29 +55,15 @@ Goat::~Goat () {
    if (sem_client != SEM_FAILED) {
       sem_close(sem_client);
    }
-    
-   delete conn;
-   
+
    std::cout << "Goat terminated" << std::endl; 
 }
 
 
-Goat* Goat::GetInstance (int host_pid)
-{
-   static Goat* goat = new Goat(host_pid);  
-         
-   if (goat->sem_host == SEM_FAILED || goat->sem_client == SEM_FAILED || goat->conn->HasError()) { 
-      std::cout << "Creation goat instance failed" << std::endl;
-      if (goat->sem_host == SEM_FAILED || goat->sem_client == SEM_FAILED) {
-         std::cout << "Sem open fails" << std::endl;
-      }
-      if (goat->conn->HasError()) {
-         std::cout << "Conn create fails" << std::endl;
-      }
-      delete goat;
-      return nullptr;
-   }
 
+Goat& Goat::GetInstance (int host_pid)
+{
+   static Goat goat(host_pid);  
    return goat;
 }
 
@@ -98,7 +96,7 @@ void Goat::StartGame () {
       Msg msg;
       memset(&msg, 0, sizeof(msg));     
 
-      if (!conn->Read(&msg, sizeof(msg))) {
+      if (!conn.Read(&msg, sizeof(msg))) {
          return;
       }      
 
@@ -135,7 +133,7 @@ bool Goat::GenAndWriteValue() {
    msg.type = 2;
    msg.data = cur_val;
       
-   if (!conn->Write(&msg, sizeof(msg))) {
+   if (!conn.Write(&msg, sizeof(msg))) {
       return false;
    }
    return true;
@@ -168,10 +166,6 @@ void Goat::OnSignalRecieve (int sig) {
       case SIGINT:
       {
          std::cout << "Terminate client (signal)" << std::endl; 
-
-         Goat* goat = Goat::GetInstance(0);
-         delete goat;
-
          exit(EXIT_SUCCESS);
          break;
       }

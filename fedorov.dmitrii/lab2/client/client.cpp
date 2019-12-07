@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <unistd.h>
+#include <exception>
 
 #include "goat.h"
 
@@ -14,19 +15,20 @@ int main (int argc, char* argv[]) {
       cout << "Bad arguments to launch client (arg1 - host_pid)" << endl;
       return -1;
    }
+
    unsigned host_pid = atoi(argv[1]);
    
    cout << "This client works with host (pid): ";
    cout << host_pid << endl;
    
-   Goat* goat = Goat::GetInstance(host_pid);
-   
-   if (goat != nullptr) {
-      goat->PrepareGame();
-      goat->StartGame();
-      delete goat; 
-      return 0;
-   } 
+   try {
+      Goat& goat = Goat::GetInstance(host_pid);
+      goat.PrepareGame();
+      goat.StartGame();
+   } catch (std::exception &e) {
+      cout << e.what() << endl;
+      return 1;
+   }
 
    return 1;
 }
