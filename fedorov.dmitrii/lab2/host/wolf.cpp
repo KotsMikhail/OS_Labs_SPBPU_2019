@@ -127,7 +127,7 @@ void Wolf::StartGame () {
 
       if (goat_state == 2) {
          std::cout << "Kill client" << std::endl;
-         kill(client_pid, SIGTERM);
+         kill(client_pid, SIGUSR1);
          pause();
          return;
       }
@@ -184,6 +184,7 @@ void Wolf::HandleSignal (int sig, siginfo_t* info, void* ptr) {
       { 
          if (wolf.is_client_connected) {
             std::cout << "Ignore handshake, client already connected" << std::endl; 
+            kill(info->si_pid, SIGTERM);
          } else {
             std::cout << "Client connected: pid is " << info->si_pid << std::endl; 
             wolf.is_client_connected = true;

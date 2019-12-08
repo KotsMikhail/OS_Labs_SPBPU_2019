@@ -38,7 +38,8 @@ Goat::Goat (int host_pid_)
        sem_close(sem_host);
        throw std::runtime_error("sem_client wasn't opened");
    }
-
+ 
+   signal(SIGUSR1, OnSignalRecieve); 
    signal(SIGTERM, OnSignalRecieve);
    signal(SIGINT, OnSignalRecieve);
 
@@ -47,8 +48,6 @@ Goat::Goat (int host_pid_)
 
 
 Goat::~Goat () {
-   kill(host_pid, SIGTERM);
-
    if (sem_host != SEM_FAILED) {
       sem_close(sem_host);
    }
@@ -180,6 +179,12 @@ void Goat::OnSignalRecieve (int sig) {
          std::cout << "Terminate client (signal)" << std::endl; 
          exit(EXIT_SUCCESS);
          break;
+      }
+      case SIGUSR1:
+      {
+         Goat &goat = GetInstance(0);
+         kill(goat.host_pid, SIGTERM);
+         exit(EXIT_SUCCESS);
       }
       default:
       {
