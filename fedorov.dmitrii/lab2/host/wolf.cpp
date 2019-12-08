@@ -20,7 +20,7 @@ static const int g_timeout = 5;
 
 
 Wolf::Wolf (int host_pid_)
-   : conn(host_pid_, true)
+   : conn(host_pid_, true) 
 {
    sem_host_name = std::string("host_" + std::to_string(host_pid));
    sem_client_name = std::string("client_" + std::to_string(host_pid));
@@ -28,10 +28,9 @@ Wolf::Wolf (int host_pid_)
    is_client_connected = false;
    client_pid = 0;
    host_pid = host_pid_;
-
+   
    sem_host = sem_open(sem_host_name.c_str(), O_CREAT, 0666, 0);
    if (sem_host == SEM_FAILED) {
-      std::cout << "sem_host wasn't opened" << std::endl;
       throw std::runtime_error("sem_host wasn't opened");
    }
 
@@ -40,7 +39,7 @@ Wolf::Wolf (int host_pid_)
       sem_unlink(std::string("host_" + std::to_string(host_pid)).c_str());
       throw std::runtime_error("sem_client wasn't opened");
    }
-
+   
    std::cout << "Wolf constructed" << std::endl; 
 } 
 
@@ -61,8 +60,7 @@ Wolf::~Wolf () {
 }
 
 
-Wolf& Wolf::GetInstance (int host_pid)
-{
+Wolf& Wolf::GetInstance (int host_pid) {
    static Wolf wolf(host_pid);
    return wolf;
 }
@@ -141,20 +139,21 @@ void Wolf::StartGame () {
 }
 
 
-int Wolf::GetValue ()
-{
+int Wolf::GetValue () {
    int res;
    std::cout << "Enter number from " << g_min_wolf_val << " to " << g_max_wolf_val << std::endl;
 
    do {
       std::cin >> res;
+      if (std::cin.fail()) {
+         std::cin.clear();
+      }
    } while (res < g_min_wolf_val || res > g_max_wolf_val);
    return res;
 }
 
 
-bool Wolf::SemWait (sem_t* sem)
-{
+bool Wolf::SemWait (sem_t* sem) {
    struct timespec ts;
    clock_gettime(CLOCK_REALTIME, &ts);
    ts.tv_sec += g_timeout;
@@ -167,8 +166,7 @@ bool Wolf::SemWait (sem_t* sem)
 }
 
 
-bool Wolf::SemSignal (sem_t* sem)
-{
+bool Wolf::SemSignal (sem_t* sem) {
    if (sem_post(sem) == -1) {
       perror("sem_post() ");
       return false;
@@ -179,8 +177,7 @@ bool Wolf::SemSignal (sem_t* sem)
 
 
 
-void Wolf::HandleSignal (int sig, siginfo_t* info, void* ptr)
-{
+void Wolf::HandleSignal (int sig, siginfo_t* info, void* ptr) {
    static Wolf& wolf = GetInstance(0);
    switch (sig) {
       case SIGUSR1:

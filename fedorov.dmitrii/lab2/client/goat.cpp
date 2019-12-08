@@ -16,6 +16,7 @@
 #include "../support/game_consts.h"
 
 static const int g_timeout = 5;
+static const int g_sem_reconnects = 5;
 
 
 Goat::Goat (int host_pid_)
@@ -27,12 +28,12 @@ Goat::Goat (int host_pid_)
    host_pid = host_pid_;
    status = 0;
    
-   sem_host = sem_open(sem_host_name.c_str(), 0);
+   ConnectToSem(&sem_host, sem_host_name);
    if (sem_host == SEM_FAILED) {
       throw std::runtime_error("sem_host wasn't opened");
    }
 
-   sem_client = sem_open(sem_client_name.c_str(), 0);
+   ConnectToSem(&sem_client, sem_client_name);
    if (sem_client == SEM_FAILED) {
        sem_close(sem_host);
        throw std::runtime_error("sem_client wasn't opened");
@@ -157,6 +158,17 @@ bool Goat::SemSignal (sem_t* sem) {
    }
 
    return true;
+}
+
+
+void Goat::ConnectToSem (sem_t** sem, std::string sem_name) {
+   for (int i = 0; i < g_sem_reconnects; i++) {
+      *sem = sem_open(sem_name.c_str(), 0);
+      if (*sem != SEM_FAILED) {
+         break;
+      }
+      sleep(1);
+   }
 }
 
 

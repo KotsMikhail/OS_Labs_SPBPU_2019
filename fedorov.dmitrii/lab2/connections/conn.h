@@ -4,8 +4,7 @@
 #include <string>
 
 
-class Conn
-{
+class Conn {
 public:
    Conn (int id, bool create);
    ~Conn();

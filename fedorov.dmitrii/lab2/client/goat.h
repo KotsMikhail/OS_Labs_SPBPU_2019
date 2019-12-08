@@ -1,6 +1,7 @@
 #pragma once
 #include <semaphore.h>
 #include <memory>
+#include <string>
 #include "../connections/conn.h"
 
 class Conn;
@@ -27,6 +28,7 @@ private:
 
    bool SemWait (sem_t* sem);   
    bool SemSignal (sem_t* sem);  
+   void ConnectToSem (sem_t** sem, std::string sem_name);
    
    static void OnSignalRecieve (int sig);
 
