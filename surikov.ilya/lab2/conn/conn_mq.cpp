@@ -45,7 +45,7 @@ bool Conn::Open(size_t id, bool create)
 bool Conn::Read(void* buf, size_t count)
 {
     bool success = false;
-    if (mq_receive(_id, buf, count, nullptr) == -1)
+    if (mq_receive(_id, (char*)buf, count, nullptr) == -1)
     {
         std::cout << "ERROR: mq_recieve failed, errno: " << strerror(errno) << std::endl;
     } else {
