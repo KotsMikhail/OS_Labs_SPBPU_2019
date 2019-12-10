@@ -27,6 +27,7 @@ Conn::Conn (int msgkey, bool create) {
    }
 }
 
+
 Conn::~Conn() {
    if (!owner) {
       return;
@@ -39,6 +40,7 @@ Conn::~Conn() {
    std::cout << "Connection: msgqueue closed qid: " << desc << std::endl;
 }
 
+
 bool Conn::Read (void* buf, size_t count) {
    if (msgrcv(desc, buf, count - sizeof(long), 0, SA_RESTART) == -1) {
       perror("msgrcv() ");
@@ -46,6 +48,7 @@ bool Conn::Read (void* buf, size_t count) {
    } 
    return true;
 }
+
 
 bool Conn::Write (void* buf, size_t count) {
    if (msgsnd(desc, buf, count - sizeof(long), 0) == -1) {

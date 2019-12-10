@@ -48,14 +48,11 @@ Conn::~Conn() {
 
 
 bool Conn::Read (void* buf, size_t count) {
-   Msg msg;
-
-   if (read(desc, &msg, count) == -1) {
+   if (read(desc, buf, count) == -1) {
       perror("read() ");
       return false;
    } 
      
-   *((Msg*)buf) = msg;
    return true;   
 }
 

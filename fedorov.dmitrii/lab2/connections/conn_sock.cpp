@@ -64,6 +64,7 @@ Conn::Conn (int host_pid_, bool create) {
    p_data = new (std::nothrow) SockConnData(socketdata); 
 }
 
+
 Conn::~Conn () {
    SockConnData* socketdata = (SockConnData*)p_data;
    std::string socketpath = std::string("/tmp/" + std::to_string(host_pid));
@@ -87,9 +88,9 @@ Conn::~Conn () {
    }
 
    delete (SockConnData*)p_data;
-   std::cout << "Connection closed" << std::endl;
-   
+   std::cout << "Connection closed" << std::endl;  
 }
+
 
 bool Conn::Read (void* buf, size_t count) {
     SockConnData* socketdata = (SockConnData*)p_data;
@@ -100,6 +101,7 @@ bool Conn::Read (void* buf, size_t count) {
     }
     return true;
 }
+
 
 bool Conn::Write (void* buf, size_t count) {
    SockConnData* socketdata = (SockConnData*)p_data;

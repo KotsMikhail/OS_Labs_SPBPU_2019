@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <time.h>
 #include <stdexcept>
+#include <unistd.h>
 
 #include "../connections/conn.h"
 #include "../support/message_types.h"
@@ -20,8 +21,7 @@ static const int g_sem_reconnects = 5;
 
 
 Goat::Goat (int host_pid_)
-   : conn(host_pid_, false)
-{
+   : conn(host_pid_, false) {
    std::string sem_host_name = std::string("host_" + std::to_string(host_pid));
    std::string sem_client_name = std::string("client_" + std::to_string(host_pid));
 
@@ -61,15 +61,13 @@ Goat::~Goat () {
 
 
 
-Goat& Goat::GetInstance (int host_pid)
-{
+Goat& Goat::GetInstance (int host_pid) {
    static Goat goat(host_pid);  
    return goat;
 }
 
 
-void Goat::PrepareGame ()
-{
+void Goat::PrepareGame () {
    kill(host_pid, SIGUSR1);
 }
 
@@ -105,6 +103,7 @@ void Goat::StartGame () {
       if (!GenAndWriteValue()) {
          return;
       }
+
       if (!SemSignal(sem_host)) {
          return;
       }
@@ -125,7 +124,7 @@ int Goat::GenerateValue () {
 }
 
 
-bool Goat::GenAndWriteValue() {
+bool Goat::GenAndWriteValue () {
    Msg msg;
    int cur_val = GenerateValue();
    std::cout << "Goat: number is " << cur_val << std::endl;
@@ -145,7 +144,6 @@ bool Goat::SemWait (sem_t* sem) {
       perror("sem_timewait() ");
       return false;
    }
-
    return true;
 }
 
@@ -155,7 +153,6 @@ bool Goat::SemSignal (sem_t* sem) {
       perror("sem_post() ");
       return false;
    }
-
    return true;
 }
 
@@ -172,25 +169,20 @@ void Goat::ConnectToSem (sem_t** sem, std::string sem_name) {
 
 
 void Goat::OnSignalRecieve (int sig) {
+   Goat &goat = GetInstance(0);
+   
    switch (sig) {
       case SIGTERM:
       case SIGINT:
-      {
          std::cout << "Terminate client (signal)" << std::endl; 
          exit(EXIT_SUCCESS);
          break;
-      }
       case SIGUSR1:
-      {
-         Goat &goat = GetInstance(0);
          kill(goat.host_pid, SIGTERM);
          exit(EXIT_SUCCESS);
-      }
       default:
-      {
          std::cout << "Unknown signal recieve: continue work" << std::endl; 
          break;
-      }
    }
 }
 

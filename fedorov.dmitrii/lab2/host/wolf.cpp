@@ -20,8 +20,7 @@ static const int g_timeout = 5;
 
 
 Wolf::Wolf (int host_pid_)
-   : conn(host_pid_, true) 
-{
+   : conn(host_pid_, true) {
    sem_host_name = std::string("host_" + std::to_string(host_pid));
    sem_client_name = std::string("client_" + std::to_string(host_pid));
 
@@ -56,6 +55,7 @@ Wolf::~Wolf () {
    if (sem_client != SEM_FAILED) {
       sem_unlink(sem_client_name.c_str());
    }
+
    std::cout << "Wolf terminated" << std::endl; 
 }
 
@@ -171,7 +171,6 @@ bool Wolf::SemSignal (sem_t* sem) {
       perror("sem_post() ");
       return false;
    }
-
    return true;
 }
 
@@ -181,36 +180,28 @@ void Wolf::HandleSignal (int sig, siginfo_t* info, void* ptr) {
    static Wolf& wolf = GetInstance(0);
    switch (sig) {
       case SIGUSR1:
-      { 
          if (wolf.is_client_connected) {
             std::cout << "Ignore handshake, client already connected" << std::endl; 
             kill(info->si_pid, SIGTERM);
          } else {
             std::cout << "Client connected: pid is " << info->si_pid << std::endl; 
             wolf.is_client_connected = true;
-  	    wolf.client_pid = info->si_pid;
+            wolf.client_pid = info->si_pid;
          }
          break;       
-      }
-      case SIGUSR2:
-      { 
+      case SIGUSR2: 
          std::cout << "Client has error, disconnect him" << std::endl; 
          wolf.is_client_connected = false;
          wolf.client_pid = 0;
          break;       
-      }
       case SIGTERM:
       case SIGINT:
-      {
          std::cout << "Terminate host" << std::endl; 
          exit(EXIT_SUCCESS);
          break;
-      }
       default:
-      {
          std::cout << "Unknown signal: continue work" << std::endl; 
          break;
-      }
    }
 }
 
