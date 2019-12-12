@@ -13,7 +13,7 @@ struct Node
   pthread_mutex_t mutex;
   Node *next;
 
-  Node(T item);
+  explicit Node(T item);
   int lock();
   int unlock();
   ~Node();

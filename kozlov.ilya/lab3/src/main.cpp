@@ -3,6 +3,7 @@
 #include <vector>
 #include <sstream>
 #include "optimistic_list/optimistic_list.h"
+#include "lazy_list/lazy_list.h"
 
 using data_set = std::vector<int>;
 
@@ -75,7 +76,7 @@ int main()
   int THREAD_NUM = data_sets.size();
   for (int i = 0; i < THREAD_NUM; i++)
   {
-    TestInfo* info = new TestInfo(ol, data_sets[i]);
+    auto info = new TestInfo(ol, data_sets[i]);
     pthread_t tid;
     pthread_create(&tid, &attr, write, info);
     thread_ids.push_back(tid);
@@ -85,6 +86,22 @@ int main()
     pthread_join(id, nullptr);
   }
   checkAllWritten(ol, data_sets);
-  std::cout << "Basic OptimisticList test for writing done!" << std::endl;
+  std::cout << "Basic OptimisticList test for writing done!\n---------------------------------------------" << std::endl;
+  LazyList<int> ll;
+  thread_ids.clear();
+  THREAD_NUM = data_sets.size();
+  for (int i = 0; i < THREAD_NUM; i++)
+  {
+    auto info = new TestInfo(ll, data_sets[i]);
+    pthread_t tid;
+    pthread_create(&tid, &attr, write, info);
+    thread_ids.push_back(tid);
+  }
+  for (auto id : thread_ids)
+  {
+    pthread_join(id, nullptr);
+  }
+  checkAllWritten(ll, data_sets);
+  std::cout << "Basic LazyList test for writing done!" << std::endl;
   return 0;
 }

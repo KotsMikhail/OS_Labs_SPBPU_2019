@@ -3,28 +3,28 @@
 #include <min_max/max_value.h>
 
 template<typename T>
-OptimisticList<T>::OptimisticList()
+LazyList<T>::LazyList()
 {
   Logger::logDebug(tag, "constructing...");
-  head = new Node<T>(MinValue::get<T>());
-  head->next = new Node<T>(MaxValue::get<T>());
+  head = new LazyNode<T>(MinValue::get<T>());
+  head->next = new LazyNode<T>(MaxValue::get<T>());
 }
 
 template<typename T>
-OptimisticList<T>::~OptimisticList()
+LazyList<T>::~LazyList()
 {
   Logger::logDebug(tag, "destructing...");
-  Node<T>* curr = head;
+  LazyNode<T>* curr = head;
   while (curr != nullptr)
   {
-    Node<T>* prev = curr;
+    LazyNode<T>* prev = curr;
     curr = curr->next;
     delete prev;
   }
 }
 
 template<typename T>
-bool OptimisticList<T>::add(T element)
+bool LazyList<T>::add(T element)
 {
   Logger::logDebug(tag, "add(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
@@ -32,8 +32,8 @@ bool OptimisticList<T>::add(T element)
   bool need_return = false;
   while (true)
   {
-    Node<T>* prev = head;
-    Node<T>* curr = prev->next;
+    LazyNode<T>* prev = head;
+    LazyNode<T>* curr = prev->next;
     while (curr->key < key)
     {
       prev = curr;
@@ -50,7 +50,7 @@ bool OptimisticList<T>::add(T element)
       }
       else
       {
-        auto node = new Node<T>(element);
+        auto node = new LazyNode<T>(element);
         node->next = curr;
         prev->next = node;
         res = true;
@@ -66,7 +66,7 @@ bool OptimisticList<T>::add(T element)
 }
 
 template<typename T>
-bool OptimisticList<T>::remove(T element)
+bool LazyList<T>::remove(T element)
 {
   Logger::logDebug(tag, "remove(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
@@ -74,8 +74,8 @@ bool OptimisticList<T>::remove(T element)
   bool need_return = false;
   while (true)
   {
-    Node<T>* prev = head;
-    Node<T>* curr = prev->next;
+    LazyNode<T>* prev = head;
+    LazyNode<T>* curr = prev->next;
     while (curr->key < key)
     {
       prev = curr;
@@ -88,6 +88,7 @@ bool OptimisticList<T>::remove(T element)
       need_return = true;
       if (curr->key == key)
       {
+        curr->marked = true;
         prev->next = curr->next;
         delete curr;
         res = true;
@@ -110,51 +111,21 @@ bool OptimisticList<T>::remove(T element)
 }
 
 template<typename T>
-bool OptimisticList<T>::contains(T element) const
+bool LazyList<T>::contains(T element) const
 {
   Logger::logDebug(tag, "contains(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
-  bool res = false;
-  bool need_return = false;
-  while (true)
+  LazyNode<T>* curr = head;
+  while (curr->key < key)
   {
-    Node<T>* prev = head;
-    Node<T>* curr = prev->next;
-    while (curr->key < key)
-    {
-      prev = curr;
-      curr = curr->next;
-    }
-    prev->lock();
-    curr->lock();
-    if (validate(prev, curr))
-    {
-      need_return = true;
-      res = curr->key == key;
-    }
-    prev->unlock();
-    curr->unlock();
-    if (need_return)
-    {
-      return res;
-    }
+    curr = curr->next;
   }
+  return curr->key == key && !curr->marked;
 }
 
 template<typename T>
-bool OptimisticList<T>::validate(Node<T>* prev, Node<T>* curr) const
+bool LazyList<T>::validate(LazyNode<T>* prev, LazyNode<T>* curr) const
 {
   //Logger::logDebug(tag, "validating...");
-  Node<T>* node = head;
-  while (node->key < prev->key)
-  {
-    node = node->next;
-  }
-  if (node == prev)
-  {
-    return node->next == curr;
-  }
-  return false;
+  return !prev->marked && !curr->marked && prev->next == curr;
 }
-
-
