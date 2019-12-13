@@ -1,0 +1,3 @@
+/home/alexander/OS_Labs_SPBPU_2019/zhukov.alexander/lab1/folder1
+/home/alexander/OS_Labs_SPBPU_2019/zhukov.alexander/lab1/folder2
+60
