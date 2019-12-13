@@ -4,3 +4,4 @@
 !.gitignore
 !/lab*
 !/lab*/*
+!/lab2/*/*
