@@ -35,7 +35,7 @@ bool set_fine_t<t, l, c>::add(const t &item)
     bool ret = false;
     this->_head->lock();
     node_t<t> *pred = this->_head, *curr = pred->next;
-    loop_fine(pred, curr, this->_cmp, item);
+    loop_fine(pred, curr, this->_cmp, item)
     if (this->_cmp(item, curr->item))
     {
         node_t<t> *node = new (std::nothrow) node_t<t>(item);
@@ -57,7 +57,7 @@ bool set_fine_t<t, l, c>::remove(const t &item)
     bool ret = false;
     this->_head->lock();
     node_t<t> *pred = this->_head, *curr = pred->next;
-    loop_fine(pred, curr, this->_cmp, item);
+    loop_fine(pred, curr, this->_cmp, item)
     if (!this->_cmp(item, curr->item))
     {
         pred->next = curr->next;
@@ -76,7 +76,7 @@ bool set_fine_t<t, l, c>::contains(const t &item)
     bool ret = false;
     this->_head->lock();
     node_t<t> *pred = this->_head, *curr = pred->next;
-    loop_fine(pred, curr, this->_cmp, item);
+    loop_fine(pred, curr, this->_cmp, item)
     if (!this->_cmp(item, curr->item))
         ret = true;
     pred->unlock();

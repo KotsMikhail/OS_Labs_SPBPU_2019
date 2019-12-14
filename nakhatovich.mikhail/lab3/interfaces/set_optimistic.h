@@ -1,8 +1,6 @@
 #ifndef SET_OPTIMISTIC_H
 #define SET_OPTIMISTIC_H
 
-#include <functional>
-
 #include "set.h"
 
 template<class t, class limits = limits_t<t>, class compare = std::less<t>>

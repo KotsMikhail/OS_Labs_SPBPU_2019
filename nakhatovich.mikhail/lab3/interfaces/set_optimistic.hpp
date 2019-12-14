@@ -35,7 +35,7 @@ bool set_optimistic_t<t, l, c>::add(const t &item)
     while (true)
     {
         node_t<t> *pred = this->_head, *curr = pred->next;
-        loop_opt(pred, curr, this->_cmp, item);
+        loop_opt(pred, curr, this->_cmp, item)
         if (validate(pred, curr))
         {
             if (this->_cmp(item, curr->item))
@@ -65,7 +65,7 @@ bool set_optimistic_t<t, l, c>::remove(const t &item)
     while (true)
     {
         node_t<t> *pred = this->_head, *curr = pred->next;
-        loop_opt(pred, curr, this->_cmp, item);
+        loop_opt(pred, curr, this->_cmp, item)
         if (validate(pred, curr))
         {
             if (!this->_cmp(item, curr->item))
@@ -92,7 +92,7 @@ bool set_optimistic_t<t, l, c>::contains(const t &item)
     while (true)
     {
         node_t<t> *pred = this->_head, *curr = pred->next;
-        loop_opt(pred, curr, this->_cmp, item);
+        loop_opt(pred, curr, this->_cmp, item)
         if (validate(pred, curr))
         {
             if (!this->_cmp(item, curr->item))

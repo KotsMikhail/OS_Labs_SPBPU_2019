@@ -1,9 +1,12 @@
 #include <pthread.h>
 #include <stdio.h>
+
 #include <atomic>
-
+#include <algorithm>
 #include <numeric>
+#include <random> 
 
+#include "config.h"
 #include "set_fine.h"
 #include "set_optimistic.h"
 #include "test.h"
@@ -23,6 +26,8 @@ struct test_info_t
 };
 
 typedef std::vector<test_info_t*> vector_ti_t;
+using cntr_data_fn = bool(*)(set_t<int>*,size_t,const vector_size_t &,vvector_int_t &,vector_ti_t &,bool *,bool);
+using time_test_fn = bool(*)(set_type_t, cntr_data_fn, double &);
 
 void print_start(const char *name)
 {
@@ -140,22 +145,27 @@ void join_threads(vector_pthread_t &threads, size_t count)
         pthread_join(threads[i], nullptr);
 }
 
-size_t create_threads(vector_pthread_t &threads, void *(*func)(void*), vector_ti_t &tis)
+size_t create_threads(vector_pthread_t &threads, void *(*func)(void*), vector_ti_t &tis, bool is_print=false)
 {
-    printf("Create threads.\n");
+    if (is_print)
+        printf("Create threads.\n");
     for (size_t i = 0; i < threads.size(); ++i)
     {
         if (pthread_create(&(threads[i]), nullptr, func, tis[i]))
         {
-            printf("Couldn't create thread #%lu.\n%lu/%lu threads was created.\n", i, i, threads.size());
+            printf("Couldn't create thread #%lu.\n", i);
+            if (is_print)
+                printf("%lu/%lu threads was created.\n", i, threads.size());
             return i;
         }
     }
-    printf("%lu/%lu threads was created.\n", threads.size(), threads.size());
+    if (is_print)
+        printf("%lu/%lu threads was created.\n", threads.size(), threads.size());
     return threads.size();
 }
 
-bool create_data_sets(set_t<int> *set, size_t cnt_threads, const vector_size_t &cnt_elements, vvector_int_t &data_sets, vector_ti_t &tis, bool *run, bool add=false)
+bool create_data_sets(set_t<int> *set, size_t cnt_threads, const vector_size_t &cnt_elements, 
+                      vvector_int_t &data_sets, vector_ti_t &tis, bool *run, bool add=false)
 {
     int elem = 0;
     for (size_t i = 0, n = 0; i < cnt_threads; ++i)
@@ -189,36 +199,72 @@ bool create_data_sets(set_t<int> *set, size_t cnt_threads, const vector_size_t &
     return true;
 }
 
-void run_writers_test(set_t<int> *set, size_t cnt_writers, const vector_size_t &cnt_records, bool check, double *time)
+void get_start_time(struct timespec *start_time)
 {
+    clock_gettime(CLOCK_REALTIME, start_time);
+}
+
+void get_result_time(const struct timespec &start_time, double *time)
+{
+    struct timespec cur_time;
+    clock_gettime(CLOCK_REALTIME, &cur_time);
+    __time_t sec = cur_time.tv_sec - start_time.tv_sec;
+    __syscall_slong_t nsec = cur_time.tv_nsec - start_time.tv_nsec;
+    *time = sec + (double) nsec / 1e9;
+}
+
+bool run_writers_test(set_t<int> *set, cntr_data_fn cntr_data, bool check, double *time=nullptr)
+{
+    config_t *config = config_t::get_instance();
+    size_t cnt_writers = config->get_value(WRITERS);
+    const vector_size_t &cnt_records = config->get_cnt_elements(WRITERS);
     vector_ti_t tis(cnt_writers, nullptr);
     vector_pthread_t tids(cnt_writers);
     vvector_int_t data_sets(cnt_writers);
     bool run = false;
-    if (!create_data_sets(set, cnt_writers, cnt_records, data_sets, tis, &run))
-        return;
-    size_t n = create_threads(tids, write, tis);
+    struct timespec start_time;
+    if (!cntr_data(set, cnt_writers, cnt_records, data_sets, tis, &run, false))
+        return false;
+    size_t n = create_threads(tids, write, tis, check);
+    if (time)
+        get_start_time(&start_time);
     run = true;
     join_threads(tids, n);
+    if (time)
+        get_result_time(start_time, time);
     delete_test_info(tis);
-    if (n == cnt_writers && check && check_writers(set, data_sets))
+    if (n != cnt_writers)
+        return false;
+    if (check && check_writers(set, data_sets))
         printf("Succesfully.\n");
+    return true;
 }
 
-void run_readers_test(set_t<int> *set, size_t cnt_readers, const vector_size_t &cnt_readings, bool check, double *time)
+bool run_readers_test(set_t<int> *set, cntr_data_fn cntr_data, bool check, double *time=nullptr)
 {
+    config_t *config = config_t::get_instance();
+    size_t cnt_readers = config->get_value(READERS);
+    const vector_size_t &cnt_readings = config->get_cnt_elements(READERS);
     vector_ti_t tis(cnt_readers, nullptr);
     vector_pthread_t tids(cnt_readers);
     vvector_int_t data_sets(cnt_readers);
     bool run = false;
-    if (!create_data_sets(set, cnt_readers, cnt_readings, data_sets, tis, &run, true))
-        return;
-    size_t n = create_threads(tids, read, tis);
+    struct timespec start_time;
+    if (!cntr_data(set, cnt_readers, cnt_readings, data_sets, tis, &run, true))
+        return false;
+    size_t n = create_threads(tids, read, tis, check);
+    if (time)
+        get_start_time(&start_time);
     run = true;
     join_threads(tids, n);
+    if (time)
+        get_result_time(start_time, time);
     delete_test_info(tis);
-    if (n == cnt_readers && check && check_readers(set, data_sets))
+    if (n != cnt_readers)
+        return false;
+    if (check && check_readers(set, data_sets))
         printf("Succesfully.\n");
+    return true;
 }
 
 void get_count_elements_test(size_t cnt_threads, size_t cnt_elements, vector_size_t &data)
@@ -241,40 +287,52 @@ void get_count_elements_test(size_t cnt_threads, size_t cnt_elements, vector_siz
     }
 }
 
-void run_common_test(set_t<int> *set, size_t cnt_readers, size_t cnt_writers, size_t cnt_elements, bool check, double *time)
+bool run_common_test(set_t<int> *set, cntr_data_fn cntr_data, const vector_size_t &cnt_records, 
+                     const vector_size_t &cnt_readings, bool check, double *time=nullptr)
 {
+    config_t *config = config_t::get_instance();
+    size_t cnt_writers = config->get_value(COMMON_WRITERS), cnt_readers = config->get_value(COMMON_WRITERS);
+    size_t cnt_elements = config->get_value(COMMON_N);   
     std::vector<test_info_t*> rtis(cnt_readers), wtis(cnt_writers);
     std::vector<pthread_t> rtids(cnt_readers), wtids(cnt_writers);
     std::vector<vector_int_t> rdata_sets(cnt_readers), wdata_sets(cnt_writers);
-    vector_size_t cnt_records(cnt_writers), cnt_readings(cnt_readers);
     size_t * data = new (std::nothrow) size_t[cnt_elements]();
-    get_count_elements_test(cnt_readers, cnt_elements, cnt_readings);
-    get_count_elements_test(cnt_writers, cnt_elements, cnt_records);
     bool run = false, run_writers = true;
-    if (!create_data_sets(set, cnt_readers, cnt_readings, rdata_sets, rtis, &run))
-        return;
+    struct timespec start_time;
+    if (!cntr_data(set, cnt_readers, cnt_readings, rdata_sets, rtis, &run, false))
+        return false;
     for (test_info_t * ti : rtis)
     {        
         ti->arr = data;
         ti->run_writers = &run_writers;
     }
-    if (!create_data_sets(set, cnt_writers, cnt_records, wdata_sets, wtis, &run))
+    if (!cntr_data(set, cnt_writers, cnt_records, wdata_sets, wtis, &run, false))
     {
         delete_test_info(rtis);
         delete[] data;
-        return;
+        return false;
     }
-    size_t wn = create_threads(wtids, write, wtis);
-    size_t rn = create_threads(rtids, read_w, rtis);
+    size_t wn = create_threads(wtids, write, wtis, check);
+    size_t rn = create_threads(rtids, read_w, rtis, check);
+    if (time)
+        get_start_time(&start_time);
     run = true;
     join_threads(wtids, wn);
     run_writers = false;
     join_threads(rtids, rn);
+    if (time)
+        get_result_time(start_time, time);
     delete_test_info(wtis);
     delete_test_info(rtis);
-    if (wn == cnt_writers && rn == cnt_readers && check && check_common(data, cnt_elements))
+    if (wn != cnt_writers || rn != cnt_readers)
+    {
+        delete[] data;
+        return false;
+    }
+    if (check && check_common(data, cnt_elements))
         printf("Succesfully.\n");
     delete[] data;
+    return true;
 }
 
 set_t<int> * create_set(set_type_t type)
@@ -297,32 +355,218 @@ set_t<int> * create_set(set_type_t type)
     return set;
 }
 
-void run_writers_test(set_type_t type, size_t cnt_writers, const vector_size_t &cnt_records)
+void run_writers_test(set_type_t type)
 {
     print_start("writers");
     set_t<int> * set = create_set(type);
     if (set)
-        run_writers_test(set, cnt_writers, cnt_records, true, nullptr);
+        run_writers_test(set, create_data_sets, true);
     delete set;
     print_stop("writers");
 }
 
-void run_readers_test(set_type_t type, size_t cnt_readers, const vector_size_t &cnt_readings)
+void run_readers_test(set_type_t type)
 {
     print_start("readers");
     set_t<int> * set = create_set(type);
     if (set)
-        run_readers_test(set, cnt_readers, cnt_readings, true, nullptr);
+        run_readers_test(set, create_data_sets, true);
     delete set;
     print_stop("readers");
 }
 
-void run_common_test(set_type_t type, size_t cnt_readers, size_t cnt_writers, size_t cnt_elements)
+void run_common_test(set_type_t type)
 {
     print_start("common");
     set_t<int> * set = create_set(type);
+    config_t *config = config_t::get_instance();
+    size_t cnt_writers = config->get_value(COMMON_WRITERS), cnt_readers = config->get_value(COMMON_WRITERS);
+    size_t cnt_elements = config->get_value(COMMON_N); 
+    vector_size_t cnt_records(cnt_writers), cnt_readings(cnt_readers);
+    get_count_elements_test(cnt_readers, cnt_elements, cnt_readings);
+    get_count_elements_test(cnt_writers, cnt_elements, cnt_records);
     if (set)
-        run_common_test(set, cnt_readers, cnt_writers, cnt_elements, true, nullptr);
+        run_common_test(set, create_data_sets, cnt_records, cnt_readings, true);
     delete set;
     print_stop("common");
+}
+
+bool create_random_data_sets(set_t<int> *set, size_t cnt_threads, const vector_size_t &cnt_elements, 
+                             vvector_int_t &data_sets, vector_ti_t &tis, bool *run, bool add=false)
+{
+    vector_int_t elements(std::accumulate(cnt_elements.begin(), cnt_elements.end(), 0));
+    std::iota(elements.begin(), elements.end(), 0);
+    std::shuffle(elements.begin(), elements.end(), std::default_random_engine(0));
+    for (size_t i = 0, n = 0, k = 0; i < cnt_threads; ++i)
+    {
+        n = cnt_elements[i];
+        data_sets[i].resize(n);
+        for (size_t j = 0; j < n; ++j, ++k)
+        {
+            data_sets[i][j] = elements[k];
+            if (add && !set->add(data_sets[i][j]))
+            {
+                delete_test_info(tis);
+                printf("not enouh memory\n");
+                return false;
+            }
+        }
+        tis[i] = new (std::nothrow) test_info_t(set, data_sets[i], run);
+        if (!tis[i])
+        {
+            delete_test_info(tis);
+            printf("not enouh memory\n");
+            return false;
+        }
+    }
+    return true;
+}
+
+bool create_fixed_data_sets(set_t<int> *set, size_t cnt_threads, const vector_size_t &cnt_elements, 
+                            vvector_int_t &data_sets, vector_ti_t &tis, bool *run, bool add=false)
+{
+    int elem = 0;
+    size_t max_elems = *std::max_element(cnt_elements.begin(), cnt_elements.end());
+    vector_size_t inds(cnt_threads, 0);
+    for (size_t i = 0; i < cnt_threads; ++i)
+        data_sets[i].resize(cnt_elements[i]);
+    for (size_t i = 0; i < max_elems; ++i)
+    {
+        for (size_t j = 0; j < cnt_threads; ++j)
+        {
+            if (inds[j] != cnt_elements[j])
+            {
+                data_sets[j][inds[j]] = elem++;
+                if (add && !set->add(data_sets[j][inds[j]]))
+                {
+                    delete_test_info(tis);
+                    printf("not enouh memory\n");
+                    return false;
+                }
+                ++inds[j];
+            }
+        }
+    }
+    for (size_t i = 0; i < cnt_threads; ++i)
+    {
+        tis[i] = new (std::nothrow) test_info_t(set, data_sets[i], run);
+        if (!tis[i])
+        {
+            delete_test_info(tis);
+            printf("not enouh memory\n");
+            return false;
+        }
+    }
+    return true;
+}
+
+bool run_time_writers_test(set_type_t type, cntr_data_fn cntr_data, double &time)
+{
+    config_t *config = config_t::get_instance();
+    size_t iters = config->get_value(TIME_ITERATIONS), n = 0;
+    double part_time;
+    time = 0;
+    for (size_t i = 0; i < iters; ++i)
+    {
+        set_t<int> * set = create_set(type);
+        if (set && run_writers_test(set, cntr_data, false, &part_time))
+        {
+            ++n;
+            time += part_time;
+        }
+        delete set;
+    }
+    if (n > 0)
+        time /= n;
+    return (n > 0);
+}
+
+bool run_time_readers_test(set_type_t type, cntr_data_fn cntr_data, double &time)
+{
+    config_t *config = config_t::get_instance();
+    size_t iters = config->get_value(TIME_ITERATIONS), n = 0;
+    double part_time;
+    time = 0;
+    for (size_t i = 0; i < iters; ++i)
+    {
+        set_t<int> * set = create_set(type);
+        if (set && run_readers_test(set, cntr_data, false, &part_time))
+        {
+            ++n;
+            time += part_time;
+        }
+        delete set;
+    }
+    if (n > 0)
+        time /= n;
+    return (n > 0);
+}
+
+bool run_time_common_test(set_type_t type, cntr_data_fn cntr_data, double &time)
+{
+    config_t *config = config_t::get_instance();
+    size_t iters = config->get_value(TIME_ITERATIONS), n = 0;
+    size_t cnt_writers = config->get_value(COMMON_WRITERS), cnt_readers = config->get_value(COMMON_WRITERS);
+    size_t cnt_elements = config->get_value(COMMON_N); 
+    vector_size_t cnt_records(cnt_writers), cnt_readings(cnt_readers);
+    get_count_elements_test(cnt_readers, cnt_elements, cnt_readings);
+    get_count_elements_test(cnt_writers, cnt_elements, cnt_records);
+    double part_time;
+    time = 0;
+    for (size_t i = 0; i < iters; ++i)
+    {
+        set_t<int> * set = create_set(type);
+        if (set && run_common_test(set, cntr_data, cnt_records, cnt_readings, false, &part_time))
+        {
+            ++n;
+            time += part_time;
+        }
+        delete set;
+    }
+    if (n > 0)
+        time /= n;
+    return (n > 0);
+}
+
+string_t get_set_name(set_type_t t)
+{
+    switch (t)
+    {
+    case SET_FINE:
+        return string_t("Fine-Grained");
+    case SET_OPTIMISTIC:
+        return string_t("Optimistic");
+    default:
+        return string_t("");
+    }
+}
+
+void run_time_test()
+{
+    print_start("time");
+    time_test_fn test_funcs[] = { run_time_writers_test, run_time_readers_test, run_time_common_test };
+    cntr_data_fn data_sets[] = { create_random_data_sets, create_fixed_data_sets };
+    set_type_t sets[] = { SET_FINE, SET_OPTIMISTIC };
+    double time;
+    char line[120];
+    printf("              | writers random |  writers fixed | readers random |  readers fixed |  common random |  common fixed  |\n");
+    printf("---------------------------------------------------------------------------------------------------------------------\n");
+    for (set_type_t set_type : sets)
+    {
+        sprintf(line, "%13s |", get_set_name(set_type).c_str());
+        for (size_t j = 0; j < 3; ++j)
+        {
+            time_test_fn test_func = test_funcs[j];
+            for (size_t k = 0; k < 2; ++k)
+            {
+                cntr_data_fn data_set = data_sets[k];
+                if (test_func(set_type, data_set, time))
+                    sprintf(line + 15 + j * 34 + k * 17, "    %s    |", std::to_string(time).c_str());
+                else
+                    sprintf(line + 15 + j * 34 + k * 17, "       NA       |");
+            }
+        }
+        printf("%s\n---------------------------------------------------------------------------------------------------------------------\n", line);
+    }
+    print_stop("time");
 }
