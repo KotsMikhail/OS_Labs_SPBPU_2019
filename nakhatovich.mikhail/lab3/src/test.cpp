@@ -291,11 +291,11 @@ bool run_common_test(set_t<int> *set, cntr_data_fn cntr_data, const vector_size_
                      const vector_size_t &cnt_readings, bool check, double *time=nullptr)
 {
     config_t *config = config_t::get_instance();
-    size_t cnt_writers = config->get_value(COMMON_WRITERS), cnt_readers = config->get_value(COMMON_WRITERS);
+    size_t cnt_writers = config->get_value(COMMON_WRITERS), cnt_readers = config->get_value(COMMON_READERS);
     size_t cnt_elements = config->get_value(COMMON_N);   
-    std::vector<test_info_t*> rtis(cnt_readers), wtis(cnt_writers);
-    std::vector<pthread_t> rtids(cnt_readers), wtids(cnt_writers);
-    std::vector<vector_int_t> rdata_sets(cnt_readers), wdata_sets(cnt_writers);
+    vector_ti_t rtis(cnt_readers), wtis(cnt_writers);
+    vector_pthread_t rtids(cnt_readers), wtids(cnt_writers);
+    vvector_int_t rdata_sets(cnt_readers), wdata_sets(cnt_writers);
     size_t * data = new (std::nothrow) size_t[cnt_elements]();
     bool run = false, run_writers = true;
     struct timespec start_time;
@@ -380,7 +380,7 @@ void run_common_test(set_type_t type)
     print_start("common");
     set_t<int> * set = create_set(type);
     config_t *config = config_t::get_instance();
-    size_t cnt_writers = config->get_value(COMMON_WRITERS), cnt_readers = config->get_value(COMMON_WRITERS);
+    size_t cnt_writers = config->get_value(COMMON_WRITERS), cnt_readers = config->get_value(COMMON_READERS);
     size_t cnt_elements = config->get_value(COMMON_N); 
     vector_size_t cnt_records(cnt_writers), cnt_readings(cnt_readers);
     get_count_elements_test(cnt_readers, cnt_elements, cnt_readings);
@@ -506,7 +506,7 @@ bool run_time_common_test(set_type_t type, cntr_data_fn cntr_data, double &time)
 {
     config_t *config = config_t::get_instance();
     size_t iters = config->get_value(TIME_ITERATIONS), n = 0;
-    size_t cnt_writers = config->get_value(COMMON_WRITERS), cnt_readers = config->get_value(COMMON_WRITERS);
+    size_t cnt_writers = config->get_value(COMMON_WRITERS), cnt_readers = config->get_value(COMMON_READERS);
     size_t cnt_elements = config->get_value(COMMON_N); 
     vector_size_t cnt_records(cnt_writers), cnt_readings(cnt_readers);
     get_count_elements_test(cnt_readers, cnt_elements, cnt_readings);
