@@ -1,5 +1,15 @@
 #include "set_fine.h"
 
+#define loop_fine(pred, curr, _cmp, item) \
+curr->lock(); \
+while (_cmp(curr->item, item)) \
+{ \
+    pred->unlock(); \
+    pred = curr; \
+    curr = pred->next; \
+    curr->lock(); \
+}
+
 template<class t, class l, class c>
 set_fine_t<t, l, c> * set_fine_t<t, l, c>::create_set()
 {
@@ -25,14 +35,7 @@ bool set_fine_t<t, l, c>::add(const t &item)
     bool ret = false;
     this->_head->lock();
     node_t<t> *pred = this->_head, *curr = pred->next;
-    curr->lock();
-    while (this->_cmp(curr->item, item))
-    {
-        pred->unlock();
-        pred = curr;
-        curr = pred->next;
-        curr->lock();
-    }
+    loop_fine(pred, curr, this->_cmp, item);
     if (this->_cmp(item, curr->item))
     {
         node_t<t> *node = new (std::nothrow) node_t<t>(item);
@@ -54,14 +57,7 @@ bool set_fine_t<t, l, c>::remove(const t &item)
     bool ret = false;
     this->_head->lock();
     node_t<t> *pred = this->_head, *curr = pred->next;
-    curr->lock();
-    while (this->_cmp(curr->item, item))
-    {
-        pred->unlock();
-        pred = curr;
-        curr = pred->next;
-        curr->lock();
-    }
+    loop_fine(pred, curr, this->_cmp, item);
     if (!this->_cmp(item, curr->item))
     {
         pred->next = curr->next;
@@ -80,14 +76,7 @@ bool set_fine_t<t, l, c>::contains(const t &item)
     bool ret = false;
     this->_head->lock();
     node_t<t> *pred = this->_head, *curr = pred->next;
-    curr->lock();
-    while (this->_cmp(curr->item, item))
-    {
-        pred->unlock();
-        pred = curr;
-        curr = pred->next;
-        curr->lock();
-    }
+    loop_fine(pred, curr, this->_cmp, item);
     if (!this->_cmp(item, curr->item))
         ret = true;
     pred->unlock();

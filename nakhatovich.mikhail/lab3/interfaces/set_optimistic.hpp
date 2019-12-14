@@ -1,5 +1,14 @@
 #include "set_optimistic.h"
 
+#define loop_opt(pred, curr, _cmp, item) \
+while (_cmp(curr->item, item)) \
+{ \
+    pred = curr; \
+    curr = pred->next; \
+} \
+pred->lock(); \
+curr->lock();
+
 template<class t, class l, class c>
 set_optimistic_t<t, l, c> * set_optimistic_t<t, l, c>::create_set()
 {
@@ -26,13 +35,7 @@ bool set_optimistic_t<t, l, c>::add(const t &item)
     while (true)
     {
         node_t<t> *pred = this->_head, *curr = pred->next;
-        while (this->_cmp(curr->item, item))
-        {
-            pred = curr;
-            curr = pred->next;
-        }
-        pred->lock();
-        curr->lock();
+        loop_opt(pred, curr, this->_cmp, item);
         if (validate(pred, curr))
         {
             if (this->_cmp(item, curr->item))
@@ -62,13 +65,7 @@ bool set_optimistic_t<t, l, c>::remove(const t &item)
     while (true)
     {
         node_t<t> *pred = this->_head, *curr = pred->next;
-        while (this->_cmp(curr->item, item))
-        {
-            pred = curr;
-            curr = pred->next;
-        }
-        pred->lock();
-        curr->lock();
+        loop_opt(pred, curr, this->_cmp, item);
         if (validate(pred, curr))
         {
             if (!this->_cmp(item, curr->item))
@@ -95,13 +92,7 @@ bool set_optimistic_t<t, l, c>::contains(const t &item)
     while (true)
     {
         node_t<t> *pred = this->_head, *curr = pred->next;
-        while (this->_cmp(curr->item, item))
-        {
-            pred = curr;
-            curr = pred->next;
-        }
-        pred->lock();
-        curr->lock();
+        loop_opt(pred, curr, this->_cmp, item);
         if (validate(pred, curr))
         {
             if (!this->_cmp(item, curr->item))
