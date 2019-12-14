@@ -16,7 +16,7 @@ public:
 private:
     set_optimistic_t(node_t<t> *head);
 
-    bool validate(node_t<t> *pred, node_t<t> *curr);
+    bool validate(std::shared_ptr<node_t<t>> &pred, std::shared_ptr<node_t<t>> &curr);
 };
 
 #include "set_optimistic.hpp"

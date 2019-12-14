@@ -10,7 +10,7 @@ template<class t, class limits = limits_t<t>, class compare = std::less<t>>
 class set_t
 {
 public:
-    virtual ~set_t();
+    virtual ~set_t() = default;
 
     virtual bool add(const t &item) = 0;
     virtual bool remove(const t &item) = 0;
@@ -25,7 +25,7 @@ protected:
 
     static node_t<t> * create_head();
 
-    node_t<t> *_head;
+    std::shared_ptr<node_t<t>> _head;
     compare _cmp;
 };
 

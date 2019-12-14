@@ -3,6 +3,8 @@
 
 #include <pthread.h>
 
+#include <memory>
+
 template<class t>
 class node_t
 {
@@ -14,7 +16,7 @@ public:
     int unlock();
 
     t item;
-    node_t<t> *next;
+    std::shared_ptr<node_t<t>> next;
 
 private:
     node_t() = delete;
