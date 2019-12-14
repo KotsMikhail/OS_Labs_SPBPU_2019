@@ -20,3 +20,12 @@ node_t<t> * set_t<t, l, c>::create_head()
     }
     return head;
 }
+
+template<class t, class l, class c>
+bool set_t<t, l, c>::empty()
+{
+    l limits;
+    t min = limits.min(), max = limits.max();
+    std::shared_ptr<node_t<t>> next = _head->next;
+    return (!_cmp(_head->item, min) && !_cmp(min, _head->item) && !_cmp(next->item, max) && !_cmp(max, next->item));
+}

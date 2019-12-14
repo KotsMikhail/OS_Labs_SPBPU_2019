@@ -87,35 +87,23 @@ void * read_w(void *args)
 
 bool check_writers(set_t<int> *set, vvector_int_t &data)
 {
-    bool ret = true;
-    for (vector_int_t data_set : data)
-    {
-        for (int value : data_set)
-        {
-            if (!set->contains(value))
-            {
-                printf("writers: set doesn't contain value: %d\n", value);
-                ret = false;
-            }
-        }
-    }
+    bool ret = !(set->empty());
+    if (!ret)
+        for (vector_int_t data_set : data)
+            for (int value : data_set)
+                if (!set->contains(value))
+                    printf("writers: set doesn't contain value: %d\n", value);
     return ret;
 }
 
 bool check_readers(set_t<int> *set, vvector_int_t &data)
 {
-    bool ret = true;
-    for (vector_int_t data_set : data)
-    {
-        for (int value : data_set)
-        {
-            if (set->contains(value))
-            {
-                printf("readers: set contains value: %d\n", value);
-                ret = false;
-            }
-        }
-    }
+    bool ret = set->empty();
+    if (!ret)
+        for (vector_int_t data_set : data)
+            for (int value : data_set)
+                if (set->contains(value))
+                    printf("readers: set contains value: %d\n", value);
     return ret;
 }
 

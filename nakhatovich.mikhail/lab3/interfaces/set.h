@@ -16,6 +16,8 @@ public:
     virtual bool remove(const t &item) = 0;
     virtual bool contains(const t &item) = 0;
 
+    bool empty();
+
 protected:
     set_t() = delete;
     set_t(set_t const&) = delete;
