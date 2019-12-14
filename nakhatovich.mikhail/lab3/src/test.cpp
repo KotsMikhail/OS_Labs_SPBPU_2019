@@ -549,7 +549,7 @@ void run_time_test()
     set_type_t sets[] = { SET_FINE, SET_OPTIMISTIC };
     double time;
     char line[120];
-    printf("              | writers random |  writers fixed | readers random |  readers fixed |  common random |  common fixed  |\n");
+    printf("   set type   | writers random |  writers fixed | readers random |  readers fixed |  common random |  common fixed  |\n");
     printf("---------------------------------------------------------------------------------------------------------------------\n");
     for (set_type_t set_type : sets)
     {
