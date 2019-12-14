@@ -34,24 +34,6 @@ int TestRunner::runWritersTest(Stack* s, const TestParams& test_params) {
     return 0;
 }
 
-void TestRunner::runWorkers(Stack* s, const int workers_count, void*(*workerFunc)(void*), void* worker_func_args)
-{
-    //init default arrts
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-
-    std::vector<pthread_t> threadVec{};
-    for (int i = 0; i < workers_count; i++){
-        pthread_t tid;
-
-        pthread_create(&tid, &attr, workerFunc, worker_func_args);
-        threadVec.push_back(tid);
-    }
-
-    for (int i = 0; i < workers_count; i++)
-        pthread_join(threadVec[i],nullptr);
-}
-
 int TestRunner::runReadersTest(Stack * s, const struct TestParams & test_params) {
     int readers_count = test_params.workers_count;
     int read_actions_count = test_params.worker_actions_count;
@@ -76,6 +58,24 @@ int TestRunner::runReadersTest(Stack * s, const struct TestParams & test_params)
     return 0;
 }
 
+void TestRunner::runWorkers(Stack* s, const int workers_count, void*(*workerFunc)(void*), void* worker_func_args)
+{
+    //init default arrts
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+
+    std::vector<pthread_t> threadVec{};
+    for (int i = 0; i < workers_count; i++){
+        pthread_t tid;
+
+        pthread_create(&tid, &attr, workerFunc, worker_func_args);
+        threadVec.push_back(tid);
+    }
+
+    for (int i = 0; i < workers_count; i++)
+        pthread_join(threadVec[i],nullptr);
+}
+
 void* TestRunner::writeToStack(void *arg) {
     auto* args = (WriterThreadArgs*)arg;
 
@@ -96,14 +96,41 @@ void* TestRunner::writeToStack(void *arg) {
     return nullptr;
 }
 
+void *TestRunner::readFromStack(void *arg) {
+    auto* args = (ReaderThreadArgs*)arg;
+
+    Stack* s = args->s;
+    std::map<int, int>& test_map = args->m_test_map;
+
+    while (!s->empty())
+    {
+        try {
+            int val = 0;
+            s->pop(val);
+            test_map[val]--;
+        }
+        catch(const TimeoutException& e)
+        {
+            pthread_yield();
+            throw e;
+        }
+    }
+    return nullptr;
+}
+
 void TestRunner::runTests() {
     for (auto test : m_tests)
     {
-        BlockingStack::initStack();
-        BlockingStack& block_stack = BlockingStack::getInstance();
-        test.runTest(&block_stack);
-        BlockingStack::destroyStack();
-        //make for non block stack
+        try{
+            BlockingStack s = BlockingStack::make();
+            test.runTest(&s);
+
+            //TODO non-block stack
+        }
+        catch (const std::runtime_error& e)
+        {
+            std::cout << "ERROR while executing tests: " << e.what() << std::endl;
+        }
     }
 }
 
@@ -115,31 +142,6 @@ TestRunner::TestRunner(const TestRunnerParams &test_params) {
 
 int TestRunner::runFullTest(Stack *s, const TestParams &test_params) {
     return 0;
-}
-
-void *TestRunner::readFromStack(void *arg) {
-    auto* args = (ReaderThreadArgs*)arg;
-
-    Stack* s = args->s;
-    std::map<int, int>& test_map = args->m_test_map;
-
-    std::cout << "start reading from stack" << std::endl;
-    while (!s->empty())
-    {
-        try {
-            int val = 0;
-            s->pop(val);
-            std::cout << "read from stack: " + std::to_string(val) << std::endl;
-            test_map[val]--;
-        }
-        catch(const TimeoutException& e)
-        {
-            pthread_yield();
-            throw e;
-        }
-    }
-    std::cout << "read end" << std::endl;
-    return nullptr;
 }
 
 void TestRunner::checkAllElemIsZero(const std::map<int, int> &map) {

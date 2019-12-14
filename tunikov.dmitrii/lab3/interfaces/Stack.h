@@ -8,8 +8,9 @@
 class Stack
 {
 public:
+    static int m_read_timeout;
     virtual void pop(int& val) = 0;
-    virtual bool empty() const = 0;
+    virtual bool empty() = 0;
     virtual void push(const int& val) = 0;
 };
 

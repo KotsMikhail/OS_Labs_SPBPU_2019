@@ -4,23 +4,12 @@
 
 #include "BlockingStack.h"
 #include "../exceptions/TimeoutException.h"
-#include <exception>
 #include <stdexcept>
 #include <iostream>
 
-BlockingStack* BlockingStack::m_inst = nullptr;
-pthread_mutex_t BlockingStack::m_mutex{};
-int BlockingStack::m_read_timeout;
-std::vector<int> BlockingStack::m_data;
+int Stack::m_read_timeout;
 
-BlockingStack &BlockingStack::getInstance() {
-    if (m_inst != nullptr)
-        return *m_inst;
-    else
-        throw std::runtime_error("ERROR: BlockingStack not initialized yet");
-}
-
-void BlockingStack::initStack() {
+BlockingStack BlockingStack::make() {
     pthread_mutex_t m;
 
     int rc = pthread_mutex_init(&m, nullptr);
@@ -28,23 +17,11 @@ void BlockingStack::initStack() {
         throw std::runtime_error("can't init mutex");
     }
 
-    delete m_inst;
-    m_inst = new BlockingStack(m);
+    return BlockingStack(m);
 }
 
 BlockingStack::BlockingStack(pthread_mutex_t& mutex){
     m_mutex = mutex;
-}
-
-void BlockingStack::destroyStack() {
-    m_data.clear();
-    int rc = pthread_mutex_destroy(&m_mutex);
-
-    if (rc != 0){
-        throw std::runtime_error("can't destroy mutex");
-    }
-
-    delete m_inst;
 }
 
 void BlockingStack::push(const int &val) {
@@ -67,7 +44,7 @@ void BlockingStack::pop(int &val) {
     pthread_mutex_unlock(&m_mutex);
 }
 
-void BlockingStack::timed_lock() const {
+void BlockingStack::timed_lock() {
     struct timespec cur_time{};
     struct timespec start_wait_time{};
     clock_gettime(CLOCK_REALTIME, &start_wait_time);
@@ -80,17 +57,22 @@ void BlockingStack::timed_lock() const {
     }
 }
 
-bool BlockingStack::empty() const {
-    static int count = 1;
+bool BlockingStack::empty() {
     timed_lock();
 
     bool res = m_data.empty();
-
-    std::cout << "stack is empty: " << std::to_string(res) << " count = " << count++ << std::endl;
 
     pthread_mutex_unlock(&m_mutex);
     return res;
 }
 
 BlockingStack::BlockingStack() = default;
-BlockingStack::~BlockingStack() = default;
+BlockingStack::~BlockingStack()
+{
+    m_data.clear();
+    pthread_mutex_destroy(&m_mutex);
+}
+
+BlockingStack::BlockingStack(const BlockingStack &h) {
+
+}
