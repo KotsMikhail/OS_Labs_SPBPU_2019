@@ -13,7 +13,9 @@ struct Node
   pthread_mutex_t mutex;
   Node *next;
 
+  // TODO: handle error
   explicit Node(T item);
+  bool operator==(const Node& other);
   int lock();
   int unlock();
   ~Node();

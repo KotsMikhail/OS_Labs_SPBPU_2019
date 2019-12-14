@@ -10,6 +10,12 @@ Node<T>::Node(T item): item(item), next(nullptr)
 }
 
 template<typename T>
+bool Node<T>::operator==(const Node& other)
+{
+  return key == other.key && item == other.item;
+}
+
+template<typename T>
 int Node<T>::lock()
 {
   return pthread_mutex_lock(&mutex);
@@ -25,4 +31,5 @@ template<typename T>
 Node<T>::~Node()
 {
   unlock();
+  pthread_mutex_destroy(&mutex);
 }

@@ -5,6 +5,7 @@
 template<typename T>
 OptimisticList<T>::OptimisticList()
 {
+  // TODO: handle error
   Logger::logDebug(tag, "constructing...");
   head = new Node<T>(MinValue::get<T>());
   head->next = new Node<T>(MaxValue::get<T>());
@@ -26,6 +27,7 @@ OptimisticList<T>::~OptimisticList()
 template<typename T>
 bool OptimisticList<T>::add(T element)
 {
+  // TODO: try_lock
   Logger::logDebug(tag, "add(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
   bool res = false;
@@ -68,6 +70,7 @@ bool OptimisticList<T>::add(T element)
 template<typename T>
 bool OptimisticList<T>::remove(T element)
 {
+  // TODO: try_lock
   Logger::logDebug(tag, "remove(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
   bool res = false;
@@ -112,6 +115,7 @@ bool OptimisticList<T>::remove(T element)
 template<typename T>
 bool OptimisticList<T>::contains(T element) const
 {
+  // TODO: try_lock
   Logger::logDebug(tag, "contains(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
   bool res = false;
@@ -157,4 +161,8 @@ bool OptimisticList<T>::validate(Node<T>* prev, Node<T>* curr) const
   return false;
 }
 
-
+template<typename T>
+bool OptimisticList<T>::empty() const
+{
+  return *head == Node<T>(MinValue::get<T>()) && *(head->next) == Node<T>(MaxValue::get<T>());
+}

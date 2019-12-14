@@ -5,6 +5,7 @@
 template<typename T>
 LazyList<T>::LazyList()
 {
+  // TODO: handle error
   Logger::logDebug(tag, "constructing...");
   head = new LazyNode<T>(MinValue::get<T>());
   head->next = new LazyNode<T>(MaxValue::get<T>());
@@ -26,6 +27,7 @@ LazyList<T>::~LazyList()
 template<typename T>
 bool LazyList<T>::add(T element)
 {
+  // TODO: try_lock
   Logger::logDebug(tag, "add(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
   bool res = false;
@@ -68,6 +70,7 @@ bool LazyList<T>::add(T element)
 template<typename T>
 bool LazyList<T>::remove(T element)
 {
+  // TODO: try_lock
   Logger::logDebug(tag, "remove(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
   bool res = false;
@@ -128,4 +131,10 @@ bool LazyList<T>::validate(LazyNode<T>* prev, LazyNode<T>* curr) const
 {
   //Logger::logDebug(tag, "validating...");
   return !prev->marked && !curr->marked && prev->next == curr;
+}
+
+template<typename T>
+bool LazyList<T>::empty() const
+{
+  return *head == LazyNode<T>(MinValue::get<T>()) && *(head->next) == LazyNode<T>(MaxValue::get<T>());
 }

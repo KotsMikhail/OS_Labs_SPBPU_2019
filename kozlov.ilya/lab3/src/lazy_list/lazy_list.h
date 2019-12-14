@@ -17,6 +17,7 @@ public:
   bool add(T element) override;
   bool remove(T element) override;
   bool contains(T element) const override;
+  bool empty() const override;
 private:
   bool validate(LazyNode<T>* prev, LazyNode<T>* curr) const;
 };
