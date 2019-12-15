@@ -13,11 +13,14 @@ private:
   int readers_num;
   int reads_num;
   std::vector<data_set<T>> data_sets;
+  const std::string tag = "ReadTest";
+
 public:
-  ReadTest(Set<T>* set, int readers_num, int reads_num, std::string name);
+  ReadTest(Set<T>* set, int readers_num, int reads_num, std::string name) noexcept;
   void run() const override;
   void check() const override;
   ~ReadTest() override;
+
 private:
   static void* threadFunc(void *param);
 };

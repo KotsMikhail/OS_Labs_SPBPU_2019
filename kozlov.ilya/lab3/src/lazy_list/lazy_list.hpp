@@ -1,14 +1,11 @@
 #include <logger/logger.h>
 #include <min_max/min_value.h>
 #include <min_max/max_value.h>
+#include <node_creator/node_creator.h>
 
 template<typename T>
-LazyList<T>::LazyList()
+LazyList<T>::LazyList(LazyNode<T>* head): head(head)
 {
-  // TODO: handle error
-  Logger::logDebug(tag, "constructing...");
-  head = new LazyNode<T>(MinValue::get<T>());
-  head->next = new LazyNode<T>(MaxValue::get<T>());
 }
 
 template<typename T>
@@ -27,7 +24,6 @@ LazyList<T>::~LazyList()
 template<typename T>
 bool LazyList<T>::add(T element)
 {
-  // TODO: try_lock
   Logger::logDebug(tag, "add(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
   bool res = false;
@@ -41,8 +37,14 @@ bool LazyList<T>::add(T element)
       prev = curr;
       curr = curr->next;
     }
-    prev->lock();
-    curr->lock();
+    if (prev->timedLock() != 0)
+    {
+      return false;
+    }
+    if (curr->timedLock() != 0)
+    {
+      return false;
+    }
     if (validate(prev, curr))
     {
       need_return = true;
@@ -52,10 +54,17 @@ bool LazyList<T>::add(T element)
       }
       else
       {
-        auto node = new LazyNode<T>(element);
-        node->next = curr;
-        prev->next = node;
-        res = true;
+        auto node = NodeCreator<T>(element).template get<LazyNode<T>>();
+        if (node == nullptr)
+        {
+          res = false;
+        }
+        else
+        {
+          node->next = curr;
+          prev->next = node;
+          res = true;
+        }
       }
     }
     prev->unlock();
@@ -70,7 +79,6 @@ bool LazyList<T>::add(T element)
 template<typename T>
 bool LazyList<T>::remove(T element)
 {
-  // TODO: try_lock
   Logger::logDebug(tag, "remove(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
   bool res = false;
@@ -84,8 +92,14 @@ bool LazyList<T>::remove(T element)
       prev = curr;
       curr = curr->next;
     }
-    prev->lock();
-    curr->lock();
+    if (prev->timedLock() != 0)
+    {
+      return false;
+    }
+    if (curr->timedLock() != 0)
+    {
+      return false;
+    }
     if (validate(prev, curr))
     {
       need_return = true;
@@ -136,5 +150,5 @@ bool LazyList<T>::validate(LazyNode<T>* prev, LazyNode<T>* curr) const
 template<typename T>
 bool LazyList<T>::empty() const
 {
-  return *head == LazyNode<T>(MinValue::get<T>()) && *(head->next) == LazyNode<T>(MaxValue::get<T>());
+  return head->item == MinValue::get<T>() && head->next->item == MaxValue::get<T>();
 }

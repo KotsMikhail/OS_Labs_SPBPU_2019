@@ -7,20 +7,20 @@
 #include "test.h"
 #include "../optimistic_list/optimistic_list.h"
 #include "../lazy_list/lazy_list.h"
+#include "test_creator/test_creator.h"
 
 template<typename T>
 class Tester
 {
 private:
   const int default_num = 5;
-  int writers_num;
-  int records_num;
-  int readers_num;
-  int reads_num;
+  const std::string tag = "Tester";
   std::vector<Test<T>*> tests;
+
+  void setTests(TestCreator<T>* creator);
+
 public:
-  Tester();
-  bool LoadConfig(std::string file_name);
+  bool loadConfig(const std::string& file_name);
   void runTests() const;
   ~Tester();
 };

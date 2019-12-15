@@ -11,13 +11,15 @@ class LazyList: public Set<T>
 private:
   LazyNode<T>* head;
   const std::string tag = "LazyList";
+
 public:
-  LazyList();
+  LazyList(LazyNode<T>* head);
   ~LazyList();
   bool add(T element) override;
   bool remove(T element) override;
   bool contains(T element) const override;
   bool empty() const override;
+
 private:
   bool validate(LazyNode<T>* prev, LazyNode<T>* curr) const;
 };

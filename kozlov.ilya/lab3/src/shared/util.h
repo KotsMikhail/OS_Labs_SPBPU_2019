@@ -23,18 +23,23 @@ namespace Util
     return ss.str();
   }
 
-  enum class Color {
+  enum class Color
+  {
     RED = 31,
     GREEN = 32,
     BLUE = 34,
     DEFAULT = 39
   };
-  class Modifier {
+
+  class Modifier
+  {
     Color code;
   public:
     Modifier(Color pCode): code(pCode) {}
+
     friend std::ostream&
-    operator<<(std::ostream& os, const Modifier& mod) {
+    operator<<(std::ostream& os, const Modifier& mod)
+    {
       return os << "\033[" << (size_t)mod.code << "m";
     }
   };

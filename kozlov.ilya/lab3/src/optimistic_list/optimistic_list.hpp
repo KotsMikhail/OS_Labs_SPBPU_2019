@@ -1,14 +1,11 @@
 #include <logger/logger.h>
 #include <min_max/min_value.h>
 #include <min_max/max_value.h>
+#include <node_creator/node_creator.h>
 
 template<typename T>
-OptimisticList<T>::OptimisticList()
+OptimisticList<T>::OptimisticList(Node<T>* head): head(head)
 {
-  // TODO: handle error
-  Logger::logDebug(tag, "constructing...");
-  head = new Node<T>(MinValue::get<T>());
-  head->next = new Node<T>(MaxValue::get<T>());
 }
 
 template<typename T>
@@ -27,7 +24,6 @@ OptimisticList<T>::~OptimisticList()
 template<typename T>
 bool OptimisticList<T>::add(T element)
 {
-  // TODO: try_lock
   Logger::logDebug(tag, "add(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
   bool res = false;
@@ -41,8 +37,14 @@ bool OptimisticList<T>::add(T element)
       prev = curr;
       curr = curr->next;
     }
-    prev->lock();
-    curr->lock();
+    if (prev->timedLock() != 0)
+    {
+      return false;
+    }
+    if (curr->timedLock() != 0)
+    {
+      return false;
+    }
     if (validate(prev, curr))
     {
       need_return = true;
@@ -52,10 +54,17 @@ bool OptimisticList<T>::add(T element)
       }
       else
       {
-        auto node = new Node<T>(element);
-        node->next = curr;
-        prev->next = node;
-        res = true;
+        auto node = NodeCreator<T>(element).template get<Node<T>>();
+        if (node == nullptr)
+        {
+          res = false;
+        }
+        else
+        {
+          node->next = curr;
+          prev->next = node;
+          res = true;
+        }
       }
     }
     prev->unlock();
@@ -84,8 +93,14 @@ bool OptimisticList<T>::remove(T element)
       prev = curr;
       curr = curr->next;
     }
-    prev->lock();
-    curr->lock();
+    if (prev->timedLock() != 0)
+    {
+      return false;
+    }
+    if (curr->timedLock() != 0)
+    {
+      return false;
+    }
     if (validate(prev, curr))
     {
       need_return = true;
@@ -115,7 +130,6 @@ bool OptimisticList<T>::remove(T element)
 template<typename T>
 bool OptimisticList<T>::contains(T element) const
 {
-  // TODO: try_lock
   Logger::logDebug(tag, "contains(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
   bool res = false;
@@ -129,8 +143,14 @@ bool OptimisticList<T>::contains(T element) const
       prev = curr;
       curr = curr->next;
     }
-    prev->lock();
-    curr->lock();
+    if (prev->timedLock() != 0)
+    {
+      return false;
+    }
+    if (curr->timedLock() != 0)
+    {
+      return false;
+    }
     if (validate(prev, curr))
     {
       need_return = true;
@@ -164,5 +184,5 @@ bool OptimisticList<T>::validate(Node<T>* prev, Node<T>* curr) const
 template<typename T>
 bool OptimisticList<T>::empty() const
 {
-  return *head == Node<T>(MinValue::get<T>()) && *(head->next) == Node<T>(MaxValue::get<T>());
+  return head->item == MinValue::get<T>() && head->next->item == MaxValue::get<T>();
 }

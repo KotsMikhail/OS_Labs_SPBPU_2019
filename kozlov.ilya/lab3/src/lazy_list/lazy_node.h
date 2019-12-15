@@ -4,12 +4,14 @@
 #include <node/node.h>
 
 template<typename T>
-struct LazyNode: public Node<T>
+class LazyNode: public Node<T>
 {
+public:
   bool marked;
   LazyNode *next;
 
-  explicit LazyNode(T item) : Node<T>(item), marked(false), next(nullptr)
+  LazyNode(const T& item, int key, pthread_mutex_t& mutex) noexcept:
+    Node<T>(item, key, mutex), marked(false), next(nullptr)
   {
   }
 };

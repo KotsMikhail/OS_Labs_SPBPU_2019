@@ -16,12 +16,15 @@ private:
   int readers_num;
   int reads_num;
   std::vector<int> data_sets;
+  const std::string tag = "GeneralTest";
+
 public:
   GeneralTest(Set<T>* set, int writers_num, int records_num,
-    int readers_num, int reads_num, std::string name);
+              int readers_num, int reads_num, std::string name) noexcept;
   void run() const override;
   void check() const override;
   ~GeneralTest() override;
+
 private:
   static std::vector<int> check_array;
   static void* threadWriteFunc(void *param);

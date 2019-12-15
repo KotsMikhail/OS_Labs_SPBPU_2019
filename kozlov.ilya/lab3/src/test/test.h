@@ -10,7 +10,7 @@ struct TestException: public std::exception {
 private:
   std::string message;
 public:
-  explicit TestException(std::string& message) : message(message)
+  explicit TestException(std::string& message) noexcept: message(message)
   {}
 
   const char* what() const noexcept override
@@ -28,8 +28,16 @@ struct TestInfo
   Set<T>* testing_set;
   data_set<T> data;
 
-  TestInfo(Set<T>* set, data_set<T> data): testing_set(set), data(std::move(data))
+  TestInfo(Set<T>* set, data_set<T> data) noexcept: testing_set(set), data(std::move(data))
   {}
+};
+
+enum class TestType
+{
+  WRITE,
+  READ,
+  GENERAL,
+  COMPARE
 };
 
 template<typename T>
@@ -38,7 +46,7 @@ class Test
 public:
   std::string name;
 
-  explicit Test(std::string& name): name(name)
+  explicit Test(std::string& name) noexcept: name(name)
   {}
   virtual void run() const = 0;
   virtual void check() const noexcept(false) = 0;

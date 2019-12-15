@@ -12,18 +12,22 @@ void* WriteTest<T>::threadFunc(void *param)
   Logger::logDebug(tag, "\n\tTestInfo.data = " + Util::toStr(info->data.begin(), info->data.end()));
   for (int value : info->data)
   {
-    // TODO: handle error
-    Logger::logDebug(std::to_string(pthread_self()), "writing: " + std::to_string(value));
-    info->testing_set->add(value);
+    Logger::logDebug(tag, "writing: " + std::to_string(value));
+    if (!info->testing_set->add(value))
+    {
+      Logger::logError(tag, "Cant write to set value = " + std::to_string(value) + "\n");
+      break;
+    }
   }
   delete info;
   pthread_exit(nullptr);
 }
 
 template<typename T>
-WriteTest<T>::WriteTest(Set<T>* set, int writers_num, int records_num, std::string name) :
+WriteTest<T>::WriteTest(Set<T>* set, int writers_num, int records_num, std::string name) noexcept:
   Test<T>(name), curr_set(set), writers_num(writers_num), records_num(records_num)
 {
+  Logger::logDebug(tag, "constructing...");
   for (int i = 0; i < writers_num; i++)
   {
     data_set<T> data;
@@ -38,26 +42,39 @@ WriteTest<T>::WriteTest(Set<T>* set, int writers_num, int records_num, std::stri
 template<typename T>
 void WriteTest<T>::run() const
 {
+  Logger::logDebug(tag, "run");
   std::vector<pthread_t> thread_ids;
   pthread_attr_t attr;
-  pthread_attr_init(&attr);
+  if (pthread_attr_init(&attr) != 0)
+  {
+    Logger::logError(tag, "Cant init pthread attributes");
+    return;
+  }
   for (int i = 0; i < writers_num; i++)
   {
     auto info = new TestInfo<T>(curr_set, data_sets[i]);
     pthread_t tid;
-    // TODO: handle error
-    pthread_create(&tid, &attr, threadFunc, info);
+    if (pthread_create(&tid, &attr, threadFunc, info) != 0)
+    {
+      Logger::logError(tag, "Cant create pthread");
+      return;
+    }
     thread_ids.push_back(tid);
   }
   for (auto id : thread_ids)
   {
-    pthread_join(id, nullptr);
+    if (pthread_join(id, nullptr) != 0)
+    {
+      Logger::logError(tag, "Cant join pthread with id == " + std::to_string(id) + "\n");
+      return;
+    }
   }
 }
 
 template<typename T>
 void WriteTest<T>::check() const
 {
+  Logger::logDebug(tag, "check");
   for (const auto& data_set : data_sets)
   {
     for (int value : data_set)
@@ -74,5 +91,6 @@ void WriteTest<T>::check() const
 template<typename T>
 WriteTest<T>::~WriteTest()
 {
+  Logger::logDebug(tag, "destructing");
   delete curr_set;
 }
