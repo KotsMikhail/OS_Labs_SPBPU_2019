@@ -21,7 +21,7 @@ public:
     
     bool load();
 
-    const size_t get_value(size_types_t type) const;
+    size_t get_value(size_types_t type) const;
     const vector_size_t & get_cnt_elements(size_types_t type) const;
 
 private: 
@@ -30,7 +30,7 @@ private:
     config_t& operator=(config_t const&) = delete;
 
     config_t(string_t &path);
-    ~config_t();
+    ~config_t() = default;
 
     bool parse_with_array(string_t &s, string_t &type, string_t &line);
     bool parse_without_array(string_t &s, string_t &type, string_t &line);

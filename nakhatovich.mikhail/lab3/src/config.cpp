@@ -12,10 +12,7 @@ vector_string_t config_t::_keys = vector_string_t({"writers", "readers", "common
 vector_string_t config_t::_array_keys = vector_string_t({"writers", "readers"});
 
 config_t::config_t(string_t &path) : _conf_path(path)
-{};
-
-config_t::~config_t()
-{};
+{}
 
 config_t * config_t::get_instance(const char *path)
 {
@@ -146,7 +143,7 @@ bool config_t::parse_without_array(string_t &s, string_t &type, string_t &line)
     return true;
 }
 
-const size_t config_t::get_value(size_types_t type) const
+size_t config_t::get_value(size_types_t type) const
 {
     auto it = _values.find(_keys[type]);
     if (it != _values.cend())
