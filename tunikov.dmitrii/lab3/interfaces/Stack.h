@@ -5,13 +5,22 @@
 #ifndef LAB3_STACK_H
 #define LAB3_STACK_H
 
+#include <memory>
+#include <vector>
+
+enum StackType
+{
+    LOCK,
+    LOCK_FREE
+};
+
 class Stack
 {
 public:
     static int m_read_timeout;
-    virtual void pop(int& val) = 0;
-    virtual bool empty() = 0;
+    virtual std::shared_ptr<int> pop() = 0;
     virtual void push(const int& val) = 0;
+    virtual bool empty() = 0;
 };
 
 #endif //LAB3_STACK_H

@@ -3,89 +3,125 @@
 //
 
 #include "TestRunner.h"
-#include "../blocking_stack/BlockingStack.h"
+#include "../lock_stack/LockStack.h"
 #include "../exceptions/TimeoutException.h"
-#include <map>
+#include "../lock_free_stack/LockFreeStack.h"
+#include "../utils/utils.h"
 
-int TestRunner::runWritersTest(Stack* s, const TestParams& test_params) {
-    int writers_count = test_params.workers_count;
-    int write_actions_count = test_params.worker_actions_count;
-
-    //fill test map
-    std::map<int, int> test_map{};
-    for (int j = 0; j < write_actions_count; j++)
-        test_map.insert(std::pair<int, int>(j, writers_count));
-
-    auto thread_args = new WriterThreadArgs(s, write_actions_count);
-
-    runWorkers(s, writers_count, writeToStack, thread_args);
-
-    //increment test_map by stack real data
-    while (!s->empty())
-    {
-        int val = 0;
-        s->pop(val);
-
-        test_map[val]--;
-    }
-
-    checkAllElemIsZero(test_map);
-
+int TestRunner::runWritersTest(Stack* s, const FullTestParams& test_params) {
+    runWorkerTest(s, &writeToStack, test_params.writer_params);
     return 0;
 }
 
-int TestRunner::runReadersTest(Stack * s, const struct TestParams & test_params) {
-    int readers_count = test_params.workers_count;
-    int read_actions_count = test_params.worker_actions_count;
-
-    //fill test map
-    std::map<int, int> test_map{};
-    for (int j = 0; j < read_actions_count; j++)
-    {
-        for (int i = 0; i < readers_count; i++)
+int TestRunner::runReadersTest(Stack * s, const struct FullTestParams & test_params)
+{
+    for (int i = 0; i < test_params.reader_params.workers_count; i++)
+        for (int j = 0; j < test_params.reader_params.worker_actions_count; j++)
         {
             s->push(j);
         }
-        test_map.insert(std::pair<int, int>(j, readers_count));
-    }
 
-    auto thread_args = new ReaderThreadArgs(s, test_map);
+    runWorkerTest(s, &readFromStack, test_params.reader_params);
+    return 0;
+}
 
-    runWorkers(s, readers_count, &readFromStack, thread_args);
+int TestRunner::runFullTest(Stack *s, const FullTestParams &test_params) {
+    int reader_action_count = test_params.reader_params.worker_actions_count;
+    int writer_action_count = test_params.writer_params.worker_actions_count;
 
-    checkAllElemIsZero(test_map);
+    for (int i = 1; i < test_params.reader_params.workers_count; i++)
+        for (int j = 1; j < test_params.writer_params.workers_count; j++)
+        {
+            std::vector<std::vector<int>> writers_vecs;
+            std::vector<std::vector<int>> readers_vecs;
+
+            //run writers
+            auto writer_threads = std::move(runWorkers(TestParams(j, writer_action_count), writers_vecs, writeToStack, s));
+            //run readers
+            auto readers_threads = std::move(runWorkers(TestParams(i, reader_action_count), readers_vecs, readFromStack, s));
+
+            //join all threads
+            utils::joinThreads(writer_threads);
+            utils::joinThreads(readers_threads);
+
+            for (auto& writer_vec : writers_vecs)
+            {
+                for (auto& writer_vec_elem : writer_vec)
+                {
+                    bool was_found = utils::containsAndErase(readers_vecs, writer_vec_elem);
+
+                    if (!was_found)
+                    {
+                        std::string error_msg = "for writers count: " + std::to_string(j) + ", readers count: " + std::to_string(i)
+                                + ", error for elem: " + std::to_string(writer_vec_elem);
+                        throw std::runtime_error(error_msg);
+                    }
+                }
+            }
+        }
 
     return 0;
 }
 
-void TestRunner::runWorkers(Stack* s, const int workers_count, void*(*workerFunc)(void*), void* worker_func_args)
+std::vector<pthread_t> TestRunner::runWorkers(const TestParams& test_params, std::vector<std::vector<int>>& worker_vecs, void*(*workerFunc)(void*), Stack* s)
 {
-    //init default arrts
     pthread_attr_t attr;
     pthread_attr_init(&attr);
 
+    //run worker
     std::vector<pthread_t> threadVec{};
-    for (int i = 0; i < workers_count; i++){
+    worker_vecs.clear();
+    for (int i = 0; i < test_params.workers_count; i++)
+    {
+        std::vector<int> v = std::vector<int>();
+        worker_vecs.push_back(v);
+    }
+
+    for (int i = 0; i < test_params.workers_count; i++)
+    {
+        auto* thread_args = new ThreadArgs(s, worker_vecs[i], test_params.worker_actions_count);
+
         pthread_t tid;
 
-        pthread_create(&tid, &attr, workerFunc, worker_func_args);
+        pthread_create(&tid, &attr, workerFunc, thread_args);
         threadVec.push_back(tid);
     }
 
-    for (int i = 0; i < workers_count; i++)
-        pthread_join(threadVec[i],nullptr);
+    return threadVec;
+}
+
+void TestRunner::runWorkerTest(Stack* s, void*(*workerFunc)(void*), const TestParams& test_params)
+{
+    std::vector<std::vector<int>> worker_vecs;
+
+    auto threads = std::move(runWorkers(test_params, worker_vecs, workerFunc, s));
+    utils::joinThreads(threads);
+
+    //test workers vectors
+    for (int i = 0; i < test_params.workers_count; i++)
+        for (int j = 0; j < test_params.worker_actions_count; j++)
+        {
+            bool was_found = utils::containsAndErase(worker_vecs, j);
+
+            if (!was_found)
+            {
+                throw std::runtime_error(std::string("wasn't found elem: ") + std::to_string(j));
+            }
+        }
 }
 
 void* TestRunner::writeToStack(void *arg) {
-    auto* args = (WriterThreadArgs*)arg;
+    auto* args = (ThreadArgs*)arg;
 
     Stack* s = args->s;
-    int n = args->n;
+    int n = args->m_action_count;
+    std::vector<int>& test_vec = args->m_test_vec;
 
     for (int i = 0; i < n; i++)
     {
         try {
             s->push(i);
+            test_vec.emplace_back(i);
         }
         catch(const TimeoutException& e)
         {
@@ -93,21 +129,22 @@ void* TestRunner::writeToStack(void *arg) {
             throw e;
         }
     }
+
     return nullptr;
 }
 
 void *TestRunner::readFromStack(void *arg) {
-    auto* args = (ReaderThreadArgs*)arg;
+    auto* args = (ThreadArgs*)arg;
 
     Stack* s = args->s;
-    std::map<int, int>& test_map = args->m_test_map;
+    std::vector<int>& test_vec = args->m_test_vec;
 
     while (!s->empty())
     {
         try {
-            int val = 0;
-            s->pop(val);
-            test_map[val]--;
+            auto val = s->pop();
+            if (val != std::shared_ptr<int>())
+                test_vec.emplace_back(*val);
         }
         catch(const TimeoutException& e)
         {
@@ -119,35 +156,40 @@ void *TestRunner::readFromStack(void *arg) {
 }
 
 void TestRunner::runTests() {
-    for (auto test : m_tests)
+    static std::vector<StackType> available_stack_types{LOCK, LOCK_FREE};
+    for (auto stack_type : available_stack_types)
     {
-        try{
-            BlockingStack s = BlockingStack::make();
-            test.runTest(&s);
-
-            //TODO non-block stack
-        }
-        catch (const std::runtime_error& e)
+        Stack* stack = nullptr;
+        switch (stack_type)
         {
-            std::cout << "ERROR while executing tests: " << e.what() << std::endl;
+            case LOCK_FREE:
+                std::cout << "Running tests for LOCK_FREE_STACK: " << std::endl;
+                stack = new LockFreeStack();
+                break;
+            case LOCK:
+                std::cout << "Running tests for LOCK_STACK: " << std::endl;
+                stack = LockStack::make();
+                break;
+            default:
+                throw std::runtime_error("ERROR: unknown stack type");
         }
+
+        for (auto test : m_tests)
+        {
+            try{
+                test.runTest(stack);
+            }
+            catch (const std::runtime_error& e)
+            {
+                std::cout << "ERROR while executing tests: " << e.what() << std::endl;
+            }
+        }
+        std::cout << "--------------------------------------------------------" << std::endl;
     }
 }
 
-TestRunner::TestRunner(const TestRunnerParams &test_params) {
-    m_tests.emplace_back(Test("Writers test", test_params.writer_params, &runWritersTest));
-    m_tests.emplace_back(Test("Readers test", test_params.reader_params, &runReadersTest));
-    m_tests.emplace_back(Test("Writers/Readers test", test_params.writer_params, &runFullTest));
-}
-
-int TestRunner::runFullTest(Stack *s, const TestParams &test_params) {
-    return 0;
-}
-
-void TestRunner::checkAllElemIsZero(const std::map<int, int> &map) {
-    for (auto elem : map)
-    {
-        if (elem.second != 0)
-            throw std::runtime_error("wrong test map value for: " + std::to_string(elem.first));
-    }
+TestRunner::TestRunner(const FullTestParams &test_params) {
+    //m_tests.emplace_back(Test("Writers test", test_params, &runWritersTest));
+    //m_tests.emplace_back(Test("Readers test", test_params, &runReadersTest));
+    m_tests.emplace_back(Test("Writers/Readers test", test_params, &runFullTest));
 }

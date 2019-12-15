@@ -7,13 +7,9 @@
 
 #include "../interfaces/Stack.h"
 #include "Test.h"
+#include <utility>
 #include <vector>
 #include <map>
-
-struct TestRunnerParams{
-    TestParams writer_params;
-    TestParams reader_params;
-};
 
 class TestRunner {
     std::vector<Test> m_tests;
@@ -21,32 +17,24 @@ class TestRunner {
     static void *writeToStack(void *arg);
     static void *readFromStack(void *arg);
 
-    static void runWorkers(Stack* s, const int workers_count, void*(*workerFunc)(void*), void* worker_func_args);
-
-    static void checkAllElemIsZero(const std::map<int, int>& map);
-    static int runWritersTest(Stack *s, const TestParams &test_params);
-    static int runReadersTest(Stack *s, const TestParams &test_params);
-    static int runFullTest(Stack *s, const TestParams &test_params);
+    static void runWorkerTest(Stack* s, void*(*workerFunc)(void*), const TestParams& test_params);
+    static int runWritersTest(Stack *s, const FullTestParams &test_params);
+    static int runReadersTest(Stack *s, const FullTestParams &test_params);
+    static int runFullTest(Stack *s, const FullTestParams &test_params);
 public:
-    explicit TestRunner(const TestRunnerParams& test_params);
+    explicit TestRunner(const FullTestParams& test_params);
     void runTests();
+
+    static std::vector<pthread_t> runWorkers(const TestParams &test_params, std::vector<std::vector<int>> &worker_vecs, void *(*workerFunc)(void *),
+               Stack *s);
 };
 
 struct ThreadArgs
 {
-    ThreadArgs(Stack* _s) : s(_s) {}
+    ThreadArgs(Stack* _s, std::vector<int>& test_vec, const int& action_count) : s(_s), m_test_vec(test_vec), m_action_count(action_count) {}
     Stack* s;
-};
-
-struct WriterThreadArgs : public ThreadArgs {
-    WriterThreadArgs(Stack* _s, int _n) : ThreadArgs(_s), n(_n) {}
-    int n;
-};
-
-struct ReaderThreadArgs : public ThreadArgs
-{
-    ReaderThreadArgs(Stack* _s, std::map<int, int>& test_map) : ThreadArgs(_s), m_test_map(test_map){}
-    std::map<int, int>& m_test_map;
+    std::vector<int>& m_test_vec;
+    int m_action_count;
 };
 
 

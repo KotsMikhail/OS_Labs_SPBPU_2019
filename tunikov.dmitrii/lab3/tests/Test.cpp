@@ -4,7 +4,7 @@
 
 #include "Test.h"
 
-Test::Test(const std::string &name, const TestParams &test_params, int (*_testFunc)(Stack *, const TestParams &)) {
+Test::Test(const std::string &name, const FullTestParams &test_params, int (*_testFunc)(Stack *, const FullTestParams &)) {
     m_name = name;
     testFunc = _testFunc;
     m_test_params = test_params;
