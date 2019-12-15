@@ -1,5 +1,6 @@
 #include <pthread.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <atomic>
 #include <algorithm>
@@ -39,6 +40,20 @@ void print_stop(const char *name)
     printf("Test for %s stopped.\n", name);
 }
 
+void get_start_time(struct timespec *start_time)
+{
+    clock_gettime(CLOCK_REALTIME, start_time);
+}
+
+void get_result_time(const struct timespec &start_time, double *time)
+{
+    struct timespec cur_time;
+    clock_gettime(CLOCK_REALTIME, &cur_time);
+    __time_t sec = cur_time.tv_sec - start_time.tv_sec;
+    __syscall_slong_t nsec = cur_time.tv_nsec - start_time.tv_nsec;
+    *time = sec + (double) nsec / 1e9;
+}
+
 void * write(void *args)
 {
     test_info_t * ti = (test_info_t *)(args);
@@ -76,7 +91,7 @@ void * read_w(void *args)
         {
             if (!*ti->run_writers && miss++ >= 1)
                 pthread_exit(nullptr); 
-            pthread_yield();
+            sleep(1);
         }
         do
             val = ti->arr[value];
@@ -191,20 +206,6 @@ bool create_data_sets(set_t<int> *set, size_t cnt_threads, const vector_size_t &
         */
     }
     return true;
-}
-
-void get_start_time(struct timespec *start_time)
-{
-    clock_gettime(CLOCK_REALTIME, start_time);
-}
-
-void get_result_time(const struct timespec &start_time, double *time)
-{
-    struct timespec cur_time;
-    clock_gettime(CLOCK_REALTIME, &cur_time);
-    __time_t sec = cur_time.tv_sec - start_time.tv_sec;
-    __syscall_slong_t nsec = cur_time.tv_nsec - start_time.tv_nsec;
-    *time = sec + (double) nsec / 1e9;
 }
 
 bool run_writers_test(set_t<int> *set, cntr_data_fn cntr_data, bool check, double *time=nullptr)

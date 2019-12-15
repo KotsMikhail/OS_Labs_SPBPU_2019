@@ -1,4 +1,4 @@
-CFLAGS = -std=c++11 -Wall -Werror -I ./interfaces/
+CFLAGS = -std=c++11 -Wall -Werror -I ./interfaces/ -Wextra -pedantic-errors
 PFLAGS = -pthread
 
 all: build
