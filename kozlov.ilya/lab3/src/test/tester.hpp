@@ -2,6 +2,7 @@
 #include <logger/logger.h>
 #include <sstream>
 #include <fstream>
+#include <timer.h>
 #include "../optimistic_list/optimistic_list.h"
 #include "write_test/write_test.h"
 #include "../lazy_list/lazy_list.h"
@@ -62,23 +63,33 @@ void Tester<T>::runTests() const
   Util::Modifier green(Util::Color::GREEN);
   Util::Modifier blue(Util::Color::BLUE);
   Util::Modifier def(Util::Color::DEFAULT);
+  int count = 0;
+  double time_count = 0;
+  Timer timer;
   for (auto test: tests)
   {
     if (test)
     {
       std::cout << blue << test->name << "..." << def << std::endl;
+      timer.reset();
       test->run();
       try
       {
         test->check();
         std::cout << green << "\tSUCCEEDED!" << def << std::endl;
+        count++;
       }
       catch (TestException& te)
       {
         std::cout << red << " \tFAILED!" << std::endl << def << "\tReason: " << te.what() << std::endl;
       }
+      double time = timer.elapsed();
+      time_count += time;
+      std::cout << blue << "\tTIME in sec: " << time << def << std::endl;
     }
   }
+  std::cout << blue << "TOTAL: " << green << count << " / " << tests.size() << blue << " PASSED" << def << std::endl;
+  std::cout << blue << "\tTIME in sec: " << green << time_count << def << std::endl;
 }
 
 template<typename T>

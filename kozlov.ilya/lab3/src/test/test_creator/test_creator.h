@@ -16,6 +16,7 @@ private:
   int records_num;
   int readers_num;
   int reads_num;
+  int max_threads;
 public:
   TestCreator(int writers_num, int records_num, int readers_num, int reads_num) noexcept;
   Test<T>* get(const Type& set_type, const TestType& type, std::string name);

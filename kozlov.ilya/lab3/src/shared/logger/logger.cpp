@@ -1,6 +1,8 @@
 #include "logger.h"
 
 pthread_mutex_t Logger::mutex;
+Util::Modifier Logger::def = Util::Modifier(Util::Color::DEFAULT);
+Util::Modifier Logger::red = Util::Modifier(Util::Color::RED);
 
 bool Logger::init()
 {
@@ -17,7 +19,8 @@ void Logger::destroy()
 void Logger::logError(const std::string& tag, const std::string& msg)
 {
   pthread_mutex_lock(&mutex);
-  std::cout << "ERROR: " << tag << "::" << msg << std::endl;
+
+  std::cout << red << "ERROR: " << tag << "::" << msg << def << std::endl;
   pthread_mutex_unlock(&mutex);
 }
 
@@ -28,11 +31,4 @@ void Logger::logDebug(const std::string& tag, const std::string& msg)
   std::cout << "DEBUG: " << tag << "::" << msg << std::endl;
   pthread_mutex_unlock(&mutex);
 #endif
-}
-
-void Logger::logNote(const std::string& tag, const std::string& msg)
-{
-  pthread_mutex_lock(&mutex);
-  std::cout << tag << "::" << msg << std::endl;
-  pthread_mutex_unlock(&mutex);
 }

@@ -39,11 +39,11 @@ bool OptimisticList<T>::add(T element)
     }
     if (prev->timedLock() != 0)
     {
-      return false;
+      continue;
     }
     if (curr->timedLock() != 0)
     {
-      return false;
+      continue;
     }
     if (validate(prev, curr))
     {
@@ -79,7 +79,6 @@ bool OptimisticList<T>::add(T element)
 template<typename T>
 bool OptimisticList<T>::remove(T element)
 {
-  // TODO: try_lock
   Logger::logDebug(tag, "remove(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
   bool res = false;
@@ -95,11 +94,11 @@ bool OptimisticList<T>::remove(T element)
     }
     if (prev->timedLock() != 0)
     {
-      return false;
+      continue;
     }
     if (curr->timedLock() != 0)
     {
-      return false;
+      continue;
     }
     if (validate(prev, curr))
     {
@@ -145,11 +144,11 @@ bool OptimisticList<T>::contains(T element) const
     }
     if (prev->timedLock() != 0)
     {
-      return false;
+      continue;
     }
     if (curr->timedLock() != 0)
     {
-      return false;
+      continue;
     }
     if (validate(prev, curr))
     {
@@ -170,13 +169,13 @@ bool OptimisticList<T>::validate(Node<T>* prev, Node<T>* curr) const
 {
   //Logger::logDebug(tag, "validating...");
   Node<T>* node = head;
-  while (node->key < prev->key)
+  while (node->key <= prev->key)
   {
+    if (node == prev)
+    {
+      return node->next == curr;
+    }
     node = node->next;
-  }
-  if (node == prev)
-  {
-    return node->next == curr;
   }
   return false;
 }

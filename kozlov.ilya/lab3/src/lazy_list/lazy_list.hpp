@@ -39,11 +39,11 @@ bool LazyList<T>::add(T element)
     }
     if (prev->timedLock() != 0)
     {
-      return false;
+      continue;
     }
     if (curr->timedLock() != 0)
     {
-      return false;
+      continue;
     }
     if (validate(prev, curr))
     {
@@ -94,11 +94,11 @@ bool LazyList<T>::remove(T element)
     }
     if (prev->timedLock() != 0)
     {
-      return false;
+      continue;
     }
     if (curr->timedLock() != 0)
     {
-      return false;
+      continue;
     }
     if (validate(prev, curr))
     {

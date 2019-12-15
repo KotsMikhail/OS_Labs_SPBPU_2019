@@ -21,7 +21,7 @@ public:
   ~Node();
 
 private:
-  const int timeout = 1;
+  const double timeout = 1.0;
 };
 
 #include "node.hpp"

@@ -3,10 +3,13 @@
 
 #include <string>
 #include <iostream>
+#include <util.h>
 
 class Logger
 {
 private:
+  static Util::Modifier def;
+  static Util::Modifier red;
   static pthread_mutex_t mutex;
 public:
   static bool init();
