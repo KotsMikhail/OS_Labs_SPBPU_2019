@@ -1,6 +1,5 @@
 #include <pthread.h>
 #include <stdio.h>
-#include <unistd.h>
 
 #include <atomic>
 #include <algorithm>
@@ -53,15 +52,24 @@ void get_result_time(const struct timespec &start_time, double *time)
     __syscall_slong_t nsec = cur_time.tv_nsec - start_time.tv_nsec;
     *time = sec + (double) nsec / 1e9;
 }
-
+/*
+void get_prio_pol(int *policy, int *prio)
+{
+    struct sched_param sp;
+    pthread_getschedparam(pthread_self(), policy, &sp);
+    *prio = sp.sched_priority;
+}
+*/
 void * write(void *args)
 {
     test_info_t * ti = (test_info_t *)(args);
     set_t<int> * set = ti->set;
-    size_t len = ti->data.size();
+    // int policy, prio;
+    // get_prio_pol(&policy, &prio);
     while (!*ti->run) {};
-    for (size_t i = 0; i < len; ++i)
-        set->add(ti->data[i]);
+    // printf("prio = %d, [%d..%d], pol = %d\n", prio, sched_get_priority_min(policy), sched_get_priority_max(policy), policy);
+    for (int value : ti->data)
+        set->add(value);
     pthread_exit(nullptr);
 }
 
@@ -80,18 +88,19 @@ void * read_w(void *args)
 {
     test_info_t * ti = (test_info_t *)(args);
     set_t<int> * set = ti->set;
-    size_t val, len = ti->data.size(), miss;
-    int value;
+    size_t val, miss;
+    // int policy, prio;
+    // get_prio_pol(&policy, &prio);
     while (!*ti->run) {};
-    for (size_t i = 0; i < len; ++i)
+    // printf("prio = %d, [%d..%d], pol = %d\n", prio, sched_get_priority_min(policy), sched_get_priority_max(policy), policy);
+    for (int value : ti->data)
     {
-        value = ti->data[i];
         miss = 0;
         while (!set->remove(value))
         {
             if (!*ti->run_writers && miss++ >= 1)
                 pthread_exit(nullptr); 
-            sleep(1);
+            pthread_yield();
         }
         do
             val = ti->arr[value];
@@ -154,15 +163,25 @@ void join_threads(vector_pthread_t &threads, size_t count)
         pthread_join(threads[i], nullptr);
 }
 
-size_t create_threads(vector_pthread_t &threads, void *(*func)(void*), vector_ti_t &tis, bool is_print=false)
+size_t create_threads(vector_pthread_t &threads, void *(*func)(void*), vector_ti_t &tis, bool is_print)
 {
     if (is_print)
         printf("Create threads.\n");
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    struct sched_param sp;
+    sp.sched_priority = sched_get_priority_max(SCHED_RR);
+    pthread_setschedparam(pthread_self(), SCHED_RR, &sp);
+    sp.sched_priority = sched_get_priority_min(SCHED_RR);
+    pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+    pthread_attr_setschedpolicy(&attr, SCHED_RR);
+    pthread_attr_setschedparam(&attr, &sp);
     for (size_t i = 0; i < threads.size(); ++i)
     {
-        if (pthread_create(&(threads[i]), nullptr, func, tis[i]))
+        int s = pthread_create(&(threads[i]), &attr, func, tis[i]);
+        if (s)
         {
-            printf("Couldn't create thread #%lu.\n", i);
+            printf("Couldn't create thread #%lu, errno %d.\n", i, s);
             if (is_print)
                 printf("%lu/%lu threads was created.\n", i, threads.size());
             return i;
