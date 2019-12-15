@@ -9,6 +9,10 @@ while (_cmp(curr->item, item)) \
 pred->lock(); \
 curr->lock();
 
+#define unlock_opt(pred, curr) \
+pred->unlock(); \
+curr->unlock();
+
 template<class t, class l, class c>
 set_optimistic_t<t, l, c> * set_optimistic_t<t, l, c>::create_set()
 {
@@ -17,13 +21,16 @@ set_optimistic_t<t, l, c> * set_optimistic_t<t, l, c>::create_set()
         return nullptr;
     set_optimistic_t<t, l, c> * set = new (std::nothrow) set_optimistic_t<t, l, c>(head);
     if (!set)
+    {
+        delete head->next;
         delete head;
+    }
     return set;
 }
 
 template<class t, class l, class c>
 set_optimistic_t<t, l, c>::set_optimistic_t(node_t<t> *head) : set_t<t, l, c>(head)
-{};
+{}
 
 template<class t, class l, class c>
 bool set_optimistic_t<t, l, c>::add(const t &item)
@@ -31,7 +38,7 @@ bool set_optimistic_t<t, l, c>::add(const t &item)
     bool ret = false;
     while (true)
     {
-        std::shared_ptr<node_t<t>> pred = this->_head, curr = pred->next;
+        node_t<t> *pred = this->_head, *curr = pred->next;
         loop_opt(pred, curr, this->_cmp, item)
         if (validate(pred, curr))
         {
@@ -41,16 +48,14 @@ bool set_optimistic_t<t, l, c>::add(const t &item)
                 if (node)
                 {
                     node->next = curr;
-                    pred->next = std::shared_ptr<node_t<t>>(node);
+                    pred->next = node;
                     ret = true;
                 }
             }
-            pred->unlock();
-            curr->unlock();
-            return ret;
+            unlock_opt(pred, curr)
+            break;
         }
-        pred->unlock();
-        curr->unlock();
+        unlock_opt(pred, curr)
     }
     return ret;
 }
@@ -61,22 +66,23 @@ bool set_optimistic_t<t, l, c>::remove(const t &item)
     bool ret = false;
     while (true)
     {
-        std::shared_ptr<node_t<t>> pred = this->_head, curr = pred->next;
+        node_t<t> *pred = this->_head, *curr = pred->next;
         loop_opt(pred, curr, this->_cmp, item)
         if (validate(pred, curr))
         {
             if (!this->_cmp(item, curr->item))
             {
                 pred->next = curr->next;
+                curr->unlock();
+                delete curr;
                 ret = true;
             }
-            curr->unlock();
+            else
+                curr->unlock();
             pred->unlock();
-            return ret;
+            break;
         }
-        curr->unlock();
-        pred->unlock();
-
+        unlock_opt(curr, pred)
     }
     return ret;
 }
@@ -87,28 +93,24 @@ bool set_optimistic_t<t, l, c>::contains(const t &item)
     bool ret = false;
     while (true)
     {
-        std::shared_ptr<node_t<t>> pred = this->_head, curr = pred->next;
+        node_t<t> *pred = this->_head, *curr = pred->next;
         loop_opt(pred, curr, this->_cmp, item)
         if (validate(pred, curr))
         {
             ret = !this->_cmp(item, curr->item);
-            pred->unlock();
-            curr->unlock();
+            unlock_opt(pred, curr)
             return ret;
         }
-        pred->unlock();
-        curr->unlock();
+        unlock_opt(pred, curr)
     }
     return ret;
 }
 
 template<class t, class l, class c>
-bool set_optimistic_t<t, l, c>::validate(std::shared_ptr<node_t<t>> &pred, std::shared_ptr<node_t<t>> &curr)
+bool set_optimistic_t<t, l, c>::validate(node_t<t> *pred, node_t<t> *curr)
 {
-    std::shared_ptr<node_t<t>> node = this->_head;
+    node_t<t> *node = this->_head;
     while (this->_cmp(node->item, pred->item)) 
         node = node->next;
-    if (node == pred)
-        return (pred->next == curr);
-    return false;
+    return (node == pred && pred->next == curr);
 }

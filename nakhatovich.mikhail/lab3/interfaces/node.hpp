@@ -4,7 +4,7 @@
 
 template<class t>
 node_t<t>::node_t(const t &item) : item(item), next(nullptr), _lock(PTHREAD_MUTEX_INITIALIZER)
-{};
+{}
 
 template<class t>
 node_t<t>::~node_t()

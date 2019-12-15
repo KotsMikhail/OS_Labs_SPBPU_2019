@@ -16,7 +16,7 @@ public:
     int unlock();
 
     t item;
-    std::shared_ptr<node_t<t>> next;
+    node_t<t> *next;
 
 private:
     node_t() = delete;
