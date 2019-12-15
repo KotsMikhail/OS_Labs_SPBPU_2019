@@ -87,7 +87,7 @@ void * read_w(void *args)
     {
         value = ti->data[i];
         miss = 0;
-        while (!(set->remove(value)))
+        while (!set->remove(value))
         {
             if (!*ti->run_writers && miss++ >= 1)
                 pthread_exit(nullptr); 

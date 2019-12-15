@@ -10,7 +10,7 @@ void load_config(int argc, char **argv)
     config_t * config = nullptr;
     if (argc > 1)
         config = config_t::get_instance(argv[1]);
-    if (!config || !(config->load()))
+    if (!config || !config->load())
     {
         printf("Couldn't initialize configuration file.\n");
         exit(EXIT_FAILURE);
