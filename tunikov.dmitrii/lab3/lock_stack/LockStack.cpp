@@ -35,7 +35,10 @@ std::shared_ptr<int> LockStack::pop() {
     timed_lock();
 
     if (m_data.empty())
+    {
+        pthread_mutex_unlock(&m_mutex);
         return  std::shared_ptr<int>();
+    }
 
     std::shared_ptr<int> val = std::make_shared<int>(m_data[m_data.size() - 1]);
     m_data.erase(m_data.begin() + m_data.size() - 1);

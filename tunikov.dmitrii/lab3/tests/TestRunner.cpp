@@ -2,6 +2,8 @@
 // Created by dmitrii on 14.12.2019.
 //
 
+#include <zconf.h>
+#include <thread>
 #include "TestRunner.h"
 #include "../lock_stack/LockStack.h"
 #include "../exceptions/TimeoutException.h"
@@ -29,9 +31,13 @@ int TestRunner::runFullTest(Stack *s, const FullTestParams &test_params) {
     int reader_action_count = test_params.reader_params.worker_actions_count;
     int writer_action_count = test_params.writer_params.worker_actions_count;
 
+    int threads_max_count = (int)std::thread::hardware_concurrency();
     for (int i = 1; i < test_params.reader_params.workers_count; i++)
         for (int j = 1; j < test_params.writer_params.workers_count; j++)
         {
+            if (i + j > threads_max_count)
+                continue;
+
             std::vector<std::vector<int>> writers_vecs;
             std::vector<std::vector<int>> readers_vecs;
 
@@ -189,7 +195,7 @@ void TestRunner::runTests() {
 }
 
 TestRunner::TestRunner(const FullTestParams &test_params) {
-    //m_tests.emplace_back(Test("Writers test", test_params, &runWritersTest));
-    //m_tests.emplace_back(Test("Readers test", test_params, &runReadersTest));
+    m_tests.emplace_back(Test("Writers test", test_params, &runWritersTest));
+    m_tests.emplace_back(Test("Readers test", test_params, &runReadersTest));
     m_tests.emplace_back(Test("Writers/Readers test", test_params, &runFullTest));
 }

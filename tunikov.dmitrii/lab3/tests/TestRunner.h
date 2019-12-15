@@ -31,7 +31,7 @@ public:
 
 struct ThreadArgs
 {
-    ThreadArgs(Stack* _s, std::vector<int>& test_vec, const int& action_count) : s(_s), m_test_vec(test_vec), m_action_count(action_count) {}
+    ThreadArgs(Stack* _s, std::vector<int>& test_vec, const unsigned& action_count) : s(_s), m_test_vec(test_vec), m_action_count(action_count) {}
     Stack* s;
     std::vector<int>& m_test_vec;
     int m_action_count;
