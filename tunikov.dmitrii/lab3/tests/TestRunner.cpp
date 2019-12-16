@@ -32,23 +32,30 @@ int TestRunner::runFullTest(Stack *s, const FullTestParams &test_params) {
     int writer_action_count = test_params.writer_params.worker_actions_count;
 
     int threads_max_count = (int)std::thread::hardware_concurrency();
-    for (int i = 1; i < test_params.reader_params.workers_count; i++)
-        for (int j = 1; j < test_params.writer_params.workers_count; j++)
+    for (int cur_readers_count = test_params.reader_params.workers_count - 1; cur_readers_count < test_params.reader_params.workers_count; cur_readers_count++)
+        for (int cur_writers_count = test_params.writer_params.workers_count - 1; cur_writers_count < test_params.writer_params.workers_count; cur_writers_count++)
         {
-            if (i + j > threads_max_count)
+            if (cur_readers_count + cur_writers_count > threads_max_count)
                 continue;
 
             std::vector<std::vector<int>> writers_vecs;
             std::vector<std::vector<int>> readers_vecs;
 
             //run writers
-            auto writer_threads = std::move(runWorkers(TestParams(j, writer_action_count), writers_vecs, writeToStack, s));
+            auto writers_threads = std::move(runWorkers(TestParams(cur_writers_count, writer_action_count), writers_vecs, writeToStack, s));
             //run readers
-            auto readers_threads = std::move(runWorkers(TestParams(i, reader_action_count), readers_vecs, readFromStack, s));
+            auto readers_threads = std::move(runWorkers(TestParams(cur_readers_count, reader_action_count), readers_vecs, readFromStack, s));
 
             //join all threads
-            utils::joinThreads(writer_threads);
+            utils::joinThreads(writers_threads);
             utils::joinThreads(readers_threads);
+
+            /*
+            std::cout << "writers count: " << cur_writers_count << ", readers count: " << cur_readers_count << std::endl;
+            std::cout << "writer vecs: " << std::endl;
+            utils::printVectors(writers_vecs);
+            std::cout << "reader vecs: " << std::endl;
+            utils::printVectors(readers_vecs);*/
 
             for (auto& writer_vec : writers_vecs)
             {
@@ -58,8 +65,8 @@ int TestRunner::runFullTest(Stack *s, const FullTestParams &test_params) {
 
                     if (!was_found)
                     {
-                        std::string error_msg = "for writers count: " + std::to_string(j) + ", readers count: " + std::to_string(i)
-                                + ", error for elem: " + std::to_string(writer_vec_elem);
+                        std::string error_msg = "for writers count: " + std::to_string(cur_writers_count) + ", readers count: " + std::to_string(cur_readers_count)
+                                                + ", error for elem: " + std::to_string(writer_vec_elem);
                         throw std::runtime_error(error_msg);
                     }
                 }
@@ -132,7 +139,6 @@ void* TestRunner::writeToStack(void *arg) {
         catch(const std::runtime_error& e)
         {
             pthread_yield();
-            throw e;
         }
     }
 
@@ -154,6 +160,7 @@ void *TestRunner::readFromStack(void *arg) {
         }
         catch(const std::runtime_error& e)
         {
+            std::cout << "catch read exception" << std::endl;
             pthread_yield();
             throw e;
         }

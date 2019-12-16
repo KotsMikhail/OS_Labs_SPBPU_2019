@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/resource.h>
+#include <iostream>
 #include <stdexcept>
 #include <ctime>
 
@@ -57,6 +58,19 @@ public:
             return rlim.rlim_max;
         else
             throw std::runtime_error("can't get max threads count");
+    }
+
+    static void printVectors(const std::vector<std::vector<int>> &vv)
+    {
+        for (unsigned i = 0; i < vv.size(); i++)
+        {
+            std::cout << "[" << i << "]: ";
+            for (unsigned j = 0; j < vv[i].size(); j++)
+            {
+                std::cout << vv[i][j] << " ";
+            }
+            std::cout << std::endl;
+        }
     }
 };
 
