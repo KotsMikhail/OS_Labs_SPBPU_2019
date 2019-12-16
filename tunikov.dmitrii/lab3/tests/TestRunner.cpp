@@ -2,7 +2,6 @@
 // Created by dmitrii on 14.12.2019.
 //
 
-#include <zconf.h>
 #include "TestRunner.h"
 #include "../lock_stack/LockStack.h"
 #include <stdexcept>
