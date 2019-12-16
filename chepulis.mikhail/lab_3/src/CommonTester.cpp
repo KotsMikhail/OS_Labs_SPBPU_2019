@@ -42,9 +42,10 @@ void *CommonTester::Read(void *arg) {
             }
         } catch (IStack::timeout_stack &e) {
             if (is_need_print) {
-                std::cout << id << " : " << e.what() << std::endl;
+                //std::cout << id << " : " << e.what() << std::endl;
+                std::cout << "Reader" << id << " : access timed out" << std::endl;
             }
-            std::cout << "Reader" << id << " : access timed out" << std::endl;
+
             pthread_yield();
         }
     }
@@ -80,11 +81,12 @@ void *CommonTester::Write(void *arg) {
             break;
         } catch (IStack::timeout_stack &e) {
             if (is_need_print) {
-                std::cout << id << " : " << e.what() << std::endl;
+                //std::cout << id << " : " << e.what() << std::endl;
+                //писатель выводит сообщение, о превышении таймаута и вновь пытается положить число в стек
+                std::cout << "Writer : " << id << " : access timed out" << std::endl;
             }
             //break;
-            //писатель выводит сообщение, о превышении таймаута и вновь пытается положить число в стек
-            std::cout << "Writer : " << id << " : access timed out" << std::endl;
+
             pthread_yield();
         }
     }

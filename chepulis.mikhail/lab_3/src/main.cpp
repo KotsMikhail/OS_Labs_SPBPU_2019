@@ -19,7 +19,68 @@ int GetNpocLim(){
     return lim.rlim_cur;
 }
 
-int main() {
+struct testParam{
+    int N_big;                  // размер массива для единоразового теста
+    int R_num;                  // кол-во писателей для единоразового теста
+    int W_num;                  // кол-во читателей для единоразового теста
+    int N;                      // размер массива
+    int max_thread;             // макс кол-во потоков для перебора
+};
+
+
+bool CheckThreadCount(testParam& param){
+    int nproc_lim = GetNpocLim();
+    if (nproc_lim < param.max_thread) {
+        param.max_thread = nproc_lim;
+    }
+    if(param.W_num <= 0){
+        std::cout << "ERROR: W_num <= 0" << std::endl;
+        return false;
+    }
+    if(param.R_num <= 0){
+        std::cout << "ERROR: R_num <= 0" << std::endl;
+        return false;
+    }
+    if(param.W_num + param.R_num > nproc_lim){
+        std::cout << "ERROR: (W_num  + R_num) > thread limit" << std::endl;
+        return false;
+    }
+    return true;
+
+}
+
+bool ParsArgs(int argc, char** agrv, testParam& result ){
+     if (argc < 6)
+     {
+         std::cout << "ERROR: Wrong arguments" << std::endl;
+         return false;
+     }
+     try {
+         result.N_big = std::stoi(agrv[1]);
+         result.R_num = std::stoi(agrv[2]);
+         result.W_num = std::stoi(agrv[3]);
+         result.N = std::stoi(agrv[4]);
+         result.max_thread = std::stoi(agrv[5]);
+
+         if(result.N <= 0){
+             std::cout << "ERROR: N <= 0" << std::endl;
+             return false;
+         }
+         if(result.N_big <= 0){
+             std::cout << "ERROR: N_big <= 0" << std::endl;
+             return false;
+         }
+         return CheckThreadCount(result);
+     }catch(std::exception e)
+     {
+         std::cout << "ERROR: Wrong arguments: " << e.what() << std::endl;
+         return false;
+     }
+
+
+}
+
+int main(int argc, char** argv) {
     bool test_res;
 
     IStack *my_block_stack = new BlockedStack;
@@ -36,23 +97,26 @@ int main() {
     CommonTester C_tester;
     std::cout << std::boolalpha;
 
-    int N, R_num, W_num;
-    int max_thread = 25;
-    int nproc_lim = GetNpocLim();
-    if (nproc_lim < max_thread) {
-        max_thread = nproc_lim;
+    testParam params;
+    if(!ParsArgs(argc, argv, params)){
+        return -1;
     }
-    N = 10000;
-    int stack_num = 2;
-    int repeat = 10;
+
+
+
+    int N, R_num, W_num, max_thread, stack_num, repeat;
+    max_thread = params.max_thread;
+    N = params.N;
+    stack_num = 2;
+    repeat = 10;
+
 
     if (is_need_test[0]) {
 
-        R_num = max_thread/2;
-        W_num = max_thread/2;
+        R_num = params.R_num;
+        W_num = params.W_num;
         int local_N;
-        //local_N = N;
-        local_N = 1000000;
+        local_N = params.N_big;
         std::cout << "(" << R_num << ", " << W_num << ", " << local_N << ")" << std::endl;
         test_res = R_tester.Test(my_block_stack, R_num, local_N, &timer);
         std::cout << "block\t\tReader test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;

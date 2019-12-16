@@ -92,9 +92,9 @@ void *ReaderTester::Read(void *arg) {
             break;
         } catch (IStack::timeout_stack &e) {
             if (is_need_print) {
-                std::cout << id << " : " << e.what() << std::endl;
+                //std::cout << id << " : " << e.what() << std::endl;
+                std::cout << id << " : access timed out" << std::endl;
             }
-            std::cout << id << " : access timed out" << std::endl;
             pthread_yield();
         }
     }
