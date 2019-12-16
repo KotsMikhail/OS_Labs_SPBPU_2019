@@ -5,8 +5,10 @@
 
 enum size_types_t
 {
-    WRITERS = 0,
-    READERS,
+    WRITERS_TH = 0,
+    WRITERS_NUM,
+    READERS_TH,
+    READERS_NUM,
     COMMON_N,
     COMMON_WRITERS,
     COMMON_READERS,
@@ -22,7 +24,6 @@ public:
     bool load();
 
     size_t get_value(size_types_t type) const;
-    const vector_size_t & get_cnt_elements(size_types_t type) const;
 
 private: 
     config_t() = delete;
@@ -31,9 +32,6 @@ private:
 
     config_t(string_t &path);
     ~config_t() = default;
-
-    bool parse_with_array(string_t &s, string_t &type, string_t &line);
-    bool parse_without_array(string_t &s, string_t &type, string_t &line);
 
     static config_t * _instance;
     static vector_string_t _keys, _array_keys;
