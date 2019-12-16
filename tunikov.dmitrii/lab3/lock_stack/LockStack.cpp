@@ -26,7 +26,9 @@ LockStack::LockStack(pthread_mutex_t& mutex){
 void LockStack::push(const int &val) {
     pthread_mutex_lock(&m_mutex);
 
-    m_data.push_back(val);
+    Node* new_elem = new (std::nothrow) Node(val);
+    new_elem->m_next = head;
+    head = new_elem;
 
     pthread_mutex_unlock(&m_mutex);
 }
@@ -34,14 +36,21 @@ void LockStack::push(const int &val) {
 std::shared_ptr<int> LockStack::pop() {
     timed_lock();
 
-    if (m_data.empty())
+    if (head == nullptr)
     {
         pthread_mutex_unlock(&m_mutex);
         return  std::shared_ptr<int>();
     }
 
-    std::shared_ptr<int> val = std::make_shared<int>(m_data[m_data.size() - 1]);
-    m_data.erase(m_data.begin() + m_data.size() - 1);
+    Node* old_head = head;
+    std::shared_ptr<int> val = std::make_shared<int>(*(old_head->m_data));
+
+    if (old_head->m_next)
+        head = old_head->m_next;
+    else
+        head = nullptr;
+
+    delete old_head;
 
     pthread_mutex_unlock(&m_mutex);
     return val;
@@ -76,7 +85,7 @@ void LockStack::timed_lock() {
 bool LockStack::empty() {
     timed_lock();
 
-    bool res = m_data.empty();
+    bool res = head == nullptr;
 
     pthread_mutex_unlock(&m_mutex);
     return res;
@@ -85,6 +94,6 @@ bool LockStack::empty() {
 LockStack::LockStack() = default;
 LockStack::~LockStack()
 {
-    m_data.clear();
+    Node::delete_nodes(head);
     pthread_mutex_destroy(&m_mutex);
 }

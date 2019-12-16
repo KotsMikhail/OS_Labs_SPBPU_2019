@@ -8,11 +8,12 @@
 #include <vector>
 #include <pthread.h>
 #include "../interfaces/Stack.h"
+#include "../node/Node.h"
 #include <memory>
 
 class LockStack : public Stack {
 private:
-    std::vector<int> m_data;
+    Node* head;
     pthread_mutex_t m_mutex{};
 
     void timed_lock();

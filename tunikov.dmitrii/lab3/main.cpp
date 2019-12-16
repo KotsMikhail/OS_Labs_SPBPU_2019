@@ -1,7 +1,21 @@
 #include <iostream>
 #include "tests/TestRunner.h"
-#include <thread>
+#include "utils/utils.h"
+#include <stdexcept>
 
+FullTestParams parseProgramArguments(char** argv)
+{
+    FullTestParams test_params{};
+
+    test_params.writer_params = {std::stoi(argv[1]), std::stoi(argv[2])};
+    test_params.reader_params = {std::stoi(argv[3]), std::stoi(argv[4])};
+
+    int max_threads_count = utils::getMaxThreadsCount();
+    if (test_params.reader_params.workers_count > max_threads_count || test_params.writer_params.workers_count > max_threads_count)
+        throw std::runtime_error(std::string( "wrong writers/readers count, must be <= ") + std::to_string(max_threads_count));
+
+    return test_params;
+}
 
 int main(int argc, char** argv)
 {
@@ -11,27 +25,23 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    FullTestParams test_params{};
     try {
-        test_params.writer_params = {std::stoi(argv[1]), std::stoi(argv[2])};
-        test_params.reader_params = {std::stoi(argv[3]), std::stoi(argv[4])};
+        FullTestParams test_params = parseProgramArguments(argv);
+
+        TestRunner test_runner = TestRunner(test_params);
+        test_runner.runTests();
     }
     catch (const std::invalid_argument& e)
     {
         std::cout << "Can't parse integer program arguments" << std::endl;
         return -1;
     }
-
-
-    int threads_max_count = (int)std::thread::hardware_concurrency();
-    if (test_params.reader_params.workers_count > threads_max_count || test_params.writer_params.workers_count > threads_max_count)
+    catch (const std::runtime_error &e)
     {
-        std::cout << "wrong writers/readers count, must be <= " << threads_max_count << std::endl;
+        std::cout << e.what() << std::endl;
         return -1;
     }
 
-    TestRunner test_runner = TestRunner(test_params);
-    test_runner.runTests();
 
     return 0;
 }

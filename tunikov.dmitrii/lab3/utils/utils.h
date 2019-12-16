@@ -7,6 +7,11 @@
 
 #include <vector>
 #include <pthread.h>
+#include <unistd.h>
+#include <sys/resource.h>
+#include <stdexcept>
+#include <ctime>
+
 
 class utils {
 public:
@@ -30,7 +35,7 @@ public:
             bool was_found = utils::containsAndErase(vv[i], val);
             if (was_found)
             {
-                if (vv[i].size() == 0)
+                if (vv[i].empty())
                     vv.erase(vv.begin() + i);
                 return true;
             }
@@ -42,6 +47,16 @@ public:
     {
         for (unsigned i = 0; i < threads.size(); i++)
             pthread_join(threads[i],nullptr);
+    }
+
+    static int getMaxThreadsCount()
+    {
+        struct rlimit rlim{};
+        int rc = getrlimit(RLIMIT_NPROC, &rlim);
+        if (rc == 0)
+            return rlim.rlim_max;
+        else
+            throw std::runtime_error("can't get max threads count");
     }
 };
 

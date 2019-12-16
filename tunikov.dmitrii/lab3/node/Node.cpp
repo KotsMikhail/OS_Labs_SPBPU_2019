@@ -8,3 +8,12 @@
 Node::Node(const int &data) {
     m_data = std::make_shared<int>(data);
 }
+
+void Node::delete_nodes(Node *node) {
+    while (node)
+    {
+        Node* next = node->m_next;
+        delete node;
+        node = next;
+    }
+}

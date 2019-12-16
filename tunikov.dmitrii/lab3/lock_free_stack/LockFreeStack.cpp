@@ -46,7 +46,7 @@ void LockFreeStack::try_delete_nodes(Node *new_node_to_delete) {
         threads_calling_pop--;
         if (threads_calling_pop == 0)
         {
-            delete_nodes(cur_thread_nodes_to_delete);
+            Node::delete_nodes(cur_thread_nodes_to_delete);
         }
         else if (nodes_to_delete)
         {
@@ -59,15 +59,6 @@ void LockFreeStack::try_delete_nodes(Node *new_node_to_delete) {
     {
         add_new_node_to_delete(new_node_to_delete, new_node_to_delete);
         threads_calling_pop--;
-    }
-}
-
-void LockFreeStack::delete_nodes(Node *node) {
-    while (node)
-    {
-        Node* next = node->m_next;
-        delete node;
-        node = next;
     }
 }
 
@@ -91,5 +82,5 @@ void LockFreeStack::add_new_nodes_to_delete(Node *nodes) {
 }
 
 LockFreeStack::~LockFreeStack() {
-    delete_nodes(nodes_to_delete);
+    Node::delete_nodes(nodes_to_delete);
 }

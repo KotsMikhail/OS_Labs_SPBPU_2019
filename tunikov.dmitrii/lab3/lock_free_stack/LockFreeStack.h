@@ -18,7 +18,6 @@ private:
     std::atomic<Node*> nodes_to_delete{};
 
     void try_delete_nodes(Node* deleted_node);
-    static void delete_nodes(Node* node);
     void add_new_node_to_delete(Node *first, Node* last);
     void add_new_nodes_to_delete(Node *nodes);
 public:

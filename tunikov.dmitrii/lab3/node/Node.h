@@ -11,6 +11,7 @@ struct Node {
     std::shared_ptr<int> m_data;
     Node* m_next;
     explicit Node(const int& data);
+    static void delete_nodes(Node* node);
 };
 
 
