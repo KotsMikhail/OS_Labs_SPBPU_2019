@@ -13,6 +13,7 @@ std::map<int, const char*> names;
 void conn::Open(size_t id) {
     struct mq_attr attr = ((struct mq_attr) {0, 1, sizeof(message), 0, {0}});
     std::string name = "/lab2_queue" + std::to_string(id);
+    mq_unlink(name.c_str());
     mqd_t mqid = mq_open(name.c_str(), O_RDWR | O_CREAT, 0666, &attr);
     queues.insert(std::pair<int, mqd_t>(id, mqid));
     const char* name_const = name.c_str();

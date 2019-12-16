@@ -28,7 +28,6 @@ int goat::start(const connection_info &c_inf) {
             c_inf.connection->Write(c_inf.id, buf);
         }
         sem_post(c_inf.semaphore);
-        sleep(1);
     }
 }
 
