@@ -10,18 +10,24 @@ Test::Test(const std::string &name, const FullTestParams &test_params, int (*_te
     m_test_params = test_params;
 }
 
-void Test::runTest(Stack* s) {
+void Test::runTest(Stack* s, bool log_result) {
     try
     {
         int res = testFunc(s, m_test_params);
 
-        if (res == 0)
-            std::cout << m_name << ": " << "OK" << std::endl;
-        else
-            std::cout << m_name << ": " << "FAIL" << std::endl;
+        if (log_result)
+        {
+            if (res == 0)
+                std::cout << m_name << ": " << "OK" << std::endl;
+            else
+                std::cout << m_name << ": " << "FAIL" << std::endl;
+        }
     }
     catch (const std::runtime_error& e)
     {
-        std::cout << m_name << ": " << "FAIL, because " << e.what() << std::endl;
+        if (log_result)
+            std::cout << m_name << ": " << "FAIL, because " << e.what() << std::endl;
+        else
+            throw e;
     }
 }

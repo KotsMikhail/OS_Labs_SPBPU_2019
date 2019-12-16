@@ -28,7 +28,7 @@ public:
     std::string m_name;
     FullTestParams m_test_params;
     int (*testFunc)(Stack* s, const FullTestParams& testParams);
-    void runTest(Stack *s);
+    void runTest(Stack *s, bool log_result = true);
 };
 
 

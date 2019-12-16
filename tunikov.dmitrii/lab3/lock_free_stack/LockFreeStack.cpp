@@ -64,6 +64,9 @@ void LockFreeStack::try_delete_nodes(Node *new_node_to_delete) {
 
 void LockFreeStack::add_new_node_to_delete(Node *first, Node* last)
 {
+    if (!first || !last)
+        return;
+
     last->m_next = nodes_to_delete;
 
     while (!nodes_to_delete.compare_exchange_weak(last->m_next, first))
@@ -71,6 +74,9 @@ void LockFreeStack::add_new_node_to_delete(Node *first, Node* last)
 }
 
 void LockFreeStack::add_new_nodes_to_delete(Node *nodes) {
+    if (nodes == nullptr)
+        return;
+
     Node* last = nodes;
 
     while (last->m_next)

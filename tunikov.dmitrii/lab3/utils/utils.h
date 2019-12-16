@@ -72,6 +72,18 @@ public:
             std::cout << std::endl;
         }
     }
+
+    static float getAverage(const std::vector<unsigned long>& v)
+    {
+        unsigned long res = 0;
+
+        for (const auto& elem : v)
+        {
+            res += elem;
+        }
+
+        return float(res) / v.size();
+    }
 };
 
 

@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include "../lock_free_stack/LockFreeStack.h"
 #include "../utils/utils.h"
+#include <cstdio>
+#include <ctime>
 
 int TestRunner::runWritersTest(Stack* s, const FullTestParams& test_params) {
     runWorkerTest(s, &writeToStack, test_params.writer_params);
@@ -187,6 +189,7 @@ void TestRunner::runTests() {
                 throw std::runtime_error("ERROR: unknown stack type");
         }
 
+        std::cout << "Running functional tests: " << std::endl;
         for (auto test : m_tests)
         {
             try{
@@ -196,6 +199,28 @@ void TestRunner::runTests() {
             {
                 std::cout << "ERROR while executing tests: " << e.what() << std::endl;
             }
+        }
+        std::cout << "Running time tests: " << std::endl;
+        int tests_count = 100;
+        for (auto test : m_tests)
+        {
+            std::vector<unsigned long> tests_times;
+            for (int i = 0; i < tests_count; i++)
+            {
+                unsigned long start_time = clock();
+                try{
+                    test.runTest(stack, false);
+                }
+                catch (const std::runtime_error& e)
+                {
+                    std::cout << "ERROR while executing tests: " << e.what() << std::endl;
+                }
+                unsigned long end_time = clock();
+                tests_times.push_back((float)(end_time - start_time) * 1000 / CLOCKS_PER_SEC);
+            }
+            float average_time = utils::getAverage(tests_times);
+
+            std::cout << test.m_name << ": " << average_time << " milisecs" << std::endl;
         }
         std::cout << "--------------------------------------------------------" << std::endl;
     }
