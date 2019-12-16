@@ -33,7 +33,7 @@ int TestRunner::runFullTest(Stack *s, const FullTestParams &test_params) {
     int reader_action_count = test_params.reader_params.worker_actions_count;
     int writer_action_count = test_params.writer_params.worker_actions_count;
 
-    int threads_max_count = (int)std::thread::hardware_concurrency();
+    int threads_max_count = utils::getMaxThreadsCount();
     for (int cur_readers_count = test_params.reader_params.workers_count - 1; cur_readers_count < test_params.reader_params.workers_count; cur_readers_count++)
         for (int cur_writers_count = test_params.writer_params.workers_count - 1; cur_writers_count < test_params.writer_params.workers_count; cur_writers_count++)
         {
@@ -45,19 +45,10 @@ int TestRunner::runFullTest(Stack *s, const FullTestParams &test_params) {
 
             //run writers
             auto writers_threads = std::move(runWorkers(TestParams(cur_writers_count, writer_action_count), writers_vecs, writeToStack, s));
+            utils::joinThreads(writers_threads);
             //run readers
             auto readers_threads = std::move(runWorkers(TestParams(cur_readers_count, reader_action_count), readers_vecs, readFromStack, s));
-
-            //join all threads
-            utils::joinThreads(writers_threads);
             utils::joinThreads(readers_threads);
-
-            /*
-            std::cout << "writers count: " << cur_writers_count << ", readers count: " << cur_readers_count << std::endl;
-            std::cout << "writer vecs: " << std::endl;
-            utils::printVectors(writers_vecs);
-            std::cout << "reader vecs: " << std::endl;
-            utils::printVectors(readers_vecs);*/
 
             for (auto& writer_vec : writers_vecs)
             {
@@ -162,9 +153,7 @@ void *TestRunner::readFromStack(void *arg) {
         }
         catch(const std::runtime_error& e)
         {
-            std::cout << "catch read exception" << std::endl;
             pthread_yield();
-            throw e;
         }
     }
     return nullptr;
@@ -200,11 +189,13 @@ void TestRunner::runTests() {
                 std::cout << "ERROR while executing tests: " << e.what() << std::endl;
             }
         }
+
         std::cout << "Running time tests: " << std::endl;
         int tests_count = 100;
         for (auto test : m_tests)
         {
             std::vector<unsigned long> tests_times;
+            float average_time = 0;
             for (int i = 0; i < tests_count; i++)
             {
                 unsigned long start_time = clock();
@@ -218,7 +209,7 @@ void TestRunner::runTests() {
                 unsigned long end_time = clock();
                 tests_times.push_back((float)(end_time - start_time) * 1000 / CLOCKS_PER_SEC);
             }
-            float average_time = utils::getAverage(tests_times);
+            average_time = utils::getAverage(tests_times);
 
             std::cout << test.m_name << ": " << average_time << " milisecs" << std::endl;
         }

@@ -21,7 +21,7 @@ int main(int argc, char** argv)
 {
     if (argc < 5)
     {
-        std::cout << "Wrong program arguments. Program has 4 mandatory artuments: writers_count, write_action_count, readers_count, read_action_count" << std::endl;
+        std::cout << "Wrong program arguments. Program has 4 mandatory arguments: writers_count, write_action_count, readers_count, read_action_count" << std::endl;
         return -1;
     }
 
