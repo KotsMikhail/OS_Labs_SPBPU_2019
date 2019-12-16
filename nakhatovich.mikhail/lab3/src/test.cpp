@@ -172,15 +172,18 @@ size_t create_threads(vector_pthread_t &threads, void *(*func)(void*), vector_ti
     struct sched_param sp;
     int sched = SCHED_RR;
     int min = sched_get_priority_min(sched), max = sched_get_priority_max(sched);
-    size_t m = threads.size();
+    size_t m = threads.size(), n = max - min, k = m / n, r = m - n * k;
     sp.sched_priority = max;
     pthread_setschedparam(pthread_self(), sched, &sp);
-    sp.sched_priority = min;
+    // sp.sched_priority = min;
     pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
     pthread_attr_setschedpolicy(&attr, sched);
-    pthread_attr_setschedparam(&attr, &sp);
-    for (size_t i = 0; i < m; ++i)
+    // pthread_attr_setschedparam(&attr, &sp);
+    vector_int_t priorities(m, min);
+    for (size_t i = 0, j = 1, l = 1; i < m; ++i, ++l)
     {
+        sp.sched_priority = max - j;  // simulation of threads' order
+        pthread_attr_setschedparam(&attr, &sp);
         int s = pthread_create(&(threads[i]), &attr, func, tis[i]);
         if (s)
         {
@@ -188,6 +191,17 @@ size_t create_threads(vector_pthread_t &threads, void *(*func)(void*), vector_ti
             if (is_print)
                 printf("%lu/%lu threads was created.\n", i, m);
             return i;
+        }
+        if (r > 0 && l % (k + 1) == 0)
+        {
+            ++j;
+            --r;
+            l = 0;
+        }
+        else if (l % k == 0)
+        {
+            ++j;
+            l = 0;
         }
     }
     if (is_print)

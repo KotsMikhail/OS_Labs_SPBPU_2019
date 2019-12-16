@@ -1,13 +1,29 @@
 #include "set_optimistic.h"
 
+// check if node wasn't remove
+#define check_opt(node) \
+((size_t)node > 0xffff)
+
 #define loop_opt(pred, curr, _cmp, item) \
-while (_cmp(curr->item, item)) \
+while (check_opt(curr) && _cmp(curr->item, item)) \
 { \
     pred = curr; \
-    curr = pred->next; \
+    if (check_opt(pred)) \
+        curr = pred->next; \
+    else \
+        break; \
 } \
-pred->lock(); \
-curr->lock();
+if (check_opt(pred)) \
+    pred->lock(); \
+else \
+    continue; \
+if (check_opt(curr)) \
+    curr->lock(); \
+else \
+{ \
+    pred->unlock(); \
+    continue; \
+}
 
 #define unlock_opt(pred, curr) \
 pred->unlock(); \
@@ -110,7 +126,7 @@ template<class t, class l, class c>
 bool set_optimistic_t<t, l, c>::validate(node_t<t> *pred, node_t<t> *curr)
 {
     node_t<t> *node = this->_head;
-    while (this->_cmp(node->item, pred->item)) 
+    while (check_opt(node) && this->_cmp(node->item, pred->item))
         node = node->next;
     return (node == pred && pred->next == curr);
 }
