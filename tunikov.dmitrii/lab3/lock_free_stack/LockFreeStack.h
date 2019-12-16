@@ -1,5 +1,4 @@
 #include <memory>
-#include <atomic>
 #include "../stack/Stack.h"
 
 class LockFreeStack : public Stack {
@@ -10,19 +9,22 @@ private:
     struct CounterNodePtr {
         int m_external_count;
         LockFreeNode* m_ptr;
-    };
+
+        CounterNodePtr() : m_external_count(0), m_ptr(nullptr){}
+        CounterNodePtr(LockFreeNode* ptr) : m_external_count(0), m_ptr(ptr) {}
+    }__attribute__((__aligned__(16)));;
 
     struct LockFreeNode {
         std::shared_ptr<int> m_data;
-        std::atomic<int> m_internal_count;
+        int m_internal_count;
         CounterNodePtr m_next{};
 
-        explicit LockFreeNode(int const& data_) : m_data(std::make_shared<int>(data_)), m_internal_count(0) {}
+        explicit LockFreeNode(int const& data_) : m_data(std::make_shared<int>(data_)), m_internal_count(0), m_next(nullptr) {}
     };
-    std::atomic<CounterNodePtr> head{};
+    CounterNodePtr head{};
     void increase_head_count(CounterNodePtr& old_counter);
 public:
-    LockFreeStack();
+    LockFreeStack() : head(nullptr){}
     ~LockFreeStack() override;
     void push(int const& data) override;
     std::shared_ptr<int> pop() override;

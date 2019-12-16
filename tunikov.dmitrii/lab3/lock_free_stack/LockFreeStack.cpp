@@ -3,14 +3,18 @@
 //
 
 #include <new>
+#include <iostream>
 #include "LockFreeStack.h"
 
 void LockFreeStack::push(int const& data) {
     CounterNodePtr new_node{};
     new_node.m_ptr = new LockFreeNode(data);
     new_node.m_external_count = 1;
-    new_node.m_ptr->m_next = head.load(std::memory_order_relaxed);
-    while (!head.compare_exchange_weak(new_node.m_ptr->m_next, new_node, std::memory_order_release, std::memory_order_relaxed));
+    __atomic_load(&head, &new_node.m_ptr->m_next, __ATOMIC_RELAXED);
+
+    while (!__atomic_compare_exchange(&head, &new_node.m_ptr->m_next, &new_node, true, __ATOMIC_RELEASE,
+                                       __ATOMIC_RELAXED));
+
 }
 
 void LockFreeStack::increase_head_count(CounterNodePtr& old_counter) {
@@ -19,14 +23,14 @@ void LockFreeStack::increase_head_count(CounterNodePtr& old_counter) {
         new_counter = old_counter;
         ++new_counter.m_external_count;
     }
-    while (!head.compare_exchange_strong(old_counter, new_counter,std::memory_order_acquire,std::memory_order_relaxed));
+    while (!__atomic_compare_exchange(&head, &old_counter, &new_counter, false, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
 
     old_counter.m_external_count = new_counter.m_external_count;
 }
 
 std::shared_ptr<int> LockFreeStack::pop() {
-    CounterNodePtr old_head = head.load(std::memory_order_relaxed);
-
+    CounterNodePtr old_head{};
+    __atomic_load(&head, &old_head, __ATOMIC_RELAXED);
     while(true)
     {
         increase_head_count(old_head);
@@ -35,17 +39,17 @@ std::shared_ptr<int> LockFreeStack::pop() {
             return std::shared_ptr<int>();
         }
 
-        if (head.compare_exchange_strong(old_head, ptr->m_next, std::memory_order_relaxed)) {
+        if (__atomic_compare_exchange(&head, &old_head, &ptr->m_next, false, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
             std::shared_ptr<int> res;
             res.swap(ptr->m_data);
-            int const count_increase = old_head.m_external_count;
-            if (ptr->m_internal_count.fetch_add(count_increase, std::memory_order_release) == -count_increase) {
+            int const count_increase = old_head.m_external_count - 2;
+            if (__atomic_fetch_add(&ptr->m_internal_count, count_increase, __ATOMIC_RELEASE) == -count_increase) {
                 delete ptr;
             }
             return res;
         }
-        else if (ptr->m_internal_count.fetch_add(-1, std::memory_order_relaxed) == 1) {
-            ptr->m_internal_count.load(std::memory_order_acquire);
+        else if (__atomic_fetch_add(&ptr->m_internal_count, -1, __ATOMIC_RELAXED) == 1) {
+            __atomic_load_n(&ptr->m_internal_count, __ATOMIC_ACQUIRE);
             delete ptr;
         }
     }
@@ -55,10 +59,8 @@ LockFreeStack::~LockFreeStack() {
     while(LockFreeStack::pop());
 }
 
-LockFreeStack::LockFreeStack() = default;
-
 bool LockFreeStack::empty() {
-    CounterNodePtr temp{};
-    temp = head.load(std::memory_order_acquire);
-    return temp.m_ptr == nullptr;
+    CounterNodePtr tmp_head{};
+    __atomic_load(&head, &tmp_head, __ATOMIC_ACQUIRE);
+    return tmp_head.m_ptr == nullptr;
 }
