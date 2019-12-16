@@ -1,5 +1,5 @@
 CFLAGS = -std=c++11 -Wall -Werror
-LIBS = -lpthread
+LIBS = -lpthread -latomic
 CC = g++
 NAME = stack_lab
 
