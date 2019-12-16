@@ -223,11 +223,11 @@ void TestRunner::runFuncTests(const std::vector<StackType>& available_stack_type
         Stack *stack = nullptr;
         switch (stack_type) {
             case LOCK_FREE:
-                std::cout << "Running tests for LOCK_FREE_STACK: " << std::endl;
+                std::cout << "LOCK_FREE_STACK: " << std::endl;
                 stack = new LockFreeStack();
                 break;
             case LOCK:
-                std::cout << "Running tests for LOCK_STACK: " << std::endl;
+                std::cout << "LOCK_STACK: " << std::endl;
                 stack = LockStack::make();
                 break;
             default:
