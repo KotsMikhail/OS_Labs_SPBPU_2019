@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-enum size_types_t
+enum class size_types_t
 {
     WRITERS_TH = 0,
     WRITERS_NUM,

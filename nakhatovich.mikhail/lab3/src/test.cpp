@@ -224,7 +224,7 @@ void get_count_elements_test(size_t cnt_threads, size_t cnt_elements, vector_siz
 bool run_writers_test(set_t<int> *set, cntr_data_fn cntr_data, bool check, double *time)
 {
     config_t *config = config_t::get_instance();
-    size_t cnt_writers = config->get_value(WRITERS_TH), cnt_elements = config->get_value(WRITERS_NUM);
+    size_t cnt_writers = config->get_value(size_types_t::WRITERS_TH), cnt_elements = config->get_value(size_types_t::WRITERS_NUM);
     vector_size_t cnt_records(cnt_writers);
     vector_ti_t tis(cnt_writers, nullptr);
     vector_pthread_t tids(cnt_writers);
@@ -250,7 +250,7 @@ bool run_writers_test(set_t<int> *set, cntr_data_fn cntr_data, bool check, doubl
 bool run_readers_test(set_t<int> *set, cntr_data_fn cntr_data, bool check, double *time)
 {
     config_t *config = config_t::get_instance();
-    size_t cnt_readers = config->get_value(READERS_TH), cnt_elements = config->get_value(READERS_NUM);
+    size_t cnt_readers = config->get_value(size_types_t::READERS_TH), cnt_elements = config->get_value(size_types_t::READERS_NUM);
     vector_size_t cnt_readings(cnt_readers);
     vector_ti_t tis(cnt_readers, nullptr);
     vector_pthread_t tids(cnt_readers);
@@ -276,8 +276,8 @@ bool run_readers_test(set_t<int> *set, cntr_data_fn cntr_data, bool check, doubl
 bool run_common_test(set_t<int> *set, cntr_data_fn cntr_data, bool check, double *time)
 {
     config_t *config = config_t::get_instance();
-    size_t cnt_writers = config->get_value(COMMON_WRITERS), cnt_readers = config->get_value(COMMON_READERS);
-    size_t cnt_elements = config->get_value(COMMON_N);
+    size_t cnt_writers = config->get_value(size_types_t::COMMON_WRITERS), cnt_readers = config->get_value(size_types_t::COMMON_READERS);
+    size_t cnt_elements = config->get_value(size_types_t::COMMON_N);
     vector_size_t cnt_records(cnt_writers), cnt_readings(cnt_readers);
     vector_ti_t rtis(cnt_readers), wtis(cnt_writers);
     vector_pthread_t rtids(cnt_readers), wtids(cnt_writers);
@@ -327,10 +327,10 @@ set_t<int> * create_set(set_type_t type)
     set_t<int> *set;
     switch (type) 
     {
-    case SET_FINE:
+    case set_type_t::SET_FINE:
         set = set_fine_t<int>::create_set();
         break;
-    case SET_OPTIMISTIC:
+    case set_type_t::SET_OPTIMISTIC:
         set = set_optimistic_t<int>::create_set();
         break;
     default:
@@ -346,12 +346,12 @@ void run_simple_test(set_type_t set_type, simple_test_type_t test_type)
 {
     vector_string_t names = {"writers", "readers", "common"};
     simple_test_fn tests[] = {run_writers_test, run_readers_test, run_common_test};
-    print_start(names[test_type].c_str());
+    print_start(names[(size_t)test_type].c_str());
     set_t<int> * set = create_set(set_type);
     if (set)
-        tests[test_type](set, create_data_sets, true, nullptr);
+        tests[(size_t)test_type](set, create_data_sets, true, nullptr);
     delete set;
-    print_stop(names[test_type].c_str());
+    print_stop(names[(size_t)test_type].c_str());
 }
 
 bool create_random_data_sets(set_t<int> *set, size_t cnt_threads, const vector_size_t &cnt_elements, 
@@ -426,7 +426,7 @@ bool create_fixed_data_sets(set_t<int> *set, size_t cnt_threads, const vector_si
 bool run_time_test(set_type_t set_type, simple_test_fn test_func, cntr_data_fn cntr_data, double &time)
 {
     config_t *config = config_t::get_instance();
-    size_t iters = config->get_value(TIME_ITERATIONS), n = 0;
+    size_t iters = config->get_value(size_types_t::TIME_ITERATIONS), n = 0;
     double part_time;
     time = 0;
     for (size_t i = 0; i < iters; ++i)
@@ -448,9 +448,9 @@ string_t get_set_name(set_type_t t)
 {
     switch (t)
     {
-    case SET_FINE:
+    case set_type_t::SET_FINE:
         return string_t("Fine-Grained");
-    case SET_OPTIMISTIC:
+    case set_type_t::SET_OPTIMISTIC:
         return string_t("Optimistic");
     default:
         return string_t("");
@@ -462,7 +462,7 @@ void run_time_test()
     print_start("time");
     simple_test_fn tests[] = {run_writers_test, run_readers_test, run_common_test};
     cntr_data_fn data_sets[] = { create_random_data_sets, create_fixed_data_sets };
-    set_type_t sets[] = { SET_FINE, SET_OPTIMISTIC };
+    set_type_t sets[] = { set_type_t::SET_FINE, set_type_t::SET_OPTIMISTIC };
     double time;
     char line[120];
     printf("   set type   | writers random |  writers fixed | readers random |  readers fixed |  common random |  common fixed  |\n");

@@ -3,13 +3,13 @@
 
 #include "types.h"
 
-enum set_type_t
+enum class set_type_t
 {
     SET_FINE = 0,
     SET_OPTIMISTIC
 };
 
-enum simple_test_type_t
+enum class simple_test_type_t
 {
     TEST_WRITERS = 0,
     TEST_READERS,

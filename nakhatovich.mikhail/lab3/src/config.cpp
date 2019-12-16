@@ -83,7 +83,7 @@ bool config_t::load()
 
 size_t config_t::get_value(size_types_t type) const
 {
-    auto it = _values.find(_keys[type]);
+    auto it = _values.find(_keys[(size_t)type]);
     if (it != _values.cend())
         return it->second;
     return 0;

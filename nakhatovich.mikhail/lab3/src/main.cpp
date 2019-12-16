@@ -22,14 +22,14 @@ int main(int argc, char **argv)
     load_config(argc, argv);
 
     printf("\nFine-Grained set\n");
-    run_simple_test(SET_FINE, TEST_WRITERS);
-    run_simple_test(SET_FINE, TEST_READERS);
-    run_simple_test(SET_FINE, TEST_COMMON);
+    run_simple_test(set_type_t::SET_FINE, simple_test_type_t::TEST_WRITERS);
+    run_simple_test(set_type_t::SET_FINE, simple_test_type_t::TEST_READERS);
+    run_simple_test(set_type_t::SET_FINE, simple_test_type_t::TEST_COMMON);
 
     printf("\nOptimistic set\n");
-    run_simple_test(SET_OPTIMISTIC, TEST_WRITERS);
-    run_simple_test(SET_OPTIMISTIC, TEST_READERS);
-    run_simple_test(SET_OPTIMISTIC, TEST_COMMON);
+    run_simple_test(set_type_t::SET_OPTIMISTIC, simple_test_type_t::TEST_WRITERS);
+    run_simple_test(set_type_t::SET_OPTIMISTIC, simple_test_type_t::TEST_READERS);
+    run_simple_test(set_type_t::SET_OPTIMISTIC, simple_test_type_t::TEST_COMMON);
 
     printf("\n");
     run_time_test();

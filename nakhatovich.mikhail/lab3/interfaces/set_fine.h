@@ -14,7 +14,9 @@ public:
     bool contains(const t &item);
 
 private:
-    set_fine_t(node_t<t> *head);
+    set_fine_t(typename set_t<t, limits, compare>::node_t *head);
+
+    void loop(typename set_t<t, limits, compare>::node_t *&pred, typename set_t<t, limits, compare>::node_t *&curr, const t &item);
 };
 
 #include "set_fine.hpp"

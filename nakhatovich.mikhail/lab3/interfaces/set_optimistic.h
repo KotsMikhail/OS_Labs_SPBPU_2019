@@ -18,11 +18,12 @@ public:
     bool contains(const t &item);
 
 private:
-    set_optimistic_t(node_t<t> *head);
+    set_optimistic_t(typename set_t<t, limits, compare>::node_t *head);
 
-    bool validate(node_t<t> *pred, node_t<t> *curr);
+    bool validate(typename set_t<t, limits, compare>::node_t *pred, typename set_t<t, limits, compare>::node_t *curr);
+    void loop(typename set_t<t, limits, compare>::node_t *&pred, typename set_t<t, limits, compare>::node_t *&curr, const t &item);
 
-    std::vector<node_t<t>*> _removed;
+    std::vector<typename set_t<t, limits, compare>::node_t*> _removed;
     pthread_mutex_t _lock;
 };
 

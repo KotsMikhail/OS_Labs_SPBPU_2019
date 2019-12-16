@@ -1,23 +1,9 @@
 #include "set_fine.h"
 
-#define loop_fine(pred, curr, _cmp, item) \
-curr->lock(); \
-while (_cmp(curr->item, item)) \
-{ \
-    pred->unlock(); \
-    pred = curr; \
-    curr = pred->next; \
-    curr->lock(); \
-}
-
-#define unlock_fine(pred, curr) \
-pred->unlock(); \
-curr->unlock();
-
 template<class t, class l, class c>
 set_fine_t<t, l, c> * set_fine_t<t, l, c>::create_set()
 {
-    node_t<t> *head = set_t<t, l, c>::create_head();
+    typename set_t<t, l, c>::node_t *head = set_t<t, l, c>::create_head();
     if (!head)
         return nullptr;
     set_fine_t<t, l, c> * set = new (std::nothrow) set_fine_t<t, l, c>(head);
@@ -30,7 +16,7 @@ set_fine_t<t, l, c> * set_fine_t<t, l, c>::create_set()
 }
 
 template<class t, class l, class c>
-set_fine_t<t, l, c>::set_fine_t(node_t<t> *head) : set_t<t, l, c>(head)
+set_fine_t<t, l, c>::set_fine_t(typename set_t<t, l, c>::node_t *head) : set_t<t, l, c>(head)
 {}
 
 template<class t, class l, class c>
@@ -38,11 +24,11 @@ bool set_fine_t<t, l, c>::add(const t &item)
 {
     bool ret = false;
     this->_head->lock();
-    node_t<t> *pred = this->_head, *curr = pred->next;
-    loop_fine(pred, curr, this->_cmp, item)
+    typename set_t<t, l, c>::node_t *pred = this->_head, *curr = pred->next;
+    loop(pred, curr, item);
     if (this->_cmp(item, curr->item))
     {
-        node_t<t> *node = new (std::nothrow) node_t<t>(item);
+        typename set_t<t, l, c>::node_t *node = new (std::nothrow) typename set_t<t, l, c>::node_t(item);
         if (node) 
         {
             node->next = curr;
@@ -50,7 +36,7 @@ bool set_fine_t<t, l, c>::add(const t &item)
             ret = true;
         }
     }
-    unlock_fine(pred, curr)
+    this->unlock(pred, curr);
     return ret;
 }
 
@@ -59,8 +45,8 @@ bool set_fine_t<t, l, c>::remove(const t &item)
 {
     bool ret = false;
     this->_head->lock();
-    node_t<t> *pred = this->_head, *curr = pred->next;
-    loop_fine(pred, curr, this->_cmp, item)
+    typename set_t<t, l, c>::node_t *pred = this->_head, *curr = pred->next;
+    loop(pred, curr, item);
     if (!this->_cmp(item, curr->item))
     {
         pred->next = curr->next;
@@ -79,9 +65,22 @@ bool set_fine_t<t, l, c>::contains(const t &item)
 {
     bool ret = false;
     this->_head->lock();
-    node_t<t> *pred = this->_head, *curr = pred->next;
-    loop_fine(pred, curr, this->_cmp, item)
+    typename set_t<t, l, c>::node_t *pred = this->_head, *curr = pred->next;
+    loop(pred, curr, item);
     ret = !this->_cmp(item, curr->item);
-    unlock_fine(pred, curr)
+    this->unlock(pred, curr);
     return ret;
+}
+
+template<class t, class l, class c>
+void set_fine_t<t, l, c>::loop(typename set_t<t, l, c>::node_t *&pred, typename set_t<t, l, c>::node_t *&curr, const t &item)
+{
+    curr->lock();
+    while (this->_cmp(curr->item, item))
+    {
+        pred->unlock();
+        pred = curr;
+        curr = pred->next;
+        curr->lock();
+    }
 }
