@@ -15,18 +15,16 @@ struct test_info_t
 {
     set_t<int> *set;
     vector_int_t &data;
-    bool *run;
 
     size_t *arr;
     bool *run_writers;
 
-    test_info_t(set_t<int> *set, vector_int_t &data, bool *run) 
-        : set(set), data(data), run(run), arr(nullptr), run_writers(nullptr)
+    test_info_t(set_t<int> *set, vector_int_t &data) : set(set), data(data), arr(nullptr), run_writers(nullptr)
     {};
 };
 
 typedef std::vector<test_info_t*> vector_ti_t;
-using cntr_data_fn = bool(*)(set_t<int> *,size_t,const vector_size_t &,vvector_int_t &,vector_ti_t &,bool *,bool);
+using cntr_data_fn = bool(*)(set_t<int> *,size_t,const vector_size_t &,vvector_int_t &,vector_ti_t &,bool);
 using simple_test_fn = bool(*)(set_t<int> *, cntr_data_fn, bool, double *);
 
 void print_start(const char *name)
@@ -52,22 +50,11 @@ void get_result_time(const struct timespec &start_time, double *time)
     __syscall_slong_t nsec = cur_time.tv_nsec - start_time.tv_nsec;
     *time = sec + (double) nsec / 1e9;
 }
-/*
-void get_prio_pol(int *policy, int *prio)
-{
-    struct sched_param sp;
-    pthread_getschedparam(pthread_self(), policy, &sp);
-    *prio = sp.sched_priority;
-}
-*/
+
 void * write(void *args)
 {
     test_info_t * ti = (test_info_t *)(args);
     set_t<int> * set = ti->set;
-    // int policy, prio;
-    // get_prio_pol(&policy, &prio);
-    while (!*ti->run) {};
-    // printf("prio = %d, [%d..%d], pol = %d\n", prio, sched_get_priority_min(policy), sched_get_priority_max(policy), policy);
     for (int value : ti->data)
         set->add(value);
     pthread_exit(nullptr);
@@ -78,7 +65,6 @@ void * read(void *args)
     test_info_t * ti = (test_info_t *)(args);
     set_t<int> * set = ti->set;
     size_t len = ti->data.size();
-    while (!*ti->run) {};
     for (size_t i = 0; i < len; ++i)
         set->remove(ti->data[i]);
     pthread_exit(nullptr);
@@ -89,10 +75,6 @@ void * read_w(void *args)
     test_info_t * ti = (test_info_t *)(args);
     set_t<int> * set = ti->set;
     size_t val, miss;
-    // int policy, prio;
-    // get_prio_pol(&policy, &prio);
-    while (!*ti->run) {};
-    // printf("prio = %d, [%d..%d], pol = %d\n", prio, sched_get_priority_min(policy), sched_get_priority_max(policy), policy);
     for (int value : ti->data)
     {
         miss = 0;
@@ -167,41 +149,16 @@ size_t create_threads(vector_pthread_t &threads, void *(*func)(void*), vector_ti
 {
     if (is_print)
         printf("Create threads.\n");
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    struct sched_param sp;
-    int sched = SCHED_RR;
-    int min = sched_get_priority_min(sched), max = sched_get_priority_max(sched);
-    size_t m = threads.size(), n = max - min, k = m / n, r = m - n * k;
-    sp.sched_priority = max;
-    pthread_setschedparam(pthread_self(), sched, &sp);
-    // sp.sched_priority = min;
-    pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
-    pthread_attr_setschedpolicy(&attr, sched);
-    // pthread_attr_setschedparam(&attr, &sp);
-    vector_int_t priorities(m, min);
-    for (size_t i = 0, j = 1, l = 1; i < m; ++i, ++l)
+    size_t m = threads.size();
+    for (size_t i = 0; i < m; ++i)
     {
-        sp.sched_priority = max - j;  // simulation of threads' order
-        pthread_attr_setschedparam(&attr, &sp);
-        int s = pthread_create(&(threads[i]), &attr, func, tis[i]);
+        int s = pthread_create(&(threads[i]), nullptr, func, tis[i]);
         if (s)
         {
             printf("Couldn't create thread #%lu, errno %d.\n", i, s);
             if (is_print)
                 printf("%lu/%lu threads was created.\n", i, m);
             return i;
-        }
-        if (r > 0 && l % (k + 1) == 0)
-        {
-            ++j;
-            --r;
-            l = 0;
-        }
-        else if (l % k == 0)
-        {
-            ++j;
-            l = 0;
         }
     }
     if (is_print)
@@ -210,7 +167,7 @@ size_t create_threads(vector_pthread_t &threads, void *(*func)(void*), vector_ti
 }
 
 bool create_data_sets(set_t<int> *set, size_t cnt_threads, const vector_size_t &cnt_elements, 
-                      vvector_int_t &data_sets, vector_ti_t &tis, bool *run, bool add=false)
+                      vvector_int_t &data_sets, vector_ti_t &tis, bool add=false)
 {
     int elem = 0;
     for (size_t i = 0, n = 0; i < cnt_threads; ++i)
@@ -227,7 +184,7 @@ bool create_data_sets(set_t<int> *set, size_t cnt_threads, const vector_size_t &
                 return false;
             }
         }
-        tis[i] = new (std::nothrow) test_info_t(set, data_sets[i], run);
+        tis[i] = new (std::nothrow) test_info_t(set, data_sets[i]);
         if (!tis[i])
         {
             delete_test_info(tis);
@@ -272,15 +229,13 @@ bool run_writers_test(set_t<int> *set, cntr_data_fn cntr_data, bool check, doubl
     vector_ti_t tis(cnt_writers, nullptr);
     vector_pthread_t tids(cnt_writers);
     vvector_int_t data_sets(cnt_writers);
-    bool run = false;
     struct timespec start_time;
     get_count_elements_test(cnt_writers, cnt_elements, cnt_records);
-    if (!cntr_data(set, cnt_writers, cnt_records, data_sets, tis, &run, false))
+    if (!cntr_data(set, cnt_writers, cnt_records, data_sets, tis, false))
         return false;
-    size_t n = create_threads(tids, write, tis, check);
     if (time)
         get_start_time(&start_time);
-    run = true;
+    size_t n = create_threads(tids, write, tis, check);
     join_threads(tids, n);
     if (time)
         get_result_time(start_time, time);
@@ -300,15 +255,13 @@ bool run_readers_test(set_t<int> *set, cntr_data_fn cntr_data, bool check, doubl
     vector_ti_t tis(cnt_readers, nullptr);
     vector_pthread_t tids(cnt_readers);
     vvector_int_t data_sets(cnt_readers);
-    bool run = false;
     struct timespec start_time;
     get_count_elements_test(cnt_readers, cnt_elements, cnt_readings);
-    if (!cntr_data(set, cnt_readers, cnt_readings, data_sets, tis, &run, true))
+    if (!cntr_data(set, cnt_readers, cnt_readings, data_sets, tis, true))
         return false;
-    size_t n = create_threads(tids, read, tis, check);
     if (time)
         get_start_time(&start_time);
-    run = true;
+    size_t n = create_threads(tids, read, tis, check);
     join_threads(tids, n);
     if (time)
         get_result_time(start_time, time);
@@ -330,28 +283,27 @@ bool run_common_test(set_t<int> *set, cntr_data_fn cntr_data, bool check, double
     vector_pthread_t rtids(cnt_readers), wtids(cnt_writers);
     vvector_int_t rdata_sets(cnt_readers), wdata_sets(cnt_writers);
     size_t * data = new (std::nothrow) size_t[cnt_elements]();
-    bool run = false, run_writers = true;
+    bool run_writers = true;
     struct timespec start_time;
     get_count_elements_test(cnt_readers, cnt_elements, cnt_readings);
     get_count_elements_test(cnt_writers, cnt_elements, cnt_records);
-    if (!cntr_data(set, cnt_readers, cnt_readings, rdata_sets, rtis, &run, false))
+    if (!cntr_data(set, cnt_readers, cnt_readings, rdata_sets, rtis, false))
         return false;
     for (test_info_t * ti : rtis)
     {        
         ti->arr = data;
         ti->run_writers = &run_writers;
     }
-    if (!cntr_data(set, cnt_writers, cnt_records, wdata_sets, wtis, &run, false))
+    if (!cntr_data(set, cnt_writers, cnt_records, wdata_sets, wtis, false))
     {
         delete_test_info(rtis);
         delete[] data;
         return false;
     }
-    size_t wn = create_threads(wtids, write, wtis, check);
-    size_t rn = create_threads(rtids, read_w, rtis, check);
     if (time)
         get_start_time(&start_time);
-    run = true;
+    size_t wn = create_threads(wtids, write, wtis, check);
+    size_t rn = create_threads(rtids, read_w, rtis, check);
     join_threads(wtids, wn);
     run_writers = false;
     join_threads(rtids, rn);
@@ -403,7 +355,7 @@ void run_simple_test(set_type_t set_type, simple_test_type_t test_type)
 }
 
 bool create_random_data_sets(set_t<int> *set, size_t cnt_threads, const vector_size_t &cnt_elements, 
-                             vvector_int_t &data_sets, vector_ti_t &tis, bool *run, bool add=false)
+                             vvector_int_t &data_sets, vector_ti_t &tis, bool add=false)
 {
     vector_int_t elements(std::accumulate(cnt_elements.begin(), cnt_elements.end(), 0));
     std::iota(elements.begin(), elements.end(), 0);
@@ -422,7 +374,7 @@ bool create_random_data_sets(set_t<int> *set, size_t cnt_threads, const vector_s
                 return false;
             }
         }
-        tis[i] = new (std::nothrow) test_info_t(set, data_sets[i], run);
+        tis[i] = new (std::nothrow) test_info_t(set, data_sets[i]);
         if (!tis[i])
         {
             delete_test_info(tis);
@@ -434,7 +386,7 @@ bool create_random_data_sets(set_t<int> *set, size_t cnt_threads, const vector_s
 }
 
 bool create_fixed_data_sets(set_t<int> *set, size_t cnt_threads, const vector_size_t &cnt_elements, 
-                            vvector_int_t &data_sets, vector_ti_t &tis, bool *run, bool add=false)
+                            vvector_int_t &data_sets, vector_ti_t &tis, bool add=false)
 {
     int elem = 0;
     size_t max_elems = *std::max_element(cnt_elements.begin(), cnt_elements.end());
@@ -460,7 +412,7 @@ bool create_fixed_data_sets(set_t<int> *set, size_t cnt_threads, const vector_si
     }
     for (size_t i = 0; i < cnt_threads; ++i)
     {
-        tis[i] = new (std::nothrow) test_info_t(set, data_sets[i], run);
+        tis[i] = new (std::nothrow) test_info_t(set, data_sets[i]);
         if (!tis[i])
         {
             delete_test_info(tis);
@@ -525,7 +477,7 @@ void run_time_test()
             {
                 cntr_data_fn data_set = data_sets[k];
                 if (run_time_test(set_type, test_func, data_set, time))
-                    sprintf(line + 15 + j * 34 + k * 17, "    %s    |", std::to_string(time).c_str());
+                    sprintf(line + 15 + j * 34 + k * 17, "%15s |", std::to_string(time).c_str());
                 else
                     sprintf(line + 15 + j * 34 + k * 17, "       NA       |");
             }

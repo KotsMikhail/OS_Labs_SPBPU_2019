@@ -1,29 +1,13 @@
 #include "set_optimistic.h"
 
-// check if node wasn't remove
-#define check_opt(node) \
-((size_t)node > 0xffff)
-
 #define loop_opt(pred, curr, _cmp, item) \
-while (check_opt(curr) && _cmp(curr->item, item)) \
+while (_cmp(curr->item, item)) \
 { \
     pred = curr; \
-    if (check_opt(pred)) \
-        curr = pred->next; \
-    else \
-        break; \
+    curr = pred->next; \
 } \
-if (check_opt(pred)) \
-    pred->lock(); \
-else \
-    continue; \
-if (check_opt(curr)) \
-    curr->lock(); \
-else \
-{ \
-    pred->unlock(); \
-    continue; \
-}
+pred->lock(); \
+curr->lock();
 
 #define unlock_opt(pred, curr) \
 pred->unlock(); \
@@ -45,7 +29,7 @@ set_optimistic_t<t, l, c> * set_optimistic_t<t, l, c>::create_set()
 }
 
 template<class t, class l, class c>
-set_optimistic_t<t, l, c>::set_optimistic_t(node_t<t> *head) : set_t<t, l, c>(head)
+set_optimistic_t<t, l, c>::set_optimistic_t(node_t<t> *head) : set_t<t, l, c>(head), _lock(PTHREAD_MUTEX_INITIALIZER)
 {}
 
 template<class t, class l, class c>
@@ -89,13 +73,12 @@ bool set_optimistic_t<t, l, c>::remove(const t &item)
             if (!this->_cmp(item, curr->item))
             {
                 pred->next = curr->next;
-                curr->unlock();
-                delete curr;
+                pthread_mutex_lock(&_lock);
+                _removed.push_back(curr);
+                pthread_mutex_unlock(&_lock);
                 ret = true;
             }
-            else
-                curr->unlock();
-            pred->unlock();
+            unlock_opt(curr, pred)
             break;
         }
         unlock_opt(curr, pred)
@@ -126,7 +109,15 @@ template<class t, class l, class c>
 bool set_optimistic_t<t, l, c>::validate(node_t<t> *pred, node_t<t> *curr)
 {
     node_t<t> *node = this->_head;
-    while (check_opt(node) && this->_cmp(node->item, pred->item))
+    while (this->_cmp(node->item, pred->item))
         node = node->next;
     return (node == pred && pred->next == curr);
+}
+
+template<class t, class l, class c>
+set_optimistic_t<t, l, c>::~set_optimistic_t()
+{
+    for (node_t<t> *to_del : _removed)
+        delete to_del;
+    pthread_mutex_destroy(&_lock);
 }
