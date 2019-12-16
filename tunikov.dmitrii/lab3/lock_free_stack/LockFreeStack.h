@@ -6,7 +6,7 @@
 #define LAB3_LOCKFREESTACK_H
 
 
-#include "../interfaces/Stack.h"
+#include "../stack/Stack.h"
 #include "../node/Node.h"
 #include <pthread.h>
 #include <atomic>

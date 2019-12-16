@@ -43,8 +43,7 @@ void LockFreeStack::try_delete_nodes(Node *new_node_to_delete) {
     if (threads_calling_pop == 1)
     {
         Node* cur_thread_nodes_to_delete = nodes_to_delete.exchange(nullptr);
-        threads_calling_pop--;
-        if (threads_calling_pop == 0)
+        if (!--threads_calling_pop)
         {
             Node::delete_nodes(cur_thread_nodes_to_delete);
         }

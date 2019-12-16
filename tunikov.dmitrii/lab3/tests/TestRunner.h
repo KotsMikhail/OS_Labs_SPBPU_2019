@@ -5,7 +5,7 @@
 #ifndef LAB3_TESTRUNNER_H
 #define LAB3_TESTRUNNER_H
 
-#include "../interfaces/Stack.h"
+#include "../stack/Stack.h"
 #include "Test.h"
 #include <utility>
 #include <vector>
@@ -13,9 +13,6 @@
 
 class TestRunner {
     std::vector<Test> m_tests;
-
-    static void *writeToStack(void *arg);
-    static void *readFromStack(void *arg);
 
     static void runWorkerTest(Stack* s, void*(*workerFunc)(void*), const TestParams& test_params);
     static int runWritersTest(Stack *s, const FullTestParams &test_params);

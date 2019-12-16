@@ -3,7 +3,6 @@
 //
 
 #include <zconf.h>
-#include <thread>
 #include "TestRunner.h"
 #include "../lock_stack/LockStack.h"
 #include <stdexcept>
@@ -11,10 +10,10 @@
 #include "../utils/utils.h"
 #include <cstdio>
 #include <ctime>
-#include <map>
+#include "../stack/Stack.h"
 
 int TestRunner::runWritersTest(Stack* s, const FullTestParams& test_params) {
-    runWorkerTest(s, &writeToStack, test_params.writer_params);
+    runWorkerTest(s, &Stack::writeToStack, test_params.writer_params);
     return 0;
 }
 
@@ -26,7 +25,7 @@ int TestRunner::runReadersTest(Stack * s, const struct FullTestParams & test_par
             s->push(j);
         }
 
-    runWorkerTest(s, &readFromStack, test_params.reader_params);
+    runWorkerTest(s, &Stack::readFromStack, test_params.reader_params);
     return 0;
 }
 
@@ -35,8 +34,8 @@ int TestRunner::runFullTest(Stack *s, const FullTestParams &test_params) {
     int writer_action_count = test_params.writer_params.worker_actions_count;
 
     int threads_max_count = utils::getMaxThreadsCount();
-    for (int cur_readers_count = test_params.reader_params.workers_count - 1; cur_readers_count < test_params.reader_params.workers_count; cur_readers_count++)
-        for (int cur_writers_count = test_params.writer_params.workers_count - 1; cur_writers_count < test_params.writer_params.workers_count; cur_writers_count++)
+    for (int cur_readers_count = test_params.reader_params.workers_count; cur_readers_count < test_params.reader_params.workers_count + 1; cur_readers_count++)
+        for (int cur_writers_count = test_params.writer_params.workers_count; cur_writers_count < test_params.writer_params.workers_count + 1; cur_writers_count++)
         {
             if (cur_readers_count + cur_writers_count > threads_max_count)
                 continue;
@@ -44,12 +43,14 @@ int TestRunner::runFullTest(Stack *s, const FullTestParams &test_params) {
             std::vector<std::vector<int>> writers_vecs;
             std::vector<std::vector<int>> readers_vecs;
 
-            //run writers
-            auto writers_threads = std::move(runWorkers(TestParams(cur_writers_count, writer_action_count), writers_vecs, writeToStack, s));
+            auto writers_threads = std::move(runWorkers(TestParams(cur_writers_count, writer_action_count), writers_vecs, Stack::writeToStack, s));
             utils::joinThreads(writers_threads);
-            //run readers
-            auto readers_threads = std::move(runWorkers(TestParams(cur_readers_count, reader_action_count), readers_vecs, readFromStack, s));
+            auto readers_threads = std::move(runWorkers(TestParams(cur_readers_count, reader_action_count), readers_vecs, Stack::readFromStack, s));
             utils::joinThreads(readers_threads);
+
+            //utils::printVectors(writers_vecs);
+            //std::cout << "-------------" << std::endl;
+            //utils::printVectors(readers_vecs);
 
             for (auto& writer_vec : writers_vecs)
             {
@@ -117,49 +118,6 @@ void TestRunner::runWorkerTest(Stack* s, void*(*workerFunc)(void*), const TestPa
         }
 }
 
-void* TestRunner::writeToStack(void *arg) {
-    auto* args = (ThreadArgs*)arg;
-
-    Stack* s = args->s;
-    int n = args->m_action_count;
-    std::vector<int>& test_vec = args->m_test_vec;
-
-    for (int i = 0; i < n; i++)
-    {
-        try {
-            s->push(i);
-            test_vec.emplace_back(i);
-        }
-        catch(const std::runtime_error& e)
-        {
-            pthread_yield();
-        }
-    }
-
-    return nullptr;
-}
-
-void *TestRunner::readFromStack(void *arg) {
-    auto* args = (ThreadArgs*)arg;
-
-    Stack* s = args->s;
-    std::vector<int>& test_vec = args->m_test_vec;
-
-    while (!s->empty())
-    {
-        try {
-            auto val = s->pop();
-            if (val != std::shared_ptr<int>())
-                test_vec.emplace_back(*val);
-        }
-        catch(const std::runtime_error& e)
-        {
-            pthread_yield();
-        }
-    }
-    return nullptr;
-}
-
 void TestRunner::runTests() {
     static std::vector<StackType> available_stack_types{LOCK, LOCK_FREE};
     runFuncTests(available_stack_types);
@@ -206,10 +164,13 @@ void TestRunner::runTimeTests(const std::vector<StackType>& available_stack_type
                 }
                 catch (const std::runtime_error &e) {
                     std::cout << "ERROR while executing tests: " << e.what() << std::endl;
+                    delete s;
                 }
+
                 unsigned long end_time = clock();
                 tests_times.push_back((float)(end_time - start_time) * 1000 / CLOCKS_PER_SEC);
             }
+            delete s;
             float aver_time = utils::getAverage(tests_times);
             std::cout << aver_time << "ms\t\t";
         }
@@ -242,5 +203,6 @@ void TestRunner::runFuncTests(const std::vector<StackType>& available_stack_type
                 std::cout << "ERROR while executing tests: " << e.what() << std::endl;
             }
         }
+        delete stack;
     }
 }

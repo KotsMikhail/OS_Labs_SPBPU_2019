@@ -7,7 +7,7 @@
 
 #include <vector>
 #include <pthread.h>
-#include "../interfaces/Stack.h"
+#include "../stack/Stack.h"
 #include "../node/Node.h"
 #include <memory>
 

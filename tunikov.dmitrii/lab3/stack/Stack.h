@@ -21,6 +21,8 @@ public:
     virtual std::shared_ptr<int> pop() = 0;
     virtual void push(const int& val) = 0;
     virtual bool empty() = 0;
+    static void *readFromStack(void *arg);
+    static void* writeToStack(void *arg);
 };
 
 #endif //LAB3_STACK_H

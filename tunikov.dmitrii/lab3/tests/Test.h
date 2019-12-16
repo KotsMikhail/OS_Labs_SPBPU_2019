@@ -6,7 +6,7 @@
 #define LAB3_TEST_H
 
 #include <iostream>
-#include "../interfaces/Stack.h"
+#include "../stack/Stack.h"
 
 struct TestParams
 {
