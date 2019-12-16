@@ -1,32 +1,30 @@
-//
-// Created by dmitrii on 15.12.2019.
-//
-
-#ifndef LAB3_LOCKFREESTACK_H
-#define LAB3_LOCKFREESTACK_H
-
-
-#include "../stack/Stack.h"
-#include "../node/Node.h"
-#include <pthread.h>
+#include <memory>
 #include <atomic>
+#include "../stack/Stack.h"
 
-class LockFreeStack : public  Stack {
+class LockFreeStack : public Stack {
+
 private:
-    std::atomic<int> threads_calling_pop{};
-    std::atomic<Node*> head{};
-    std::atomic<Node*> nodes_to_delete{};
+    struct LockFreeNode;
 
-    void try_delete_nodes(Node* deleted_node);
-    void add_new_node_to_delete(Node *first, Node* last);
-    void add_new_nodes_to_delete(Node *nodes);
+    struct CounterNodePtr {
+        int m_external_count;
+        LockFreeNode* m_ptr;
+    };
+
+    struct LockFreeNode {
+        std::shared_ptr<int> m_data;
+        std::atomic<int> m_internal_count;
+        CounterNodePtr m_next{};
+
+        explicit LockFreeNode(int const& data_) : m_data(std::make_shared<int>(data_)), m_internal_count(0) {}
+    };
+    std::atomic<CounterNodePtr> head{};
+    void increase_head_count(CounterNodePtr& old_counter);
 public:
     LockFreeStack();
-    ~LockFreeStack();
-    std::shared_ptr<int> pop() override ;
-    void push(const int& val) override ;
+    ~LockFreeStack() override;
+    void push(int const& data) override;
+    std::shared_ptr<int> pop() override;
     bool empty() override ;
 };
-
-
-#endif //LAB3_LOCKFREESTACK_H

@@ -3,89 +3,62 @@
 //
 
 #include <new>
-#include <iostream>
 #include "LockFreeStack.h"
 
-void LockFreeStack::push(const int &val) {
-    Node* new_elem = new (std::nothrow) Node(val);
-    new_elem->m_next = head.load();
+void LockFreeStack::push(int const& data) {
+    CounterNodePtr new_node{};
+    new_node.m_ptr = new LockFreeNode(data);
+    new_node.m_external_count = 1;
+    new_node.m_ptr->m_next = head.load(std::memory_order_relaxed);
+    while (!head.compare_exchange_weak(new_node.m_ptr->m_next, new_node, std::memory_order_release, std::memory_order_relaxed));
+}
 
-    while (!head.compare_exchange_weak(new_elem->m_next, new_elem))
-        ;
+void LockFreeStack::increase_head_count(CounterNodePtr& old_counter) {
+    CounterNodePtr new_counter{};
+    do {
+        new_counter = old_counter;
+        ++new_counter.m_external_count;
+    }
+    while (!head.compare_exchange_strong(old_counter, new_counter,std::memory_order_acquire,std::memory_order_relaxed));
+
+    old_counter.m_external_count = new_counter.m_external_count;
 }
 
 std::shared_ptr<int> LockFreeStack::pop() {
-    threads_calling_pop++;
-    Node* old_head = head.load();
+    CounterNodePtr old_head = head.load(std::memory_order_relaxed);
 
-    while (old_head && !head.compare_exchange_weak(old_head, old_head->m_next))
-        ;
-
-    std::shared_ptr<int> res = std::make_shared<int>();
-    if (old_head)
+    while(true)
     {
-        res.swap(old_head->m_data);
-    }
-
-    try_delete_nodes(old_head);
-
-    return res;
-}
-
-LockFreeStack::LockFreeStack()= default;
-
-bool LockFreeStack::empty() {
-    return head == nullptr;
-}
-
-void LockFreeStack::try_delete_nodes(Node *new_node_to_delete) {
-
-    if (threads_calling_pop == 1)
-    {
-        Node* cur_thread_nodes_to_delete = nodes_to_delete.exchange(nullptr);
-        if (!--threads_calling_pop)
-        {
-            Node::delete_nodes(cur_thread_nodes_to_delete);
-        }
-        else if (nodes_to_delete)
-        {
-            add_new_nodes_to_delete(cur_thread_nodes_to_delete);
+        increase_head_count(old_head);
+        LockFreeNode* const ptr = old_head.m_ptr;
+        if (!ptr) {
+            return std::shared_ptr<int>();
         }
 
-        delete new_node_to_delete;
+        if (head.compare_exchange_strong(old_head, ptr->m_next, std::memory_order_relaxed)) {
+            std::shared_ptr<int> res;
+            res.swap(ptr->m_data);
+            int const count_increase = old_head.m_external_count;
+            if (ptr->m_internal_count.fetch_add(count_increase, std::memory_order_release) == -count_increase) {
+                delete ptr;
+            }
+            return res;
+        }
+        else if (ptr->m_internal_count.fetch_add(-1, std::memory_order_relaxed) == 1) {
+            ptr->m_internal_count.load(std::memory_order_acquire);
+            delete ptr;
+        }
     }
-    else
-    {
-        add_new_node_to_delete(new_node_to_delete, new_node_to_delete);
-        threads_calling_pop--;
-    }
-}
-
-void LockFreeStack::add_new_node_to_delete(Node *first, Node* last)
-{
-    if (!first || !last)
-        return;
-
-    last->m_next = nodes_to_delete;
-
-    while (!nodes_to_delete.compare_exchange_weak(last->m_next, first))
-        ;
-}
-
-void LockFreeStack::add_new_nodes_to_delete(Node *nodes) {
-    if (nodes == nullptr)
-        return;
-
-    Node* last = nodes;
-
-    while (last->m_next)
-    {
-        last = last->m_next;
-    }
-
-    add_new_node_to_delete(nodes, last);
 }
 
 LockFreeStack::~LockFreeStack() {
-    Node::delete_nodes(nodes_to_delete);
+    while(LockFreeStack::pop());
+}
+
+LockFreeStack::LockFreeStack() = default;
+
+bool LockFreeStack::empty() {
+    CounterNodePtr temp{};
+    temp = head.load(std::memory_order_acquire);
+    return temp.m_ptr == nullptr;
 }

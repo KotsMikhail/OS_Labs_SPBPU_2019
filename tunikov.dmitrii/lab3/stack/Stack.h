@@ -23,6 +23,7 @@ public:
     virtual bool empty() = 0;
     static void *readFromStack(void *arg);
     static void* writeToStack(void *arg);
+    virtual ~Stack();
 };
 
 #endif //LAB3_STACK_H
