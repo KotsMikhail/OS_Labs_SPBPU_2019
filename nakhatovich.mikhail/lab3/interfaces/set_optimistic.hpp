@@ -109,7 +109,7 @@ void set_optimistic_t<t, l, c>::loop(typename set_t<t, l, c>::node_t *&pred, typ
         pred = curr;
         curr = pred->next;
     }
-    pred->unlock();
+    pred->lock();
     curr->lock();
 }
 
