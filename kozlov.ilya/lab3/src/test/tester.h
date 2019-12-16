@@ -13,7 +13,6 @@ template<typename T>
 class Tester
 {
 private:
-  const int default_num = 5;
   const std::string tag = "Tester";
   std::vector<Test<T>*> tests;
 

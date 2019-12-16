@@ -19,7 +19,8 @@ private:
   int max_threads;
 public:
   TestCreator(int writers_num, int records_num, int readers_num, int reads_num) noexcept;
-  Test<T>* get(const Type& set_type, const TestType& type, std::string name);
+  Test<T>* get(const Type& set_type, const TestType& type, const std::string& name, const data_set<T>& data = {}) const;
+  Test<T>* compare(int times, const Type& set_type1, const Type& set_type2, const std::string& name) const;
 };
 
 #include "test_creator.hpp"

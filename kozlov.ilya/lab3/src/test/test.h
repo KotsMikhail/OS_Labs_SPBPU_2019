@@ -4,6 +4,7 @@
 #include <set.h>
 #include <string>
 #include <exception>
+#include <utility>
 #include <vector>
 
 struct TestException: public std::exception {
@@ -36,8 +37,7 @@ enum class TestType
 {
   WRITE,
   READ,
-  GENERAL,
-  COMPARE
+  GENERAL
 };
 
 template<typename T>
@@ -46,9 +46,9 @@ class Test
 public:
   std::string name;
 
-  explicit Test(std::string& name) noexcept: name(name)
+  explicit Test(std::string name) noexcept: name(std::move(name))
   {}
-  virtual void run() const = 0;
+  virtual void run() = 0;
   virtual void check() const noexcept(false) = 0;
   virtual ~Test() = default;
 };

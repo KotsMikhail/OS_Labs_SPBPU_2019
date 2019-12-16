@@ -12,12 +12,13 @@ private:
   Set<T>* curr_set;
   int readers_num;
   int reads_num;
-  std::vector<data_set<T>> data_sets;
+  data_set<T> data_sets;
   const std::string tag = "ReadTest";
 
 public:
-  ReadTest(Set<T>* set, int readers_num, int reads_num, std::string name) noexcept;
-  void run() const override;
+  ReadTest(Set<T>* set, int readers_num, int reads_num, const std::string& name) noexcept;
+  ReadTest(const data_set<T>& data_sets, Set<T>* set, int readers_num, int reads_num, const std::string& name) noexcept;
+  void run() override;
   void check() const override;
   ~ReadTest() override;
 

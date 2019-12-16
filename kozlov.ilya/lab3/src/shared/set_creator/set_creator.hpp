@@ -11,12 +11,13 @@ Set<T>* SetCreator<T>::get(const Type& type)
   {
     Logger::logDebug(tag, "Constructing optimistic list...");
     Node<T>* head = NodeCreator<T>(MinValue::get<T>()).template get<Node<T>>();
-    if (head != nullptr)
+    NodeCollector<Node<T>> collector;
+    if (head != nullptr && collector.init())
     {
       head->next = NodeCreator<T>(MaxValue::get<T>()).template get<Node<T>>();
       if (head->next != nullptr)
       {
-        return new OptimisticList<T>(head);
+        return new OptimisticList<T>(head, collector);
       }
     }
     return nullptr;
@@ -25,12 +26,13 @@ Set<T>* SetCreator<T>::get(const Type& type)
   {
     Logger::logDebug(tag, "Constructing lazy list...");
     LazyNode<T>* head = NodeCreator<T>(MinValue::get<T>()).template get<LazyNode<T>>();
-    if (head != nullptr)
+    NodeCollector<LazyNode<T>> collector;
+    if (head != nullptr && collector.init())
     {
       head->next = NodeCreator<T>(MaxValue::get<T>()).template get<LazyNode<T>>();
       if (head->next != nullptr)
       {
-        return new LazyList<T>(head);
+        return new LazyList<T>(head, collector);
       }
     }
     return nullptr;

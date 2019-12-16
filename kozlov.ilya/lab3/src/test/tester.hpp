@@ -54,6 +54,7 @@ void Tester<T>::setTests(TestCreator<T>* creator)
   tests.push_back(creator->get(Type::LAZY, TestType::WRITE, "LazyList writing test"));
   tests.push_back(creator->get(Type::LAZY, TestType::READ, "LazyList reading test"));
   tests.push_back(creator->get(Type::LAZY, TestType::GENERAL, "LazyList general test"));
+  tests.push_back(creator->compare(10, Type::LAZY, Type::OPTIMISTIC, "Lazy vs Optimistic compare test"));
 }
 
 template<typename T>

@@ -23,25 +23,36 @@ void* ReadTest<T>::threadFunc(void *param)
 }
 
 template<typename T>
-ReadTest<T>::ReadTest(Set<T>* set, int readers_num, int reads_num, std::string name) noexcept:
+ReadTest<T>::ReadTest(Set<T>* set, int readers_num, int reads_num, const std::string& name) noexcept:
   Test<T>(name), curr_set(set), readers_num(readers_num), reads_num(reads_num)
 {
   Logger::logDebug(tag, "constructing...");
-  for (int i = 0; i < readers_num; i++)
+  for (int i = readers_num - 1; i >= 0; i--)
   {
-    data_set<T> data;
-    for (int j = 0; j < reads_num; j++)
+    for (int j = reads_num - 1; j >= 0; j--)
     {
       T element = static_cast<T>(i * reads_num + j);
-      data.push_back(element);
+      data_sets.push_back(element);
       set->add(element);
     }
-    data_sets.push_back(data);
   }
 }
 
 template<typename T>
-void ReadTest<T>::run() const
+ReadTest<T>::ReadTest(const data_set<T>& data_sets, Set<T>* set, int readers_num, int reads_num, const std::string& name) noexcept:
+  Test<T>(name), curr_set(set), readers_num(readers_num), reads_num(reads_num), data_sets(data_sets)
+{
+  for (int i = 0; i < readers_num; i++)
+  {
+    for (int j = 0; j < reads_num; j++)
+    {
+      set->add(data_sets[i * reads_num + j]);
+    }
+  }
+}
+
+template<typename T>
+void ReadTest<T>::run()
 {
   Logger::logDebug(tag, "run");
   std::vector<pthread_t> thread_ids;
@@ -53,7 +64,9 @@ void ReadTest<T>::run() const
   }
   for (int i = 0; i < readers_num; i++)
   {
-    auto info = new TestInfo<T>(curr_set, data_sets[i]);
+    std::vector<T> data = std::vector<T>(data_sets.begin() + i * reads_num,
+                                         data_sets.begin() + (i + 1) * reads_num);
+    auto info = new TestInfo<T>(curr_set, data);
     pthread_t tid;
     if (pthread_create(&tid, &attr, threadFunc, info) != 0)
     {

@@ -12,7 +12,7 @@ private:
   bool failed;
   pthread_mutex_t mutex;
   int hash;
-  const T& item;
+  T item;
   const std::string tag = "NodeCreator";
 
   bool initData();

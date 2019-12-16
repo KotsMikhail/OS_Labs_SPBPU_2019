@@ -15,13 +15,16 @@ private:
   int records_num;
   int readers_num;
   int reads_num;
-  std::vector<int> data_sets;
+  data_set<T> data_sets;
+  std::vector<Test<T>*> tests;
   const std::string tag = "GeneralTest";
 
 public:
   GeneralTest(Set<T>* set, int writers_num, int records_num,
-              int readers_num, int reads_num, std::string name) noexcept;
-  void run() const override;
+              int readers_num, int reads_num, const std::string& name) noexcept;
+  GeneralTest(const data_set<T>& data_sets, Set<T>* set, int writers_num, int records_num,
+              int readers_num, int reads_num, const std::string& name) noexcept;
+  void run() override;
   void check() const override;
   ~GeneralTest() override;
 

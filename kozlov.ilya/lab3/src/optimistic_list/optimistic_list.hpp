@@ -4,7 +4,8 @@
 #include <node_creator/node_creator.h>
 
 template<typename T>
-OptimisticList<T>::OptimisticList(Node<T>* head): head(head)
+OptimisticList<T>::OptimisticList(Node<T>* head, const NodeCollector<Node<T>>& collector):
+  head(head), collector(collector)
 {
 }
 
@@ -106,7 +107,8 @@ bool OptimisticList<T>::remove(T element)
       if (curr->key == key)
       {
         prev->next = curr->next;
-        delete curr;
+        curr->unlock();
+        collector.add(curr);
         res = true;
       }
       else

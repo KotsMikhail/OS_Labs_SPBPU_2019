@@ -24,23 +24,30 @@ void* WriteTest<T>::threadFunc(void *param)
 }
 
 template<typename T>
-WriteTest<T>::WriteTest(Set<T>* set, int writers_num, int records_num, std::string name) noexcept:
+WriteTest<T>::WriteTest(Set<T>* set, int writers_num, int records_num, const std::string& name) noexcept:
   Test<T>(name), curr_set(set), writers_num(writers_num), records_num(records_num)
 {
   Logger::logDebug(tag, "constructing...");
-  for (int i = 0; i < writers_num; i++)
+  for (int i = writers_num - 1; i >= 0; i--)
   {
-    data_set<T> data;
-    for (int j = 0; j < records_num; j++)
+    for (int j = records_num - 1; j >= 0; j--)
     {
-      data.push_back(static_cast<T>(i * records_num + j));
+      T element = static_cast<T>(i * records_num + j);
+      data_sets.push_back(element);
     }
-    data_sets.push_back(data);
   }
 }
 
 template<typename T>
-void WriteTest<T>::run() const
+WriteTest<T>::WriteTest(const data_set<T>& data_sets, Set<T>* set,
+  int writers_num, int records_num, const std::string& name) noexcept:
+  Test<T>(name), curr_set(set), writers_num(writers_num), records_num(records_num), data_sets(data_sets)
+{
+  Logger::logDebug(tag, "constructing...");
+}
+
+template<typename T>
+void WriteTest<T>::run()
 {
   Logger::logDebug(tag, "run");
   std::vector<pthread_t> thread_ids;
@@ -52,7 +59,9 @@ void WriteTest<T>::run() const
   }
   for (int i = 0; i < writers_num; i++)
   {
-    auto info = new TestInfo<T>(curr_set, data_sets[i]);
+    std::vector<T> data = std::vector<T>(data_sets.begin() + i * records_num,
+                                         data_sets.begin() + (i + 1) * records_num);
+    auto info = new TestInfo<T>(curr_set, data);
     pthread_t tid;
     if (pthread_create(&tid, &attr, threadFunc, info) != 0)
     {
@@ -75,15 +84,12 @@ template<typename T>
 void WriteTest<T>::check() const
 {
   Logger::logDebug(tag, "check");
-  for (const auto& data_set : data_sets)
+  for (T value : data_sets)
   {
-    for (int value : data_set)
+    if (!curr_set->contains(value))
     {
-      if (!curr_set->contains(value))
-      {
-        std::string msg = "Value not found: " + std::to_string(value);
-        throw TestException(msg);
-      }
+      std::string msg = "Value not found: " + std::to_string(value);
+      throw TestException(msg);
     }
   }
 }

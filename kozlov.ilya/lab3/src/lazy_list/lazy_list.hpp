@@ -4,7 +4,8 @@
 #include <node_creator/node_creator.h>
 
 template<typename T>
-LazyList<T>::LazyList(LazyNode<T>* head): head(head)
+LazyList<T>::LazyList(LazyNode<T>* head, const NodeCollector<LazyNode<T>>& collector):
+  head(head), collector(collector)
 {
 }
 
@@ -107,7 +108,8 @@ bool LazyList<T>::remove(T element)
       {
         curr->marked = true;
         prev->next = curr->next;
-        delete curr;
+        curr->unlock();
+        collector.add(curr);
         res = true;
       }
       else

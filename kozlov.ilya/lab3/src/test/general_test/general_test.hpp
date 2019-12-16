@@ -1,7 +1,6 @@
 #include <logger/logger.h>
 #include <util.h>
 #include <cassert>
-#include "general_test.h"
 
 template<typename T>
 std::vector<int> GeneralTest<T>::check_array;
@@ -37,10 +36,10 @@ void* GeneralTest<T>::threadReadFunc(void *param)
   for (int value : info->data)
   {
     Logger::logDebug(tag, "reading: " + std::to_string(value));
-    if (!info->testing_set->remove(value))
+    while (!info->testing_set->remove(value))
     {
-      Logger::logError(tag, "Cant read value = " + std::to_string(value) + "\n");
-      break;
+      Logger::logDebug(tag, "Yet cant read value = " + std::to_string(value) + "\n");
+      pthread_yield();
     }
     check_array[(int)value]++;
   }
@@ -50,14 +49,14 @@ void* GeneralTest<T>::threadReadFunc(void *param)
 
 template<typename T>
 GeneralTest<T>::GeneralTest(Set<T>* set, int writers_num, int records_num,
-  int readers_num, int reads_num, std::string name) noexcept:
+  int readers_num, int reads_num, const std::string& name) noexcept:
   Test<T>(name), curr_set(set), writers_num(writers_num), records_num(records_num),
   readers_num(readers_num), reads_num(reads_num)
 {
   Logger::logDebug(tag, "constructing...");
-  for (int i = 0; i < readers_num; i++)
+  for (int i = readers_num - 1; i >= 0; i--)
   {
-    for (int j = 0; j < reads_num; j++)
+    for (int j = reads_num - 1; j >= 0; j--)
     {
       T element = static_cast<T>(i * reads_num + j);
       data_sets.push_back(element);
@@ -67,7 +66,22 @@ GeneralTest<T>::GeneralTest(Set<T>* set, int writers_num, int records_num,
 }
 
 template<typename T>
-void GeneralTest<T>::run() const
+GeneralTest<T>::GeneralTest(const data_set<T>& data_sets, Set<T>* set, int writers_num, int records_num,
+  int readers_num, int reads_num, const std::string& name) noexcept:
+  Test<T>(name), curr_set(set), writers_num(writers_num), records_num(records_num),
+  readers_num(readers_num), reads_num(reads_num), data_sets(data_sets)
+{
+  for (int i = readers_num - 1; i >= 0; i--)
+  {
+    for (int j = reads_num - 1; j >= 0; j--)
+    {
+      check_array.push_back(0);
+    }
+  }
+}
+
+template<typename T>
+void GeneralTest<T>::run()
 {
   Logger::logDebug(tag, "run");
   check_array.clear();
@@ -78,6 +92,19 @@ void GeneralTest<T>::run() const
   {
     Logger::logError(tag, "Cant init pthread attributes");
     return;
+  }
+  for (int i = 0; i < readers_num; i++)
+  {
+    std::vector<T> data = std::vector<T>(data_sets.begin() + i * reads_num,
+                                         data_sets.begin() + (i + 1) * reads_num);
+    auto info = new TestInfo<T>(curr_set, data);
+    pthread_t tid;
+    if (pthread_create(&tid, &attr, threadReadFunc, info) != 0)
+    {
+      Logger::logError(tag, "Cant create pthread");
+      return;
+    }
+    readers_thread_ids.push_back(tid);
   }
   for (int i = 0; i < writers_num; i++)
   {
@@ -92,20 +119,7 @@ void GeneralTest<T>::run() const
     }
     writers_thread_ids.push_back(tid);
   }
-  for (int i = 0; i < readers_num; i++)
-  {
-    std::vector<T> data = std::vector<T>(data_sets.begin() + i * reads_num,
-                                      data_sets.begin() + (i + 1) * reads_num);
-    auto info = new TestInfo<T>(curr_set, data);
-    pthread_t tid;
-    if (pthread_create(&tid, &attr, threadReadFunc, info) != 0)
-    {
-      Logger::logError(tag, "Cant create pthread");
-      return;
-    }
-    readers_thread_ids.push_back(tid);
-  }
-  for (auto id : writers_thread_ids)
+  for (auto id : readers_thread_ids)
   {
     if (pthread_join(id, nullptr) != 0)
     {
@@ -113,7 +127,7 @@ void GeneralTest<T>::run() const
       return;
     }
   }
-  for (auto id : readers_thread_ids)
+  for (auto id : writers_thread_ids)
   {
     if (pthread_join(id, nullptr) != 0)
     {

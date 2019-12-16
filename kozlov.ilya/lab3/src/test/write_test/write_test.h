@@ -12,12 +12,13 @@ private:
   Set<T>* curr_set;
   int writers_num;
   int records_num;
-  std::vector<data_set<T>> data_sets;
+  data_set<T> data_sets;
   const std::string tag = "WriteTest";
 
 public:
-  WriteTest(Set<T>* set, int writers_num, int records_num, std::string name) noexcept;
-  void run() const override;
+  WriteTest(Set<T>* set, int writers_num, int records_num, const std::string& name) noexcept;
+  WriteTest(const data_set<T>& data_sets, Set<T>* set, int writers_num, int records_num, const std::string& name) noexcept;
+  void run() override;
   void check() const override;
   ~WriteTest() override;
 
