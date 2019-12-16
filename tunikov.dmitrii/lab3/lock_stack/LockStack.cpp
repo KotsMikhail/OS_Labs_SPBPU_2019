@@ -3,7 +3,6 @@
 //
 
 #include "LockStack.h"
-#include "../exceptions/TimeoutException.h"
 #include <stdexcept>
 
 int Stack::m_read_timeout;
@@ -21,6 +20,7 @@ LockStack* LockStack::make() {
 
 LockStack::LockStack(pthread_mutex_t& mutex){
     m_mutex = mutex;
+    head = nullptr;
 }
 
 void LockStack::push(const int &val) {
@@ -76,7 +76,7 @@ void LockStack::timed_lock() {
         else
         {
             if (rc != 0)
-                throw TimeoutException("ERROR: pthread_mutex_trylock return unknown error");
+                throw std::runtime_error("ERROR: pthread_mutex_trylock return unknown error");
             return;
         }
     }
@@ -91,7 +91,6 @@ bool LockStack::empty() {
     return res;
 }
 
-LockStack::LockStack() = default;
 LockStack::~LockStack()
 {
     Node::delete_nodes(head);

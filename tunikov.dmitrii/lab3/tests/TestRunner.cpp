@@ -6,7 +6,7 @@
 #include <thread>
 #include "TestRunner.h"
 #include "../lock_stack/LockStack.h"
-#include "../exceptions/TimeoutException.h"
+#include <stdexcept>
 #include "../lock_free_stack/LockFreeStack.h"
 #include "../utils/utils.h"
 
@@ -129,7 +129,7 @@ void* TestRunner::writeToStack(void *arg) {
             s->push(i);
             test_vec.emplace_back(i);
         }
-        catch(const TimeoutException& e)
+        catch(const std::runtime_error& e)
         {
             pthread_yield();
             throw e;
@@ -152,7 +152,7 @@ void *TestRunner::readFromStack(void *arg) {
             if (val != std::shared_ptr<int>())
                 test_vec.emplace_back(*val);
         }
-        catch(const TimeoutException& e)
+        catch(const std::runtime_error& e)
         {
             pthread_yield();
             throw e;

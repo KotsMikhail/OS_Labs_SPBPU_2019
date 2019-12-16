@@ -17,7 +17,9 @@ private:
     pthread_mutex_t m_mutex{};
 
     void timed_lock();
-    LockStack();
+    LockStack() = delete;
+    LockStack(const LockStack& lock_stack) = delete;
+    LockStack&operator=(const LockStack& h) = delete;
     explicit LockStack(pthread_mutex_t& mutex);
 public:
     static LockStack* make();
