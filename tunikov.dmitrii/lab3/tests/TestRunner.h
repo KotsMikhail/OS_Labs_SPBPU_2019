@@ -24,6 +24,8 @@ class TestRunner {
 public:
     explicit TestRunner(const FullTestParams& test_params);
     void runTests();
+    void runTimeTests(const std::vector<StackType>& available_stack_types);
+    void runFuncTests(const std::vector<StackType>& available_stack_types);
 
     static std::vector<pthread_t> runWorkers(const TestParams &test_params, std::vector<std::vector<int>> &worker_vecs, void *(*workerFunc)(void *),
                Stack *s);

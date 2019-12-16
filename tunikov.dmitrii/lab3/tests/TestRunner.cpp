@@ -11,6 +11,7 @@
 #include "../utils/utils.h"
 #include <cstdio>
 #include <ctime>
+#include <map>
 
 int TestRunner::runWritersTest(Stack* s, const FullTestParams& test_params) {
     runWorkerTest(s, &writeToStack, test_params.writer_params);
@@ -161,11 +162,66 @@ void *TestRunner::readFromStack(void *arg) {
 
 void TestRunner::runTests() {
     static std::vector<StackType> available_stack_types{LOCK, LOCK_FREE};
-    for (auto stack_type : available_stack_types)
+    runFuncTests(available_stack_types);
+    std::cout << "-------------------------------------" << std::endl;
+    runTimeTests(available_stack_types);
+}
+
+TestRunner::TestRunner(const FullTestParams &test_params) {
+    m_tests.emplace_back(Test("Writers test", test_params, &runWritersTest));
+    m_tests.emplace_back(Test("Readers test", test_params, &runReadersTest));
+    m_tests.emplace_back(Test("Writers/Readers test", test_params, &runFullTest));
+}
+
+void TestRunner::runTimeTests(const std::vector<StackType>& available_stack_types)
+{
+    std::cout << "Running time tests: " << std::endl;
+
+    int space_count = 23;
+    for (int i = 0; i < space_count; i++)
+        std::cout << " ";
+    std::cout << "LOCK_STACK\t" << "LOCK_FREE_STACK\t" << std::endl;
+
+    for (auto& test : m_tests)
     {
-        Stack* stack = nullptr;
-        switch (stack_type)
+        std::cout << test.m_name;
+        for (int i = test.m_name.size(); i < space_count; i++)
+            std::cout << " ";
+
+        for (const auto& stack_type : available_stack_types)
         {
+            Stack* s = nullptr;
+            if (stack_type == LOCK)
+                s = LockStack::make();
+            else
+                s = new LockFreeStack();
+
+            int tests_count = 100;
+            std::vector<unsigned long> tests_times;
+            for (int i = 0; i < tests_count; i++)
+            {
+                unsigned long start_time = clock();
+                try {
+                    test.runTest(s, false);
+                }
+                catch (const std::runtime_error &e) {
+                    std::cout << "ERROR while executing tests: " << e.what() << std::endl;
+                }
+                unsigned long end_time = clock();
+                tests_times.push_back((float)(end_time - start_time) * 1000 / CLOCKS_PER_SEC);
+            }
+            float aver_time = utils::getAverage(tests_times);
+            std::cout << aver_time << "ms\t\t";
+        }
+        std::cout << "\n";
+    }
+}
+
+void TestRunner::runFuncTests(const std::vector<StackType>& available_stack_types) {
+    std::cout << "Running functional tests: " << std::endl;
+    for (auto stack_type : available_stack_types) {
+        Stack *stack = nullptr;
+        switch (stack_type) {
             case LOCK_FREE:
                 std::cout << "Running tests for LOCK_FREE_STACK: " << std::endl;
                 stack = new LockFreeStack();
@@ -178,47 +234,13 @@ void TestRunner::runTests() {
                 throw std::runtime_error("ERROR: unknown stack type");
         }
 
-        std::cout << "Running functional tests: " << std::endl;
-        for (auto test : m_tests)
-        {
-            try{
+        for (auto test : m_tests) {
+            try {
                 test.runTest(stack);
             }
-            catch (const std::runtime_error& e)
-            {
+            catch (const std::runtime_error &e) {
                 std::cout << "ERROR while executing tests: " << e.what() << std::endl;
             }
         }
-
-        std::cout << "Running time tests: " << std::endl;
-        int tests_count = 100;
-        for (auto test : m_tests)
-        {
-            std::vector<unsigned long> tests_times;
-            float average_time = 0;
-            for (int i = 0; i < tests_count; i++)
-            {
-                unsigned long start_time = clock();
-                try{
-                    test.runTest(stack, false);
-                }
-                catch (const std::runtime_error& e)
-                {
-                    std::cout << "ERROR while executing tests: " << e.what() << std::endl;
-                }
-                unsigned long end_time = clock();
-                tests_times.push_back((float)(end_time - start_time) * 1000 / CLOCKS_PER_SEC);
-            }
-            average_time = utils::getAverage(tests_times);
-
-            std::cout << test.m_name << ": " << average_time << " milisecs" << std::endl;
-        }
-        std::cout << "--------------------------------------------------------" << std::endl;
     }
-}
-
-TestRunner::TestRunner(const FullTestParams &test_params) {
-    m_tests.emplace_back(Test("Writers test", test_params, &runWritersTest));
-    m_tests.emplace_back(Test("Readers test", test_params, &runReadersTest));
-    m_tests.emplace_back(Test("Writers/Readers test", test_params, &runFullTest));
 }
