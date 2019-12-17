@@ -45,6 +45,14 @@ private:
         int *array;
         bool is_need_print;
         bool *start_flag;
+        thread_W_args() :
+                id(0),
+                stack(nullptr),
+                start_index(0),
+                end_index(0),
+                array(nullptr),
+                is_need_print(false),
+                start_flag(nullptr) {}
 
         thread_W_args(IStack *stack_, int *array_, int start_index_, int end_index_, bool is_need_print_, int id_,
                       bool *start_flag_) :
@@ -65,6 +73,13 @@ private:
         bool is_need_print;
         bool *start_flag;
         bool *writers_work_done;
+        thread_R_args() :
+                id(0),
+                stack(nullptr),
+                array(nullptr),
+                is_need_print(false),
+                start_flag(nullptr),
+                writers_work_done(nullptr) {}
 
         thread_R_args(IStack *stack_, int *array_, bool is_need_print_, int id_, bool *start_flag_,
                       bool *writers_work_done_) :

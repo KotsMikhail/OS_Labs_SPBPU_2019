@@ -58,7 +58,6 @@ void BlockedStack::timed_lock() {
 }
 
 BlockedStack::~BlockedStack() {
-    pthread_mutex_destroy(&my_lock);
     int value;
     while (1) {
         try {
@@ -67,9 +66,10 @@ BlockedStack::~BlockedStack() {
         catch (IStack::empty_stack &e) {
             break;
         } catch (std::exception &e) {
-            std::cout << "ERROR : " << e.what() << std::endl;
+            std::cout << "ERROR : D-TOR block : " << e.what() << std::endl;
         }
     }
+    pthread_mutex_destroy(&my_lock);
 }
 
 bool BlockedStack::empty() {

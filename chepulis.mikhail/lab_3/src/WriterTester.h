@@ -37,7 +37,12 @@ private:
         int N;
         bool is_need_print;
         bool *start_flag;
-
+        thread_args() :
+                id(0),
+                stack(nullptr),
+                N(0),
+                is_need_print(false),
+                start_flag(nullptr) {}
         thread_args(IStack *stack_, int N_, bool is_need_print_, int id_, bool *start_flag_) :
                 id(id_),
                 stack(stack_),

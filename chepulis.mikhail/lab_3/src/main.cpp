@@ -274,7 +274,7 @@ int main(int argc, char** argv) {
     }
 
 
-    free(my_block_stack);
-    free(my_non_block_stack);
+    delete my_block_stack;
+    delete my_non_block_stack;
     return 0;
 }

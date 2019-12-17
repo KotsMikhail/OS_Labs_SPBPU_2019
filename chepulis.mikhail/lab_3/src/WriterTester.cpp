@@ -47,14 +47,14 @@ bool WriterTester::Test(IStack *my_stack, int num_of_threads, int num_of_element
         return true;
     }
     bool result = true;
-    pthread_t *threads = (pthread_t *) malloc(num_of_threads * sizeof(pthread_t));
+    pthread_t *threads =  new pthread_t[num_of_threads];
 
 
-    array = (int *) malloc(num_of_elements * sizeof(int));
+    array =  new int[num_of_elements];
     for (int i = 0; i < num_of_elements; i++) {
         array[i] = 0;
     }
-    thread_args *arg_array = (thread_args *) malloc(num_of_threads * sizeof(thread_args));
+    thread_args *arg_array = new thread_args[num_of_threads];
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     void *(*function)(void *) = Write;
@@ -107,8 +107,8 @@ bool WriterTester::Test(IStack *my_stack, int num_of_threads, int num_of_element
             result = false;
     }
 
-    free(threads);
-    free(array);
-
+    delete[] threads;
+    delete[] array ;
+    delete[] arg_array;
     return result;
 }

@@ -102,13 +102,13 @@ bool CommonTester::Test(IStack *my_stack, int num_of_reader, int num_of_writer, 
     }
 
     bool result = true;
-    pthread_t *R_threads = (pthread_t *) malloc((num_of_reader) * sizeof(pthread_t));
-    pthread_t *W_threads = (pthread_t *) malloc((num_of_writer) * sizeof(pthread_t));
-    thread_W_args *arg_W_array = (thread_W_args *) malloc(num_of_writer * sizeof(thread_W_args));
-    thread_R_args *arg_R_array = (thread_R_args *) malloc(num_of_reader * sizeof(thread_R_args));
+    pthread_t *R_threads = new  pthread_t[num_of_reader];
+    pthread_t *W_threads = new pthread_t[num_of_writer];
+    thread_W_args *arg_W_array = new thread_W_args[num_of_writer];
+    thread_R_args *arg_R_array = new thread_R_args[num_of_reader];
 
 
-    array = (int *) malloc(num_of_elements * sizeof(int));
+    array = new int [num_of_elements];
     for (int i = 0; i < num_of_elements; i++) {
         array[i] = 0;
     }
@@ -171,12 +171,11 @@ bool CommonTester::Test(IStack *my_stack, int num_of_reader, int num_of_writer, 
             result = false;
     }
 
-    free(R_threads);
-
-    free(W_threads);
-    free(array);
-    free(arg_W_array);
-    free(arg_R_array);
+    delete[] R_threads;
+    delete[] W_threads;
+    delete[] array;
+    delete[]  arg_W_array;
+    delete[] arg_R_array;
 
     return result;
 }

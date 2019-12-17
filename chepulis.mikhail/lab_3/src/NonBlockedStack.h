@@ -24,6 +24,7 @@ private:
     }__attribute__((__aligned__(16)));
 
 
+
     struct Node {
         int data;
         int internal_count;

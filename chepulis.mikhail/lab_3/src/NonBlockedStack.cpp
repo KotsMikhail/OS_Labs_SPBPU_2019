@@ -37,7 +37,7 @@ NonBlockedStack::~NonBlockedStack() {
         catch (IStack::empty_stack &e) {
             break;
         } catch (std::exception &e) {
-            std::cout << "ERROR : " << e.what() << std::endl;
+            std::cout << "ERROR D-TOR non block : " << e.what() << std::endl;
         }
     }
 }

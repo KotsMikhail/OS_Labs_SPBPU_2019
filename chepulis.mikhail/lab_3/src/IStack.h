@@ -12,7 +12,7 @@ class IStack {
 public:
     IStack() {}
 
-    ~IStack() {}
+    virtual ~IStack() {}
 
     virtual void push(int const &data) {}
 
