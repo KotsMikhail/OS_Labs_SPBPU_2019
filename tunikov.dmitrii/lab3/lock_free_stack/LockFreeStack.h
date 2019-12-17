@@ -12,7 +12,7 @@ private:
 
         CounterNodePtr() : m_external_count(0), m_ptr(nullptr){}
         CounterNodePtr(LockFreeNode* ptr) : m_external_count(0), m_ptr(ptr) {}
-    }__attribute__((__aligned__(16)));;
+    }__attribute__((__aligned__(16)));
 
     struct LockFreeNode {
         std::shared_ptr<int> m_data;

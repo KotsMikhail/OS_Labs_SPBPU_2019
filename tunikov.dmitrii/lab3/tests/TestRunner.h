@@ -19,6 +19,8 @@ class TestRunner {
     static int runWritersTest(Stack *s, const FullTestParams &test_params);
     static int runReadersTest(Stack *s, const FullTestParams &test_params);
     static int runFullTest(Stack *s, const FullTestParams &test_params);
+    static void *readFromStack(void *arg);
+    static void* writeToStack(void *arg);
 public:
     explicit TestRunner(const FullTestParams& test_params);
     void runTests();

@@ -8,11 +8,17 @@
 #include <vector>
 #include <pthread.h>
 #include "../stack/Stack.h"
-#include "../node/Node.h"
 #include <memory>
 
 class LockStack : public Stack {
 private:
+    struct Node {
+        std::shared_ptr<int> m_data;
+        Node* m_next;
+        explicit Node(const int& data);
+        static void delete_nodes(Node* node);
+    };
+
     Node* head;
     pthread_mutex_t m_mutex{};
 

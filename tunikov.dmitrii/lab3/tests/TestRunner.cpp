@@ -13,7 +13,7 @@
 unsigned TestRunner::time_tests_count = 100;
 
 int TestRunner::runWritersTest(Stack* s, const FullTestParams& test_params) {
-    runWorkerTest(s, &Stack::writeToStack, test_params.writer_params);
+    runWorkerTest(s, writeToStack, test_params.writer_params);
     return 0;
 }
 
@@ -25,7 +25,7 @@ int TestRunner::runReadersTest(Stack * s, const struct FullTestParams & test_par
             s->push(j);
         }
 
-    runWorkerTest(s, &Stack::readFromStack, test_params.reader_params);
+    runWorkerTest(s, readFromStack, test_params.reader_params);
     return 0;
 }
 
@@ -46,8 +46,8 @@ int TestRunner::runFullTest(Stack *s, const FullTestParams &test_params) {
             int one_reader_action_count = full_write_count / cur_readers_count;
             int balance_for_last_reader = full_write_count - one_reader_action_count * cur_readers_count;
 
-            auto readers_threads = std::move(runWorkers(TestParams(cur_readers_count, one_reader_action_count), readers_vecs, Stack::readFromStack, s, balance_for_last_reader));
-            auto writers_threads = std::move(runWorkers(TestParams(cur_writers_count, writer_action_count), writers_vecs, Stack::writeToStack, s));
+            auto readers_threads = std::move(runWorkers(TestParams(cur_readers_count, one_reader_action_count), readers_vecs, readFromStack, s, balance_for_last_reader));
+            auto writers_threads = std::move(runWorkers(TestParams(cur_writers_count, writer_action_count), writers_vecs, writeToStack, s));
             utils::joinThreads(readers_threads);
             utils::joinThreads(writers_threads);
 
@@ -122,7 +122,7 @@ void TestRunner::runWorkerTest(Stack* s, void*(*workerFunc)(void*), const TestPa
 }
 
 void TestRunner::runTests() {
-    static std::vector<StackType> available_stack_types{LOCK, LOCK_FREE};
+    static std::vector<StackType> available_stack_types{StackType::LOCK, StackType::LOCK_FREE};
     runFuncTests(available_stack_types);
     std::cout << "-------------------------------------" << std::endl;
     runTimeTests(available_stack_types);
@@ -157,7 +157,7 @@ void TestRunner::runTimeTests(const std::vector<StackType>& available_stack_type
                 unsigned long start_time = clock();
                 Stack* s = nullptr;
                 try {
-                    if (stack_type == LOCK)
+                    if (stack_type == StackType::LOCK)
                         s = LockStack::make();
                     else
                         s = new LockFreeStack();
@@ -179,17 +179,65 @@ void TestRunner::runTimeTests(const std::vector<StackType>& available_stack_type
     }
 }
 
+
+void *TestRunner::readFromStack(void *arg) {
+    auto* args = (ThreadArgs*)arg;
+
+    Stack* s = args->s;
+    unsigned read_count = args->m_action_count;
+    std::vector<int>& test_vec = args->m_test_vec;
+
+    while (test_vec.size() != read_count)
+    {
+        if (!s->empty()) {
+            try {
+                auto val = s->pop();
+                if (val != std::shared_ptr<int>())
+                {
+                    test_vec.emplace_back(*val);
+                }
+            }
+            catch (const std::runtime_error &e) {
+                pthread_yield();
+                throw e;
+            }
+        }
+    }
+    return nullptr;
+}
+
+void *TestRunner::writeToStack(void *arg) {
+    auto* args = (ThreadArgs*)arg;
+
+    Stack* s = args->s;
+    unsigned n = args->m_action_count;
+    std::vector<int>& test_vec = args->m_test_vec;
+
+    for (unsigned i = 0; i < n; i++)
+    {
+        try {
+            s->push(int(i));
+            test_vec.emplace_back(i);
+        }
+        catch(const std::runtime_error& e)
+        {
+            pthread_yield();
+        }
+    }
+    return nullptr;
+}
+
 void TestRunner::runFuncTests(const std::vector<StackType>& available_stack_types) {
     std::cout << "Running functional tests: " << std::endl;
     for (auto stack_type : available_stack_types) {
-        if (stack_type == LOCK_FREE)
+        if (stack_type == StackType::LOCK_FREE)
             std::cout << "LOCK_FREE_STACK: " << std::endl;
         else
             std::cout << "LOCK_STACK: " << std::endl;
 
         for (auto test : m_tests) {
             Stack *stack = nullptr;
-            if (LOCK_FREE == stack_type)
+            if (StackType::LOCK_FREE == stack_type)
                 stack = new LockFreeStack();
             else
                 stack = LockStack::make();

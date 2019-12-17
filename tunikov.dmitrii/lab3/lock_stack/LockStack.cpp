@@ -56,6 +56,20 @@ std::shared_ptr<int> LockStack::pop() {
     return val;
 }
 
+LockStack::Node::Node(const int &data) {
+    m_data = std::make_shared<int>(data);
+}
+
+void LockStack::Node::delete_nodes(Node *node) {
+    while (node)
+    {
+        Node* next = node->m_next;
+        delete node;
+        node = next;
+    }
+}
+
+
 void LockStack::timed_lock() {
     struct timespec cur_time{};
     struct timespec start_wait_time{};
