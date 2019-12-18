@@ -16,6 +16,7 @@ private:
   {
     EXIT,
     INPUT_DATE,
+    COMMAND_COUNT,
     UNKNOWN
   };
 

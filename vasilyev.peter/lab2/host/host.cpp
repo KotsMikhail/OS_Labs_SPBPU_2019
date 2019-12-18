@@ -16,7 +16,7 @@ int main( int argc, char **argv )
   }
   catch (std::exception &e)
   {
-    std::cout << "ERROR: " << e.what() << std::endl;
+    std::cout << "ERROR: " << e.what() << ", errno = " << strerror(errno) << std::endl;
     return 1;
   }
 

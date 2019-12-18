@@ -8,6 +8,7 @@
 #include <cmath>
 #include <fcntl.h>
 #include <cstring>
+#include <ctime>
 
 #include "host_class.h"
 #include "../client/client.h"
@@ -92,6 +93,7 @@ void Host::doWork()
     // read command
     switch (readCommand())
     {
+      case Command::COMMAND_COUNT:
       case Command::UNKNOWN:
         std::cout << "Unknown command!" << std::endl;
         break;
@@ -121,18 +123,16 @@ void Host::doWork()
 
 Host::Command Host::readCommand()
 {
-  static const Command COMMANDS[] = {Command::EXIT, Command::INPUT_DATE};
-
   std::string command;
   std::cin >> command;
 
   try
   {
     int num = std::stoi(command) - 1;
-    if (num < 0 || num >= (int)(sizeof(COMMANDS) / sizeof(Command)))
+    if (num < 0 || num >= static_cast<int>(Command::COMMAND_COUNT))
       throw std::exception();
     
-    return COMMANDS[num];
+    return static_cast<Command>(num);
   }
   catch (std::exception &e)
   {
@@ -189,16 +189,19 @@ void Host::printMenu()
 
 void Host::blockAndWait()
 {
+  const int TIMEOUT_SEC = 5;
+
   // block self and unblock client
   std::cout << "Blocking self" << std::endl;
   sem_wait(m_host_semaphore);
   std::cout << "Unblocking client" << std::endl;
   sem_post(m_client_semaphore);
   // wait for client response
-//  struct timespec timeout = ((struct timespec){5, 5000});
-//  if (sem_timedwait(m_host_semaphore, &timeout) == -1)
-//    throw std::runtime_error("Client response wait timeout");
-  sem_wait(m_host_semaphore);
+  struct timespec ts;
+  timespec_get(&ts, TIMER_ABSTIME);
+  ts.tv_sec += TIMEOUT_SEC;
+  if (sem_timedwait(m_host_semaphore, &ts) == -1)
+    throw std::runtime_error("Client response wait timeout");
   std::cout << "Response came" << std::endl;
   sem_post(m_host_semaphore);
 } // end of 'Host::blockAndWait' function

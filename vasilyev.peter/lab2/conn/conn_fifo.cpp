@@ -26,11 +26,11 @@ void Connection::open( const std::string &id, bool is_create )
 
   int flags = S_IWUSR | S_IRUSR | S_IWGRP | S_IRGRP | S_IWOTH | S_IROTH;
   if (is_create && mkfifo(id.c_str(), flags) == -1)
-    throwError("Failed to create fifo file");
+    std::runtime_error("Failed to create fifo file");
 
   m_desc[0] = ::open(id.c_str(), O_RDWR);
   if (m_desc[0] == -1)
-    throwError("Failed to open fifo file");
+    std::runtime_error("Failed to open fifo file");
 
   std::cout << "Opened fifo connection" << std::endl;
 } // end of 'Connection::open' function
@@ -38,7 +38,7 @@ void Connection::open( const std::string &id, bool is_create )
 void Connection::write( int message )
 {
   if (::write(m_desc[0], &message, sizeof(int)) == -1)
-    throwError("Failed to write message");
+    std::runtime_error("Failed to write message");
 } // end of 'Connection::write' function
 
 int Connection::read()
@@ -46,7 +46,7 @@ int Connection::read()
   int message;
 
   if (::read(m_desc[0], &message, sizeof(int)) == -1)
-    throwError("Failed to read message");
+    std::runtime_error("Failed to read message");
 
   return message;
 } // end of 'Connection::read' function

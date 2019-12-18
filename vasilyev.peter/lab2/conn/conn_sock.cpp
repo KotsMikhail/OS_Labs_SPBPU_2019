@@ -28,33 +28,33 @@ void Connection::open( const std::string &id, bool is_create )
   {
     m_desc[0] = socket(AF_UNIX, SOCK_STREAM, 0);
     if (m_desc[0] == -1)
-      throwError("Failed to create socket");
+      std::runtime_error("Failed to create socket");
 
     if (bind(m_desc[0], (struct sockaddr*)&addr, sizeof(struct sockaddr_un)) == -1)
-      throwError("Failed to bind address to socket");
+      std::runtime_error("Failed to bind address to socket");
 
     if (listen(m_desc[0], 1) == -1)
-      throwError("Failed to listen for connections on socket");
+      std::runtime_error("Failed to listen for connections on socket");
 
     m_desc[1] = accept(m_desc[0], nullptr, nullptr);
     if (m_desc[1] == -1)
-      throwError("Failed to accept connection on socket");
+      std::runtime_error("Failed to accept connection on socket");
   }
   else
   {
     m_desc[1] = socket(AF_UNIX, SOCK_STREAM, 0);
     if (m_desc[1] == -1)
-      throwError("Failed to get socket");
+      std::runtime_error("Failed to get socket");
 
     if (connect(m_desc[1], (struct sockaddr*)&addr, sizeof(struct sockaddr_un)) == -1)
-      throwError("Failed to connect to socket");
+      std::runtime_error("Failed to connect to socket");
   }
 } // end of 'Connection::open' function
 
 void Connection::write( int message )
 {
   if (send(m_desc[1], &message, sizeof(int), MSG_NOSIGNAL) == -1)
-    throwError("Failed to send message");
+    std::runtime_error("Failed to send message");
 } // end of 'Connection::write' function
 
 int Connection::read()
@@ -62,7 +62,7 @@ int Connection::read()
   int message;
 
   if (recv(m_desc[1], &message, sizeof(int), 0) == -1)
-    throwError("Failed to receive message");
+    std::runtime_error("Failed to receive message");
 
   return message;
 } // end of 'Connection::read' function

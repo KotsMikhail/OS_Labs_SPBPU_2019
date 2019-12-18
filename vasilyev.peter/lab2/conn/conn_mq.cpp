@@ -36,7 +36,7 @@ void Connection::open( const std::string &id, bool is_create )
   }
 
   if (m_desc[0] == -1)
-    throwError("Failed to open message queue");
+    std::runtime_error("Failed to open message queue");
   //std::cout << "Message queue descriptor = " << m_desc[0] << std::endl;
 } // end of 'Connection::open' function
 
@@ -45,7 +45,7 @@ int Connection::read()
   int message;
 
   if (mq_receive(m_desc[0], (char *)&message, sizeof(int), nullptr) == -1)
-    throwError("Failed to receive message");
+    std::runtime_error("Failed to receive message");
 
   return message;
 } // end of 'Connection::read' function
@@ -53,7 +53,7 @@ int Connection::read()
 void Connection::write( int message )
 {
   if (mq_send(m_desc[0], (char*)&message, sizeof(int), 0) == -1)
-    throwError("Failed to send message");
+    std::runtime_error("Failed to send message");
 } // end of 'Connection::write' function
 
 void Connection::close()
