@@ -7,22 +7,21 @@
 #include <random>
 
 
-Status goat::status = ALIVE;
-
-int goat::start(const connection_info_goat &connectionInfo) {
+int goat::start() {
     while (true) {
-        sem_wait(connectionInfo.semaphore);
+        sem_wait(getSemaphore());
         message *buf = new message();
-        connectionInfo.connection->Read(buf);
-        if (buf->owner == WOLF) {
-            status = buf->status;
-            int num = GenerateRandNum(status == ALIVE ? 100 : 50);
-            buf = new message(GOAT, num, status);
-            connectionInfo.connection->Write(buf);
-        } else {
-            connectionInfo.connection->Write(buf);
+        if (connection->Read(buf)) {
+            if (buf->owner == WOLF) {
+                status = buf->status;
+                int num = GenerateRandNum(status == ALIVE ? 100 : 50);
+                buf = new message(GOAT, num, status);
+                connection->Write(buf);
+            } else {
+                connection->Write(buf);
+            }
         }
-        sem_post(connectionInfo.semaphore);
+        sem_post(getSemaphore());
         sleep(1);
     }
 }
@@ -33,3 +32,9 @@ int goat::GenerateRandNum(int max) {
     std::uniform_int_distribution<int> dist(1, max);
     return dist(mt);
 }
+
+Status goat::getStatus() { return status; }
+
+sem_t *goat::getSemaphore() { return semaphore; }
+
+pid_t goat::getPid() { return pid; }

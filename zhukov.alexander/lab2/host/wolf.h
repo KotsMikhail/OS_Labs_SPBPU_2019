@@ -2,22 +2,31 @@
 #define LAB2_WOLF_H
 
 #include "conn.h"
-#include "connection_info_wolf.h"
 #include <semaphore.h>
 #include <map>
+#include "goat.h"
 
 class wolf {
 public:
-    static wolf* get_instance();
+    static wolf *get_instance();
+
     static void start();
+
 private:
     wolf();
-    static void* work(void *param);
+
+    static void *ReadGoat(void *param);
+
+    static void *WriteGoat(void *param);
+
+    static void CreateGoats();
 
     static wolf *instance;
-    static std::map<conn*, connection_info_wolf*> connections;
-
-    static void signal_handler(int signum);
+    static std::map<conn *, goat *> connections;
+    static std::map<conn *, message> messages;
+    static std::map<conn *, Status> statuses;
+    static int numGoats;
+    static int wolfNumber;
     static const int TIMEOUT = 5;
 };
 

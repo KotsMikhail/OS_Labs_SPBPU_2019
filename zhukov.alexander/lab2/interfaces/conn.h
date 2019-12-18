@@ -9,11 +9,11 @@
 
 class conn {
 public:
-    void Open(size_t id);
+    bool Open(size_t id);
 
-    void Read(void *buf, size_t count = sizeof(message));
+    bool Read(void *buf, size_t count = sizeof(message));
 
-    void Write(void *buf, size_t count = sizeof(message));
+    bool Write(void *buf, size_t count = sizeof(message));
 
     void Close();
 private:

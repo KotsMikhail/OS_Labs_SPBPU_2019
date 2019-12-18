@@ -8,21 +8,33 @@
 #include <unistd.h>
 
 
-
-void conn::Read(void *buf, size_t count) {
-    read(fd[0], buf, count);
+bool conn::Read(void *buf, size_t count) {
+    if (read(fd[0], buf, count) <= 0) {
+        std::cout << "ERROR: reading failed with error = " << strerror(errno) << std::endl;
+        return false;
+    }
+    return true;
 }
 
-void conn::Write(void *buf, size_t count) {
-    write(fd[1], buf, count);
+bool conn::Write(void *buf, size_t count) {
+    if (write(fd[1], buf, count) == -1) {
+        std::cout << "ERROR: writing failed with error = " << strerror(errno) << std::endl;
+        return false;
+    }
+    return true;
 }
 
-void conn::Open(size_t id) {
-    fd = (int *) malloc(2 * sizeof(int));
-    int pipefd[2];
-    pipe(pipefd);
-    fd[0] = pipefd[0];
-    fd[1] = pipefd[1];
+bool conn::Open(size_t id) {
+
+    fd = new int[2];
+    if (fd == nullptr) {
+        return false;
+    }
+    if (pipe(fd) == -1) {
+        std::cout << "ERROR: pipe failed with error = " << strerror(errno) << std::endl;
+        return false;
+    }
+    return true;
 }
 
 void conn::Close() {

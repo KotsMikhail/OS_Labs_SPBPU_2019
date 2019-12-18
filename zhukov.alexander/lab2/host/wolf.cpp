@@ -11,10 +11,12 @@
 #include <list>
 
 
-int numGoats = 5;
-int wolfNumber = 5;
+int wolf::numGoats = 5;
+int wolf::wolfNumber = 5;
 wolf *wolf::instance = new wolf();
-std::map<conn *, connection_info_wolf *> wolf::connections = std::map<conn *, connection_info_wolf *>();
+std::map<conn *, goat *> wolf::connections = std::map<conn *, goat *>();
+std::map<conn *, message> wolf::messages = std::map<conn *, message>();
+std::map<conn *, Status> wolf::statuses = std::map<conn *, Status>();
 
 
 wolf::wolf() {}
@@ -24,7 +26,7 @@ wolf *wolf::get_instance() {
 }
 
 
-void *wolf::work(void *param) {
+void *wolf::ReadGoat(void *param) {
     struct timespec ts;
     conn *connection = (conn *) param;
     clock_gettime(CLOCK_REALTIME, &ts);
@@ -34,50 +36,53 @@ void *wolf::work(void *param) {
 
     while (currentTime < lastTime) {
         currentTime = ts.tv_sec;
-        if (sem_trywait(connections[connection]->sem) != -1) {
-            connection->Read(&buf);
-            if (buf.owner != WOLF) {
-                sem_post(connections[connection]->sem);
-                break;
-            } else {
-                connection->Write(&buf);
+        if (sem_trywait(connections[connection]->getSemaphore()) != -1) {
+            if (connection->Read(&buf)) {
+                if (buf.owner != WOLF) {
+                    std::cout << "goat number " << buf.number << std::endl;
+                    break;
+                } else {
+                    connection->Write(&buf);
+                }
+                sem_post(connections[connection]->getSemaphore());
             }
-            sem_post(connections[connection]->sem);
         } else {
             continue;
         }
     }
     if (currentTime >= lastTime) {
-        kill(connections[connection]->pid, SIGTERM);
+        kill(connections[connection]->getPid(), SIGTERM);
         connection->Close();
         connections.erase(connection);
         numGoats--;
         return nullptr;
     }
-
-
-    Status st = buf.status;
-    std::cout << "goat number " << buf.number << std::endl;
-    if (st == ALIVE && abs(wolfNumber - buf.number) <= 70 / numGoats) {
-        st = ALIVE;
-        connections[connection]->goatStatus = ALIVE;
-    } else if (st == DEAD && abs(wolfNumber - buf.number) <= 20 / numGoats) {
-        st = ALIVE;
-        connections[connection]->goatStatus = ALIVE;
-    } else {
-        st = DEAD;
-        connections[connection]->goatStatus = DEAD;
-    }
-    message msg(WOLF, wolfNumber, st);
-
-
-    sem_wait(connections[connection]->sem);
-    connection->Write(&msg, sizeof(msg));
-    sem_post(connections[connection]->sem);
+    messages[connection] = buf;
     return nullptr;
 }
 
-void wolf::start() {
+void *wolf::WriteGoat(void *param) {
+    conn *connection = (conn *) param;
+    Status st = messages[connection].status;
+
+    if (st == ALIVE && abs(wolfNumber - messages[connection].number) <= 70 / numGoats) {
+        st = ALIVE;
+        statuses[connection] = ALIVE;
+    } else if (st == DEAD && abs(wolfNumber - messages[connection].number) <= 20 / numGoats) {
+        st = ALIVE;
+        statuses[connection] = ALIVE;
+    } else {
+        st = DEAD;
+        statuses[connection] = DEAD;
+    }
+    message msg(WOLF, wolfNumber, st);
+
+    connection->Write(&msg, sizeof(msg));
+    sem_post(connections[connection]->getSemaphore());
+    return nullptr;
+}
+
+void wolf::CreateGoats() {
     while (true) {
         std::cout << "Enter number of goats: ";
         std::cin >> numGoats;
@@ -89,38 +94,52 @@ void wolf::start() {
     }
     std::cout << "Start creating goats" << std::endl;
     for (int i = 0; i < numGoats; i++) {
-        connection_info_wolf *connectionsInfoWolf = new connection_info_wolf();
         conn *currentConnection = new conn();
         currentConnection->Open((size_t) i);
         sem_t *semClient = new sem_t();
         if ((semClient = sem_open(("/sem_con" + std::to_string(i)).c_str(), O_CREAT, 0666, 1)) !=
             SEM_FAILED) {
-            connectionsInfoWolf->sem = semClient;
-            connectionsInfoWolf->goatStatus = ALIVE;
-            int *val = new int;
-            sem_getvalue(semClient, val);
-            if (*val == 0) {
-                sem_post(connections[currentConnection]->sem);
+            int val;
+            sem_getvalue(semClient, &val);
+            if (val == 0) {
+                sem_post(semClient);
             }
             message msg(WOLF);
             currentConnection->Write(&msg, sizeof(msg));
         }
-        connection_info_goat conInfo(currentConnection, semClient);
+        goat *currGoat = new goat(ALIVE, currentConnection, semClient);
         int pid = fork();
         if (pid == 0) {
-            goat::start(conInfo);
+            currGoat->start();
             return;
         }
-        connectionsInfoWolf->pid = pid;
-        connections.insert(std::pair<conn *, connection_info_wolf *>(currentConnection, connectionsInfoWolf));
+        currGoat->setPid(pid);
+        connections.insert(std::pair<conn *, goat *>(currentConnection, currGoat));
     }
     std::cout << "Finish creating goats" << std::endl;
 
+}
+
+
+void wolf::start() {
+    CreateGoats();
     int prevAlive = numGoats;
     int numAlive = 0;
     while (true) {
 
-        std::list<pthread_t> tids;
+        std::list <pthread_t> tids;
+
+        for (auto iter : connections) {
+            pthread_t tid;
+            pthread_attr_t attr;
+            pthread_attr_init(&attr);
+            pthread_create(&tid, &attr, ReadGoat, iter.first);
+            tids.push_back(tid);
+        }
+        for (auto tid : tids) {
+            pthread_join(tid, nullptr);
+        }
+
         while (true) {
             std::cout << "Enter wolf's number: ";
             std::cin >> wolfNumber;
@@ -131,19 +150,22 @@ void wolf::start() {
             std::cout << "Incorrect number, number must be >0 and <=100" << std::endl;
         }
 
+        tids.clear();
         for (auto iter : connections) {
             pthread_t tid;
             pthread_attr_t attr;
             pthread_attr_init(&attr);
-            pthread_create(&tid, &attr, work, iter.first);
+            pthread_create(&tid, &attr, WriteGoat, iter.first);
             tids.push_back(tid);
         }
         for (auto tid : tids) {
             pthread_join(tid, nullptr);
         }
+
+
         numAlive = 0;
         for (auto iter : connections) {
-            if (connections[iter.first]->goatStatus == ALIVE)
+            if (statuses[iter.first] == ALIVE)
                 numAlive++;
         }
         std::cout << "alive/numGoats: " << numAlive << "/" << numGoats << std::endl;
@@ -151,7 +173,7 @@ void wolf::start() {
             std::cout << "Game over" << std::endl;
             for (auto iter:connections) {
                 iter.first->Close();
-                kill(connections[iter.first]->pid, SIGTERM);
+                kill(iter.second->getPid(), SIGTERM);
             }
             exit(EXIT_SUCCESS);
         }
