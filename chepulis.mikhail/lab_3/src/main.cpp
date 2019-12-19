@@ -85,11 +85,6 @@ int main(int argc, char** argv) {
 
     IStack *my_block_stack = new BlockedStack;
     IStack *my_non_block_stack = new NonBlockedStack;
-    bool is_need_test[4];
-    is_need_test[0] = true; // Тест времени
-    is_need_test[1] = true; // Reader test для различных сочетаний кол-ва читателей/писателей
-    is_need_test[2] = true; // Writer test для различных сочетаний кол-ва читателей/писателей
-    is_need_test[3] = true; // Common test для различных сочетаний кол-ва читателей/писателей
 
     Timer timer;
     ReaderTester R_tester;
@@ -98,10 +93,9 @@ int main(int argc, char** argv) {
     std::cout << std::boolalpha;
 
     testParam params;
-    if(!ParsArgs(argc, argv, params)){
+    if (!ParsArgs(argc, argv, params)) {
         return -1;
     }
-
 
 
     int N, R_num, W_num, max_thread, stack_num, repeat;
@@ -111,33 +105,29 @@ int main(int argc, char** argv) {
     repeat = 10;
 
 
-    if (is_need_test[0]) {
+    R_num = params.R_num;
+    W_num = params.W_num;
+    int local_N;
+    local_N = params.N_big;
+    std::cout << "(" << R_num << ", " << W_num << ", " << local_N << ")" << std::endl;
+    test_res = R_tester.Test(my_block_stack, R_num, local_N, &timer);
+    std::cout << "block\t\tReader test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;
 
-        R_num = params.R_num;
-        W_num = params.W_num;
-        int local_N;
-        local_N = params.N_big;
-        std::cout << "(" << R_num << ", " << W_num << ", " << local_N << ")" << std::endl;
-        test_res = R_tester.Test(my_block_stack, R_num, local_N, &timer);
-        std::cout << "block\t\tReader test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;
+    test_res = W_tester.Test(my_block_stack, W_num, local_N, &timer);
+    std::cout << "block\t\tWriter test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;
 
-        test_res = W_tester.Test(my_block_stack, W_num, local_N, &timer);
-        std::cout << "block\t\tWriter test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;
-
-        test_res = C_tester.Test(my_block_stack, R_num, W_num, local_N, &timer);
-        std::cout << "block\t\tCommon test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;
+    test_res = C_tester.Test(my_block_stack, R_num, W_num, local_N, &timer);
+    std::cout << "block\t\tCommon test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;
 
 
-        test_res = R_tester.Test(my_non_block_stack, R_num, local_N, &timer);
-        std::cout << "non block\tReader test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;
+    test_res = R_tester.Test(my_non_block_stack, R_num, local_N, &timer);
+    std::cout << "non block\tReader test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;
 
-        test_res = W_tester.Test(my_non_block_stack, W_num, local_N, &timer);
-        std::cout << "non block\tWriter test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;
+    test_res = W_tester.Test(my_non_block_stack, W_num, local_N, &timer);
+    std::cout << "non block\tWriter test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;
 
-        test_res = C_tester.Test(my_non_block_stack, R_num, W_num, local_N, &timer);
-        std::cout << "non block\tCommon test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;
-    }
-
+    test_res = C_tester.Test(my_non_block_stack, R_num, W_num, local_N, &timer);
+    std::cout << "non block\tCommon test : " << test_res << "\ttime = " << timer.GetTime() << " sec" << std::endl;
 
 
     IStack *stacks[stack_num];
@@ -152,24 +142,23 @@ int main(int argc, char** argv) {
     bool test_result[stack_num];
 
 
-    if (is_need_test[1]) {
-        for (int k = 0; k < stack_num; k++) {
-            test_result[k] = true;
-        }
-        for (int k = 0; k < stack_num; k++) {
-            for (int j = 1; j < max_thread; j++) {
-                double amount_time = 0;
-                for (int r = 0; r <= repeat; r++) {
-                    test_res = R_tester.Test(stacks[k], j, N, &timer);
-                    test_result[k] = test_result[k] && test_res;
-                    amount_time += timer.GetTime();
-                }
-                R_data_matrix[k][j] = TestData(j, 0, N, test_res, amount_time / repeat, repeat);
+    for (int k = 0; k < stack_num; k++) {
+        test_result[k] = true;
+    }
+    for (int k = 0; k < stack_num; k++) {
+        for (int j = 1; j < max_thread; j++) {
+            double amount_time = 0;
+            for (int r = 0; r <= repeat; r++) {
+                test_res = R_tester.Test(stacks[k], j, N, &timer);
+                test_result[k] = test_result[k] && test_res;
+                amount_time += timer.GetTime();
             }
+            R_data_matrix[k][j] = TestData(j, 0, N, test_res, amount_time / repeat, repeat);
         }
+    }
 
-        std::cout << "R : block    \tRead test : " << test_result[0] << std::endl;
-        std::cout << "R : non block\tRead test : " << test_result[1] << std::endl;
+    std::cout << "R : block    \tRead test : " << test_result[0] << std::endl;
+    std::cout << "R : non block\tRead test : " << test_result[1] << std::endl;
 /*
         std::cout << "------------------------\t\tReader Test\t\t------------------------" << std::endl;
         for (int k = 0; k < stack_num; k++){
@@ -185,90 +174,82 @@ int main(int argc, char** argv) {
             }
         }
 */
+
+
+    for (int k = 0; k < stack_num; k++) {
+        test_result[k] = true;
+    }
+    for (int k = 0; k < stack_num; k++) {
+        for (int i = 1; i < max_thread; i++) {
+            double amount_time = 0;
+            for (int r = 0; r <= repeat; r++) {
+                test_res = W_tester.Test(stacks[k], i, N, &timer);
+                test_result[k] = test_result[k] && test_res;
+                amount_time += timer.GetTime();
+            }
+            W_data_matrix[k][i] = TestData(0, i, N, test_res, amount_time / repeat, repeat);
+
+        }
     }
 
-    if (is_need_test[2]) {
-        for (int k = 0; k < stack_num; k++) {
-            test_result[k] = true;
-        }
-        for (int k = 0; k < stack_num; k++) {
-            for (int i = 1; i < max_thread; i++) {
+    std::cout << "W : block    \tWriter test : " << test_result[0] << std::endl;
+    std::cout << "W : non block\tWriter test : " << test_result[1] << std::endl;
+
+    for (int k = 0; k < stack_num; k++) {
+        test_result[k] = true;
+    }
+    for (int k = 0; k < stack_num; k++) {
+        for (int i = 1; i < max_thread; i++) {
+            R_num = max_thread - i;
+            for (int j = 1; j < R_num; j++) {
                 double amount_time = 0;
                 for (int r = 0; r <= repeat; r++) {
-                    test_res = W_tester.Test(stacks[k], i, N, &timer);
+                    test_res = C_tester.Test(stacks[k], i, j, N, &timer);
                     test_result[k] = test_result[k] && test_res;
                     amount_time += timer.GetTime();
                 }
-                W_data_matrix[k][i] = TestData(0, i, N, test_res, amount_time / repeat, repeat);
-
-            }
-        }
-
-        std::cout << "W : block    \tWriter test : " << test_result[0] << std::endl;
-        std::cout << "W : non block\tWriter test : " << test_result[1] << std::endl;
-    }
-
-    if (is_need_test[3]) {
-        for (int k = 0; k < stack_num; k++) {
-            test_result[k] = true;
-        }
-        for (int k = 0; k < stack_num; k++) {
-            for (int i = 1; i < max_thread; i++) {
-                R_num = max_thread - i;
-                for (int j = 1; j < R_num; j++) {
-                    double amount_time = 0;
-                    for (int r = 0; r <= repeat; r++) {
-                        test_res = C_tester.Test(stacks[k], i, j, N, &timer);
-                        test_result[k] = test_result[k] && test_res;
-                        amount_time += timer.GetTime();
-                    }
-                    C_data_matrix[k][i][j] = TestData(i, j, N, test_res, amount_time / repeat, repeat);
-                }
-            }
-        }
-
-        std::cout << "C : block    \tCommon test : " << test_result[0] << std::endl;
-        std::cout << "C : non block\tCommon test : " << test_result[1] << std::endl;
-    }
-
-    if (is_need_test[1]) {
-
-        std::cout << "-------------------------------------------------------------------------" << std::endl;
-        std::cout << "                               Reader Test                               " << std::endl;
-        std::cout << "-------------------------------------------------------------------------" << std::endl;
-        for (int k = 0; k < stack_num; k++) {
-            PrintTitle(k);
-            PrintDataHeader();
-            for (int i = 1; i < max_thread; i++) {
-                PrintData(R_data_matrix[k][i]);
+                C_data_matrix[k][i][j] = TestData(i, j, N, test_res, amount_time / repeat, repeat);
             }
         }
     }
-    if (is_need_test[2]) {
-        std::cout << "-------------------------------------------------------------------------" << std::endl;
-        std::cout << "                               Writer Test                               " << std::endl;
-        //std::cout << "------------------------\t\tWriter Test\t\t------------------------" << std::endl;
-        std::cout << "-------------------------------------------------------------------------" << std::endl;
-        for (int k = 0; k < stack_num; k++) {
-            PrintTitle(k);
-            PrintDataHeader();
-            for (int i = 1; i < max_thread; i++) {
-                PrintData(W_data_matrix[k][i]);
-            }
+
+    std::cout << "C : block    \tCommon test : " << test_result[0] << std::endl;
+    std::cout << "C : non block\tCommon test : " << test_result[1] << std::endl;
+
+
+    std::cout << "-------------------------------------------------------------------------" << std::endl;
+    std::cout << "                               Reader Test                               " << std::endl;
+    std::cout << "-------------------------------------------------------------------------" << std::endl;
+    for (int k = 0; k < stack_num; k++) {
+        PrintTitle(k);
+        PrintDataHeader();
+        for (int i = 1; i < max_thread; i++) {
+            PrintData(R_data_matrix[k][i]);
         }
     }
-    if (is_need_test[3]) {
-        std::cout << "-------------------------------------------------------------------------" << std::endl;
-        std::cout << "                               Common Test                               " << std::endl;
-        std::cout << "-------------------------------------------------------------------------" << std::endl;
-        for (int k = 0; k < stack_num; k++) {
-            PrintTitle(k);
-            PrintDataHeader();
-            for (int i = 1; i < max_thread; i++) {
-                R_num = max_thread - i;
-                for (int j = 1; j < R_num; j++) {
-                    PrintData(C_data_matrix[k][i][j]);
-                }
+
+    std::cout << "-------------------------------------------------------------------------" << std::endl;
+    std::cout << "                               Writer Test                               " << std::endl;
+    //std::cout << "------------------------\t\tWriter Test\t\t------------------------" << std::endl;
+    std::cout << "-------------------------------------------------------------------------" << std::endl;
+    for (int k = 0; k < stack_num; k++) {
+        PrintTitle(k);
+        PrintDataHeader();
+        for (int i = 1; i < max_thread; i++) {
+            PrintData(W_data_matrix[k][i]);
+        }
+    }
+
+    std::cout << "-------------------------------------------------------------------------" << std::endl;
+    std::cout << "                               Common Test                               " << std::endl;
+    std::cout << "-------------------------------------------------------------------------" << std::endl;
+    for (int k = 0; k < stack_num; k++) {
+        PrintTitle(k);
+        PrintDataHeader();
+        for (int i = 1; i < max_thread; i++) {
+            R_num = max_thread - i;
+            for (int j = 1; j < R_num; j++) {
+                PrintData(C_data_matrix[k][i][j]);
             }
         }
     }
