@@ -14,6 +14,8 @@ template<typename T>
 class CompareTest: public Test<T>
 {
 private:
+  friend TestCreator<T>;
+
   enum class DataType
   {
     RANDOM,
@@ -37,9 +39,9 @@ private:
   void createSetOfTests(const TestCreator<T>& creator, const Type& set_type,
     const TestType& test_type, const DataType& type, const data_set<T>& data);
 
-public:
   CompareTest(int times, const Type& set_type1, const Type& set_type2, int writers_num, int records_num,
-    int readers_num, int reads_num, const std::string& name) noexcept;
+              int readers_num, int reads_num, const std::string& name) noexcept;
+public:
   void run() override;
   void check() const override;
   ~CompareTest() override;

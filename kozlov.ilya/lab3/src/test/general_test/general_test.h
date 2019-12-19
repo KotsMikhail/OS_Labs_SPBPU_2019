@@ -7,9 +7,14 @@
 #include "../test.h"
 
 template<typename T>
+class TestCreator;
+
+template<typename T>
 class GeneralTest: public Test<T>
 {
 private:
+  friend TestCreator<T>;
+
   Set<T>* curr_set;
   int writers_num;
   int records_num;
@@ -20,15 +25,16 @@ private:
   const std::string tag = "GeneralTest";
 
 public:
-  GeneralTest(Set<T>* set, int writers_num, int records_num,
-              int readers_num, int reads_num, const std::string& name) noexcept;
-  GeneralTest(const data_set<T>& data_sets, Set<T>* set, int writers_num, int records_num,
-              int readers_num, int reads_num, const std::string& name) noexcept;
   void run() override;
   void check() const override;
   ~GeneralTest() override;
 
 private:
+  GeneralTest(Set<T>* set, int writers_num, int records_num,
+              int readers_num, int reads_num, const std::string& name) noexcept;
+  GeneralTest(const data_set<T>& data_sets, Set<T>* set, int writers_num, int records_num,
+              int readers_num, int reads_num, const std::string& name) noexcept;
+
   static std::vector<int> check_array;
   static void* threadWriteFunc(void *param);
   static void* threadReadFunc(void *param);

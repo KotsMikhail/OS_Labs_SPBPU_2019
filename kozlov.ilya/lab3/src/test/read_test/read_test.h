@@ -6,9 +6,14 @@
 #include "../test.h"
 
 template<typename T>
+class TestCreator;
+
+template<typename T>
 class ReadTest: public Test<T>
 {
 private:
+  friend TestCreator<T>;
+
   Set<T>* curr_set;
   int readers_num;
   int reads_num;
@@ -16,13 +21,14 @@ private:
   const std::string tag = "ReadTest";
 
 public:
-  ReadTest(Set<T>* set, int readers_num, int reads_num, const std::string& name) noexcept;
-  ReadTest(const data_set<T>& data_sets, Set<T>* set, int readers_num, int reads_num, const std::string& name) noexcept;
   void run() override;
   void check() const override;
   ~ReadTest() override;
 
 private:
+  ReadTest(Set<T>* set, int readers_num, int reads_num, const std::string& name) noexcept;
+  ReadTest(const data_set<T>& data_sets, Set<T>* set, int readers_num, int reads_num, const std::string& name) noexcept;
+
   static void* threadFunc(void *param);
 };
 

@@ -27,9 +27,10 @@ bool Tester<T>::loadConfig(const std::string& file_name)
     int rec_n = std::stoi(dict.at(Parser::ConfigName::RECORDS_NUM));
     int rd_n = std::stoi(dict.at(Parser::ConfigName::READERS_NUM));
     int reads_n = std::stoi(dict.at(Parser::ConfigName::READS_NUM));
+    int times = std::stoi(dict.at(Parser::ConfigName::TIMES));
     if (wr_n > 0 && rec_n > 0 && rd_n > 0 && reads_n > 0)
     {
-      auto creator = TestCreator<T>(wr_n, rec_n, rd_n, reads_n);
+      auto creator = TestCreator<T>(wr_n, rec_n, rd_n, reads_n, times);
       setTests(&creator);
       return true;
     }
@@ -54,7 +55,7 @@ void Tester<T>::setTests(TestCreator<T>* creator)
   tests.push_back(creator->get(Type::LAZY, TestType::WRITE, "LazyList writing test"));
   tests.push_back(creator->get(Type::LAZY, TestType::READ, "LazyList reading test"));
   tests.push_back(creator->get(Type::LAZY, TestType::GENERAL, "LazyList general test"));
-  tests.push_back(creator->compare(10, Type::LAZY, Type::OPTIMISTIC, "Lazy vs Optimistic compare test"));
+  tests.push_back(creator->compare(Type::LAZY, Type::OPTIMISTIC, "Lazy vs Optimistic compare test"));
 }
 
 template<typename T>

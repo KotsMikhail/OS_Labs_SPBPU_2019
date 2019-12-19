@@ -7,15 +7,21 @@
 #include <node_collector.h>
 
 template<typename T>
+class SetCreator;
+
+template<typename T>
 class LazyList: public Set<T>
 {
 private:
+  friend SetCreator<T>;
+
   LazyNode<T>* head;
   NodeCollector<LazyNode<T>> collector;
   const std::string tag = "LazyList";
 
-public:
   LazyList(LazyNode<T>* head, const NodeCollector<LazyNode<T>>& collector);
+
+public:
   ~LazyList();
   bool add(T element) override;
   bool remove(T element) override;

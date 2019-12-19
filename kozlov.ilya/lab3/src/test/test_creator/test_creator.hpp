@@ -2,8 +2,8 @@
 #include "../compare_test/compare_test.h"
 
 template<typename T>
-TestCreator<T>::TestCreator(int writers_num, int records_num, int readers_num, int reads_num) noexcept:
-  writers_num(writers_num), records_num(records_num), readers_num(readers_num), reads_num(reads_num)
+TestCreator<T>::TestCreator(int writers_num, int records_num, int readers_num, int reads_num, int times) noexcept:
+  writers_num(writers_num), records_num(records_num), readers_num(readers_num), reads_num(reads_num), times(times)
 {
   struct rlimit lim;
   getrlimit(RLIMIT_NPROC, &lim);
@@ -68,7 +68,7 @@ Test<T>* TestCreator<T>::get(const Type& set_type, const TestType& type, const s
 }
 
 template<typename T>
-Test<T>* TestCreator<T>::compare(int times, const Type& set_type1, const Type& set_type2, const std::string& name) const
+Test<T>* TestCreator<T>::compare(const Type& set_type1, const Type& set_type2, const std::string& name) const
 {
   if (writers_num * records_num == readers_num * reads_num &&
     writers_num + readers_num <= max_threads)

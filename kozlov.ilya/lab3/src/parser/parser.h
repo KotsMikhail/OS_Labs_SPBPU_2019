@@ -26,7 +26,8 @@ public:
     WRITERS_NUM,
     RECORDS_NUM,
     READERS_NUM,
-    READS_NUM
+    READS_NUM,
+    TIMES
   };
 
   static std::map<ConfigName, std::string> parse(std::ifstream& in_file);

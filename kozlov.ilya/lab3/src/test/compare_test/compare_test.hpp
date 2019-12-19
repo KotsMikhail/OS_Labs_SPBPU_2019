@@ -50,7 +50,7 @@ CompareTest<T>::CompareTest(int times, const Type& set_type1, const Type& set_ty
   readers_num(readers_num), reads_num(reads_num), times(times), succeeded_count(0)
 {
   Logger::logDebug(tag, "constructing...");
-  auto creator = TestCreator<T>(writers_num, records_num, readers_num, reads_num);
+  auto creator = TestCreator<T>(writers_num, records_num, readers_num, reads_num, times);
   auto random_data = createRandom();
   auto fixed_data = createFixed();
   createSetOfTests(creator, set_type1, TestType::WRITE, DataType::RANDOM, random_data);

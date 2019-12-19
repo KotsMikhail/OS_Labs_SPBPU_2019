@@ -6,15 +6,21 @@
 #include <node_collector.h>
 
 template<typename T>
+class SetCreator;
+
+template<typename T>
 class OptimisticList: public Set<T>
 {
 private:
+  friend SetCreator<T>;
+
   Node<T>* head;
   NodeCollector<Node<T>> collector;
   const std::string tag = "OptimisticList";
 
-public:
   OptimisticList(Node<T>* head, const NodeCollector<Node<T>>& collector);
+
+public:
   ~OptimisticList();
   bool add(T element) override;
   bool remove(T element) override;

@@ -9,7 +9,8 @@ std::map<std::string, Parser::ConfigName> const Parser::config_map =
   {"writers_num", ConfigName::WRITERS_NUM},
   {"records_num", ConfigName::RECORDS_NUM},
   {"readers_num", ConfigName::READERS_NUM},
-  {"reads_num", ConfigName::READS_NUM}
+  {"reads_num", ConfigName::READS_NUM},
+  {"times", ConfigName::TIMES}
 };
 
 std::map<Parser::ConfigName, std::string> Parser::parse(std::ifstream& in_file)
