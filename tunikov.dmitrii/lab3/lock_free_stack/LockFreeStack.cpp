@@ -3,8 +3,8 @@
 //
 
 #include <new>
-#include <iostream>
 #include "LockFreeStack.h"
+#include "../utils/exceptions.h"
 
 void LockFreeStack::push(int const& data) {
     CounterNodePtr new_node{};
@@ -28,7 +28,7 @@ void LockFreeStack::increase_head_count(CounterNodePtr& old_counter) {
     old_counter.m_external_count = new_counter.m_external_count;
 }
 
-std::shared_ptr<int> LockFreeStack::pop() {
+int LockFreeStack::pop() {
     CounterNodePtr old_head{};
     __atomic_load(&head, &old_head, __ATOMIC_RELAXED);
     while(true)
@@ -36,12 +36,11 @@ std::shared_ptr<int> LockFreeStack::pop() {
         increase_head_count(old_head);
         LockFreeNode* const ptr = old_head.m_ptr;
         if (!ptr) {
-            return std::shared_ptr<int>();
+            throw EmptyStackException("stack is empty");
         }
 
         if (__atomic_compare_exchange(&head, &old_head, &ptr->m_next, false, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
-            std::shared_ptr<int> res;
-            res.swap(ptr->m_data);
+            int res = ptr->m_data;
             int const count_increase = old_head.m_external_count - 2;
             if (__atomic_fetch_add(&ptr->m_internal_count, count_increase, __ATOMIC_RELEASE) == -count_increase) {
                 delete ptr;
@@ -56,7 +55,10 @@ std::shared_ptr<int> LockFreeStack::pop() {
 }
 
 LockFreeStack::~LockFreeStack() {
-    while(LockFreeStack::pop());
+    while(!LockFreeStack::empty())
+    {
+        LockFreeStack::pop();
+    }
 }
 
 bool LockFreeStack::empty() {

@@ -4,6 +4,7 @@
 
 #include "LockStack.h"
 #include <stdexcept>
+#include "../utils/exceptions.h"
 
 int Stack::m_read_timeout;
 
@@ -33,17 +34,17 @@ void LockStack::push(const int &val) {
     pthread_mutex_unlock(&m_mutex);
 }
 
-std::shared_ptr<int> LockStack::pop() {
+int LockStack::pop() {
     timed_lock();
 
     if (head == nullptr)
     {
         pthread_mutex_unlock(&m_mutex);
-        return  std::shared_ptr<int>();
+        throw EmptyStackException("stack is empty");
     }
 
     Node* old_head = head;
-    std::shared_ptr<int> val = std::make_shared<int>(*(old_head->m_data));
+    int val = old_head->m_data;
 
     if (old_head->m_next)
         head = old_head->m_next;
@@ -57,7 +58,7 @@ std::shared_ptr<int> LockStack::pop() {
 }
 
 LockStack::Node::Node(const int &data) {
-    m_data = std::make_shared<int>(data);
+    m_data = data;
 }
 
 void LockStack::Node::delete_nodes(Node *node) {

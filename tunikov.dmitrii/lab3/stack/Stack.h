@@ -18,7 +18,7 @@ class Stack
 {
 public:
     static int m_read_timeout;
-    virtual std::shared_ptr<int> pop() = 0;
+    virtual int pop() = 0;
     virtual void push(const int& val) = 0;
     virtual bool empty() = 0;
     virtual ~Stack();

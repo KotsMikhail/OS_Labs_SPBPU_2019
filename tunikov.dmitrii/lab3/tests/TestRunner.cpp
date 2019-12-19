@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include "../lock_free_stack/LockFreeStack.h"
 #include "../utils/utils.h"
+#include "../utils/exceptions.h"
 #include <cstdio>
 #include <ctime>
 
@@ -192,10 +193,11 @@ void *TestRunner::readFromStack(void *arg) {
         if (!s->empty()) {
             try {
                 auto val = s->pop();
-                if (val != std::shared_ptr<int>())
-                {
-                    test_vec.emplace_back(*val);
-                }
+                test_vec.emplace_back(val);
+            }
+            catch (const EmptyStackException& e)
+            {
+                continue;
             }
             catch (const std::runtime_error &e) {
                 pthread_yield();
