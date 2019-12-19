@@ -5,14 +5,30 @@
 #ifndef LAB2_GOAT_H
 #define LAB2_GOAT_H
 #include "Message.h"
-#include "connection_info.h"
+#include "conn.h"
+#include <unistd.h>
+#include <semaphore.h>
 
 class goat {
 public:
-    static int start(const connection_info &c_inf);
+    void start();
+    goat(conn* connection, sem_t* semaphore, Status st = Status::ALIVE) {
+        this->connection = connection;
+        this->semaphore = semaphore;
+        this->status = st;
+    }
+    Status get_status(){ return status; }
+    conn* get_connection(){ return connection; }
+    sem_t* get_semaphore(){ return semaphore; }
+    pid_t get_pid(){ return pid; }
+    void set_pid(pid_t p) { this->pid = p; }
+
 private:
-    static Status status;
-    static int generate_rand_i(int max);
+    pid_t pid;
+    Status status;
+    conn* connection;
+    sem_t* semaphore;
+    int generate_rand_i(int max);
 };
 
 

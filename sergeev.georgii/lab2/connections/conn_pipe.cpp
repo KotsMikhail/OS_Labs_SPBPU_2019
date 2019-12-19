@@ -9,26 +9,35 @@
 #include <unistd.h>
 
 
-std::map<int, int *> pipes;
+bool conn::Read(void *buf, size_t count) {
+    if (read(fd[0], buf, count) != -1){
+        return true;
+    }
+    std::cout << "Error on reading message" << std::endl;
 
-void conn::Read(size_t id, void *buf, size_t count) {
-    read(pipes[id][0], buf, count);
+    return false;
 }
 
-void conn::Write(size_t id, void *buf, size_t count) {
-    write(pipes[id][1], buf, count);
+bool conn::Write(void *buf, size_t count) {
+    if (write(fd[1], buf, count) != -1){
+        return true;
+    }
+    std::cout << "Error on writing message" << std::endl;
+    return false;
 }
 
-void conn::Open(size_t id) {
-    int *fd = (int *) malloc(2 * sizeof(int));
-    int pipefd[2];
-    pipe(pipefd);
-    fd[0] = pipefd[0];
-    fd[1] = pipefd[1];
-    pipes.insert(std::pair<int, int *>(id, fd));
+bool conn::Open(size_t id) {
+    fd = new int[2];
+    if (fd != nullptr) {
+        if (pipe(fd) != -1){
+            return true;
+        }
+    }
+    std::cout << "Error on opening connection for client " << id << std::endl;
+    return false;
 }
 
-void conn::Close(size_t id){
-    close(pipes[id][0]);
-    close(pipes[id][1]);
+void conn::Close(){
+    close(fd[0]);
+    close(fd[1]);
 }

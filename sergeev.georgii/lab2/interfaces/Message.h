@@ -7,12 +7,12 @@
 
 #include <stdint.h>
 
-enum Status {
+enum class Status {
     ALIVE,
     DEAD
 };
 
-enum Owner {
+enum class Owner {
     WOLF,
     GOAT
 };
@@ -22,7 +22,7 @@ struct message {
     Status status;
     int number;
 
-    message(Owner ow = WOLF, int num = 0, Status st = ALIVE) : owner(ow), status(st), number(num) {}
+    message(Owner ow = Owner::WOLF, int num = 0, Status st = Status::ALIVE) : owner(ow), status(st), number(num) {}
 };
 
 
