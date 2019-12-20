@@ -10,13 +10,19 @@
 off_t length = 1024;
 
 bool conn::Read(void *buf, size_t count) {
-    memcpy(buf, fd, count);
+    if (memcpy(buf, fd, count) == nullptr) {
+        std::cout << "ERROR: reading failed" << std::endl;
+        return false;
+    }
     return true;
 
 }
 
 bool conn::Write(void *buf, size_t count) {
-    memcpy(fd, buf, count);
+    if (memcpy(fd, buf, count) == nullptr) {
+        std::cout << "ERROR: writing failed" << std::endl;
+        return false;
+    }
     return true;
 
 }

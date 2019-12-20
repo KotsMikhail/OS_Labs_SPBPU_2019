@@ -17,6 +17,7 @@ bool conn::Open(size_t id) {
     std::string nameSTR = "/lab1queue" + std::to_string(id);
     mq_unlink(nameSTR.c_str());
     if ((*fd = mq_open(nameSTR.c_str(), O_CREAT | O_RDWR, mode, &attr)) == -1) {
+        delete(fd);
         std::cout << "ERROR: creating failed with error = " << strerror(errno) << std::endl;
         return false;
     }
@@ -44,4 +45,5 @@ bool conn::Write(void *buf, size_t count) {
 void conn::Close() {
     mq_unlink(name);
     mq_close(*fd);
+    delete(fd);
 }

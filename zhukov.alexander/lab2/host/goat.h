@@ -15,6 +15,7 @@ public:
     Status getStatus();
     sem_t* getSemaphore();
     pid_t getPid();
+    conn* getConnection();
     void setPid(pid_t p){pid = p;}
 private:
     Status status;

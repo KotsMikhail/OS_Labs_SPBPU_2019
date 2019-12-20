@@ -12,10 +12,10 @@ int goat::start() {
         sem_wait(getSemaphore());
         message *buf = new message();
         if (connection->Read(buf)) {
-            if (buf->owner == WOLF) {
+            if (buf->owner == Owner::WOLF) {
                 status = buf->status;
-                int num = GenerateRandNum(status == ALIVE ? 100 : 50);
-                buf = new message(GOAT, num, status);
+                int num = GenerateRandNum(status == Status::ALIVE ? 100 : 50);
+                buf = new message(Owner::GOAT, num, status);
                 connection->Write(buf);
             } else {
                 connection->Write(buf);
@@ -38,3 +38,5 @@ Status goat::getStatus() { return status; }
 sem_t *goat::getSemaphore() { return semaphore; }
 
 pid_t goat::getPid() { return pid; }
+
+conn *goat::getConnection() { return connection; }

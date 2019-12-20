@@ -10,7 +10,7 @@ class wolf {
 public:
     static wolf *get_instance();
 
-    static void start();
+    void start();
 
 private:
     wolf();
@@ -19,14 +19,15 @@ private:
 
     static void *WriteGoat(void *param);
 
-    static void CreateGoats();
+    void CreateGoats();
 
     static wolf *instance;
-    static std::map<conn *, goat *> connections;
-    static std::map<conn *, message> messages;
-    static std::map<conn *, Status> statuses;
-    static int numGoats;
-    static int wolfNumber;
+
+    void threadsWork(void *(*pFunction)(void *));
+
+    std::map<goat *, message> clients;
+    int numGoats;
+    int wolfNumber;
     static const int TIMEOUT = 5;
 };
 
