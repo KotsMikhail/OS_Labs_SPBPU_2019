@@ -28,7 +28,7 @@ public:
 
 
     bool Test(IStack *my_stack, int num_of_reader, int num_of_writer, int num_of_elements, Timer *timer = nullptr,
-              bool is_need_print = false);;
+              bool is_need_print = false);
 
 private:
     static void *Read(void *arg);

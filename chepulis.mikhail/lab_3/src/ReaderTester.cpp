@@ -16,7 +16,6 @@ bool ReaderTester::Test(IStack* my_stack, int num_of_threads, int num_of_element
 
     bool result = true;
     pthread_t *threads = new pthread_t[num_of_threads];
-
     for (int i = 0; i < num_of_elements; i++) {
         my_stack->push(i);
     }
@@ -24,7 +23,6 @@ bool ReaderTester::Test(IStack* my_stack, int num_of_threads, int num_of_element
     for (int i = 0; i < num_of_elements; i++) {
         array[i] = 0;
     }
-
     thread_args *arg_array = new thread_args[num_of_threads];
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -38,16 +36,13 @@ bool ReaderTester::Test(IStack* my_stack, int num_of_threads, int num_of_element
     if (timer) {
         timer->Start();
     }
-
     start_flag = true;
-
     for (int i = 0; i < num_of_threads; i++) {
         pthread_join(threads[i], NULL);
     }
     if (timer) {
         timer->Stop();
     }
-
     int expected_value = 1;
     int cur_value;
     for (int i = 0; i < num_of_elements; i++) {

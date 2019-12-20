@@ -10,16 +10,18 @@
 void NonBlockedStack::increase_head_count(NonBlockedStack::CountedNodePtr &old_counter) {
     CountedNodePtr new_counter;
 
-    struct timespec timer;
-    bool flag = true;
+    //struct timespec timer;
+    //bool flag = true;
     do {
         new_counter = old_counter;
         ++new_counter.external_count;
+        /*
         if (IsTimeout(&timer, flag)) {
             /////////////////////////////////////////////////////////////////////////////////////////////////////
             throw timeout_stack();
         }
         flag = false;
+        */
     } while (!__atomic_compare_exchange(&head, &old_counter, &new_counter, false, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
     //} while (!__atomic_compare_exchange(&head, &old_counter, &new_counter, true, __ATOMIC_RELEASE, __ATOMIC_RELAXED));
 
@@ -49,16 +51,18 @@ void NonBlockedStack::push(int const &data) {
     new_node.external_count = 1;
     __atomic_load(&head, &new_node.ptr->next, __ATOMIC_RELAXED);
 
-    struct timespec timer;
-    bool flag = true;
+    //struct timespec timer;
+    //bool flag = true;
     while (!__atomic_compare_exchange(&head, &new_node.ptr->next, &new_node, true, __ATOMIC_RELEASE,
                                       __ATOMIC_RELAXED)) {
+        /*
         if (IsTimeout(&timer, flag)) {
             /////////////////////////////////////////////////////////////////////////////////////////////////////
             free(new_node.ptr);
             throw timeout_stack();
         }
         flag = false;
+         */
     }
 }
 
@@ -66,8 +70,8 @@ void NonBlockedStack::pop(int &result) {
 
     CountedNodePtr old_head;
     __atomic_load(&head, &old_head, __ATOMIC_RELAXED);
-    struct timespec timer;
-    bool flag = true;
+    //struct timespec timer;
+    //bool flag = true;
 
     while (true) {
         increase_head_count(old_head);
@@ -89,11 +93,13 @@ void NonBlockedStack::pop(int &result) {
             __atomic_load_n(&ptr->internal_count, __ATOMIC_ACQUIRE);
             delete ptr;
         }
+        /*
         if (IsTimeout(&timer, flag)) {
             /////////////////////////////////////////////////////////////////////////////////////////////////////
             throw timeout_stack();
         }
         flag = false;
+         */
     }
 }
 
@@ -113,7 +119,6 @@ bool NonBlockedStack::IsTimeout(timespec *timer, bool flag) {
     clock_gettime(CLOCK_REALTIME, &cur_time);
     if (cur_time.tv_sec - timer->tv_sec > TIMEOUT) {
         return true;
-        //throw timeout_stack();
     }
     return false;
 }

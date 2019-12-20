@@ -27,7 +27,9 @@ private:
     void timed_lock();
 
 public:
-    BlockedStack() : head(nullptr) {}
+    BlockedStack() : head(nullptr) {
+        pthread_mutex_init(&my_lock, nullptr);
+    }
 
     ~BlockedStack();
 

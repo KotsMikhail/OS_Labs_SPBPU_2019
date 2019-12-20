@@ -6,22 +6,22 @@
 #include "Timer.h"
 #include <iostream>
 #include <pthread.h>
+#include <cmath>
 
 void *WriterTester::Write(void *arg) {
 
     thread_args *args = (thread_args *) arg;
     IStack *stack = args->stack;
-    int N = args->N;
+    int start_index = args->start_index;
+    int end_index = args->end_index;
     bool is_need_print = args->is_need_print;
     int id = args->id;
-    int i = 0;
     bool *start_flag = args->start_flag;
     while (!(*start_flag));
 
-    while (i < N) {
+    for (int i = start_index; i < end_index; i++) {
         try {
             stack->push(i);
-            i++;
         } catch (IStack::empty_stack &e) {
             if (is_need_print) {
                 std::cout << id << " : " << e.what() << std::endl;
@@ -47,10 +47,10 @@ bool WriterTester::Test(IStack *my_stack, int num_of_threads, int num_of_element
         return true;
     }
     bool result = true;
-    pthread_t *threads =  new pthread_t[num_of_threads];
+    pthread_t *threads = new pthread_t[num_of_threads];
 
 
-    array =  new int[num_of_elements];
+    array = new int[num_of_elements];
     for (int i = 0; i < num_of_elements; i++) {
         array[i] = 0;
     }
@@ -61,8 +61,12 @@ bool WriterTester::Test(IStack *my_stack, int num_of_threads, int num_of_element
 
     bool start_flag = false;
 
+    std::vector<std::pair<int, int>> sectors = GetSectors(num_of_elements, num_of_threads);
+    int start, end;
     for (int i = 0; i < num_of_threads; i++) {
-        arg_array[i] = thread_args(my_stack, num_of_elements, is_need_print, i, &start_flag);
+        start = sectors[i].first;
+        end = sectors[i].second;
+        arg_array[i] = thread_args(my_stack, start, end, is_need_print, i, &start_flag);
         pthread_create(&(threads[i]), &attr, function, &(arg_array[i]));
     }
 
@@ -96,7 +100,7 @@ bool WriterTester::Test(IStack *my_stack, int num_of_threads, int num_of_element
         }
     }
 
-    int expected_value = num_of_threads;
+    int expected_value = 1;
     int cur_value;
     for (int i = 0; i < num_of_elements; i++) {
         cur_value = array[i] - expected_value;
@@ -108,7 +112,31 @@ bool WriterTester::Test(IStack *my_stack, int num_of_threads, int num_of_element
     }
 
     delete[] threads;
-    delete[] array ;
+    delete[] array;
     delete[] arg_array;
+    return result;
+}
+
+std::vector<std::pair<int, int>> WriterTester::GetSectors(int length, int num_of_thread) {
+    std::vector<std::pair<int, int>> result;
+
+    if (num_of_thread > length) {
+        std::cout << "num of writer > array length : " << num_of_thread << " > " << length << std::endl;
+    }
+
+    int cur_length = length;
+    int begin = 0;
+    int end = 0;
+    double cur_step = ((double) length) / num_of_thread;
+    int cur_num = num_of_thread;
+    for (int i = 0; i < length; i++) {
+        cur_step = ceil(((double) cur_length) / cur_num);
+        end = begin + cur_step;
+        result.emplace_back(std::pair<int, int>(begin, end));
+        cur_length -= cur_step;
+        cur_num--;
+        begin = end;
+    }
+
     return result;
 }

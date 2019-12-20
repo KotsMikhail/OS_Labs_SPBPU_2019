@@ -13,8 +13,8 @@
 void BlockedStack::push(int const &data) {
     // блокируем на время всей функции
 
-    timed_lock();
-    //pthread_mutex_lock(&my_lock);
+    //timed_lock();
+    pthread_mutex_lock(&my_lock);
     node *const new_node = new node(data);
     new_node->next = head;
     //sleep(1);
@@ -24,8 +24,8 @@ void BlockedStack::push(int const &data) {
 
 void BlockedStack::pop(int &result) {
     // блокируем на время всей функции
-    timed_lock();
-    //pthread_mutex_lock(&my_lock);
+    //timed_lock();
+    pthread_mutex_lock(&my_lock);
     // в начале проверим, не пустой ли стек
     if (head == nullptr) {
         pthread_mutex_unlock(&my_lock);
@@ -44,7 +44,7 @@ void BlockedStack::timed_lock() {
     struct timespec cur_time;
     bool init_flag = true;
 
-    while (pthread_mutex_trylock(&my_lock)) {
+    while (pthread_mutex_trylock(&my_lock) != 0 ) {
         if (init_flag) {
             clock_gettime(CLOCK_REALTIME, &deadline);
             deadline.tv_sec += TIMEOUT;
@@ -73,9 +73,10 @@ BlockedStack::~BlockedStack() {
 }
 
 bool BlockedStack::empty() {
+    //timed_lock();
     pthread_mutex_lock(&my_lock);
     bool res;
-    res = head == 0;
+    res = head == nullptr;
     pthread_mutex_unlock(&my_lock);
     return res;
 }

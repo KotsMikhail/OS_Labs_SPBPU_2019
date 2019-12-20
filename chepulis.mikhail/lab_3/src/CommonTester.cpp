@@ -70,10 +70,10 @@ void *CommonTester::Write(void *arg) {
     while (i < end_index) {
         try {
             stack->push(i);
-            i++;
             if (is_need_print) {
                 std::cout << id << " : " << "pushed (" << i << ")" << std::endl;
             }
+            i++;
         } catch (IStack::empty_stack &e) {
             if (is_need_print) {
                 std::cout << id << " : " << e.what() << std::endl;
@@ -149,6 +149,7 @@ bool CommonTester::Test(IStack *my_stack, int num_of_reader, int num_of_writer, 
 
     // выстаялем флаг, что писатели закончили, а значит новые элементы в стеке больше не появятся
     writers_work_done = true;
+    //std::cout <<" work is done" << std::endl;
 
 
     // ждём когда все читатели закончат своб работу
