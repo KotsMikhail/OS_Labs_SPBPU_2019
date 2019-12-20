@@ -29,6 +29,8 @@ private:
 
     Node *head;
 
+    void find(Node* &pred, Node* &curr, size_t key);
+
 public:
     FineList();
 

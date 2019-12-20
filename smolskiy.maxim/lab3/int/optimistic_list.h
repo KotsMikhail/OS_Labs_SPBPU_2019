@@ -34,6 +34,7 @@ private:
     pthread_mutex_t mutex;
 
     bool validate(Node *pred, Node *curr);
+    void find(Node* &pred, Node* &curr, size_t key);
 
 public:
     OptimisticList();

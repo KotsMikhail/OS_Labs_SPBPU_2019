@@ -50,6 +50,16 @@ bool OptimisticList<T>::validate(Node *pred, Node *curr)
 }
 
 template <typename T>
+void OptimisticList<T>::find(Node* &pred, Node* &curr, size_t key)
+{
+    while (curr->key < key)
+    {
+        pred = curr;
+        curr = curr->next;
+    }
+}
+
+template <typename T>
 bool OptimisticList<T>::add(const T &item)
 {
     size_t key = std::hash<T>()(item);
@@ -57,13 +67,7 @@ bool OptimisticList<T>::add(const T &item)
     while (true)
     {
         Node *pred = head, *curr = pred->next;
-
-        while (curr->key <= key)
-        {
-            pred = curr;
-            curr = curr->next;
-        }
-
+        find(pred, curr, key);
         pred->lock();
         curr->lock();
 
@@ -106,13 +110,7 @@ bool OptimisticList<T>::remove(const T &item)
     while (true)
     {
         Node *pred = head, *curr = pred->next;
-
-        while (curr->key < key)
-        {
-            pred = curr;
-            curr = curr->next;
-        }
-
+        find(pred, curr, key);
         pred->lock();
         curr->lock();
 
@@ -151,13 +149,7 @@ bool OptimisticList<T>::contains(const T &item)
     while (true)
     {
         Node *pred = head, *curr = pred->next;
-
-        while (curr->key < key)
-        {
-            pred = curr;
-            curr = curr->next;
-        }
-
+        find(pred, curr, key);
         pred->lock();
         curr->lock();
 

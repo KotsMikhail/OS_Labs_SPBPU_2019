@@ -4,6 +4,8 @@
 
 using namespace std;
 
+using namespace Tests;
+
 const int NUMBER_TIMES = 10;
 
 int CheckArgument(char *arg)

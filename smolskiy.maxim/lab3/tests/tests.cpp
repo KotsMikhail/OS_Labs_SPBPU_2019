@@ -14,6 +14,8 @@
 using namespace std;
 using namespace std::chrono;
 
+using namespace Tests;
+
 class ThreadInfo
 {
 public:
@@ -136,7 +138,7 @@ void PrintTestResult(const string &type, SetType setType, DataType dataType, boo
     cout << CreateNameTest(type, setType, dataType) << (isSuccess ? ": SUCCESS " : ": FAIL ") << time << "." << endl;
 }
 
-void RunTestWriters(SetType setType, DataType dataType, int numberWriters, int numberRecords, int numberTimes)
+void Tests::RunTestWriters(SetType setType, DataType dataType, int numberWriters, int numberRecords, int numberTimes)
 {
     bool isSuccess = true;
     double timeTotal = 0;
@@ -161,7 +163,7 @@ void RunTestWriters(SetType setType, DataType dataType, int numberWriters, int n
     PrintTestResult("test writers", setType, dataType, isSuccess, timeTotal / numberTimes);
 }
 
-void RunTestReaders(SetType setType, DataType dataType, int numberReaders, int numberReadings, int numberTimes)
+void Tests::RunTestReaders(SetType setType, DataType dataType, int numberReaders, int numberReadings, int numberTimes)
 {
     bool isSuccess = true;
     double timeTotal = 0;
@@ -190,7 +192,7 @@ void RunTestReaders(SetType setType, DataType dataType, int numberReaders, int n
     PrintTestResult("test readers", setType, dataType, isSuccess, timeTotal / numberTimes);
 }
 
-void RunTestGeneral(SetType setType, DataType dataType, int numberWriters, int numberReaders, int numberRecords, int numberReadings, int numberTimes)
+void Tests::RunTestGeneral(SetType setType, DataType dataType, int numberWriters, int numberReaders, int numberRecords, int numberReadings, int numberTimes)
 {
     bool isSuccess = true;
     double timeTotal = 0;

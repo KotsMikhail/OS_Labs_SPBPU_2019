@@ -24,6 +24,18 @@ FineList<T>::Node::~Node()
 };
 
 template <typename T>
+void FineList<T>::find(Node* &pred, Node* &curr, size_t key)
+{
+    while (curr->key < key)
+    {
+        pred->unlock();
+        pred = curr;
+        curr = curr->next;
+        curr->lock();
+    }
+}
+
+template <typename T>
 FineList<T>::FineList()
     : head(new Node(T(), 0, new Node(T(), SIZE_MAX, nullptr)))
 {}
@@ -35,14 +47,7 @@ bool FineList<T>::add(const T &item)
     head->lock();
     Node *pred = head, *curr = pred->next;
     curr->lock();
-
-    while (curr->key < key)
-    {
-        pred->unlock();
-        pred = curr;
-        curr = curr->next;
-        curr->lock();
-    }
+    find(pred, curr, key);
 
     if (curr->key == key)
     {
@@ -68,14 +73,7 @@ bool FineList<T>::remove(const T &item)
     head->lock();
     Node *pred = head, *curr = pred->next;
     curr->lock();
-
-    while (curr->key < key)
-    {
-        pred->unlock();
-        pred = curr;
-        curr = curr->next;
-        curr->lock();
-    }
+    find(pred, curr, key);
 
     if (curr->key == key)
     {
@@ -100,14 +98,7 @@ bool FineList<T>::contains(const T &item)
     head->lock();
     Node *pred = head, *curr = pred->next;
     curr->lock();
-
-    while (curr->key < key)
-    {
-        pred->unlock();
-        pred = curr;
-        curr = curr->next;
-        curr->lock();
-    }
+    find(pred, curr, key);
 
     if (curr->key == key)
     {
