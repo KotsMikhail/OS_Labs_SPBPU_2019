@@ -11,8 +11,9 @@ READERS_TEST_RUNNER::READERS_TEST_RUNNER ()
 
 bool READERS_TEST_RUNNER::Check (SET<int> *set, std::vector<std::vector<int>> dataSets)
 {
-    if (set->IsEmpty())
+    if (set->IsEmpty()) {
         return true;
+    }
 
     for (std::vector<int> dataSet : dataSets) {
         for (int val : dataSet) {
@@ -77,6 +78,7 @@ bool READERS_TEST_RUNNER::RunTest(SET<int> *set, DATA_SET_CREATOR *dataSetCreato
     if (needCheck) {
         if (!Check(set, dataSets)) {
             std::cout << "Fail." << std::endl;
+            return false;
         }
     }
 

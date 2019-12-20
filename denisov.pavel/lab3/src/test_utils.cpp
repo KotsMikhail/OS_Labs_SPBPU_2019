@@ -68,11 +68,10 @@ static void * _readWithMissCountThreadFunc (void * args)
     for (int val : testInfo->data) {
         int missCount = 0;
         while (!set->Remove(val)) {
-            if (!*testInfo->isWritersRunning && missCount >= missCountLimit) {
+            if (!*testInfo->isWritersRunning && missCount++ >= missCountLimit) {
                 pthread_exit(nullptr);
             }
 
-            missCount++;
             pthread_yield();
         }
 

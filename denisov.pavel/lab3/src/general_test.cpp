@@ -103,6 +103,8 @@ bool GENERAL_TEST_RUNNER::RunTest(SET<int> *set, DATA_SET_CREATOR *dataSetCreato
     if (needCheck) {
         if (!Check(checkArr, numRecords)) {
             std::cout << "Fail." << std::endl;
+            delete [] checkArr;
+            return false;
         }
     }
 

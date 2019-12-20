@@ -71,8 +71,8 @@ bool SET_LAZY_SYNCHRONIZATION<ELEMENT_TYPE>::Add (const ELEMENT_TYPE &item)
          curr = curr->next;
       }
 
-      pthread_mutex_lock(&curr->mutex);
       pthread_mutex_lock(&prev->mutex);
+      pthread_mutex_lock(&curr->mutex);
 
       if (IsValidPair(prev, curr)) {
          break;
@@ -118,8 +118,8 @@ bool SET_LAZY_SYNCHRONIZATION<ELEMENT_TYPE>::Remove (const ELEMENT_TYPE &item)
          curr = curr->next;
       }
 
-      pthread_mutex_lock(&curr->mutex);
       pthread_mutex_lock(&prev->mutex);
+      pthread_mutex_lock(&curr->mutex);
 
       if (IsValidPair(prev, curr)) {
          break;
@@ -133,6 +133,8 @@ bool SET_LAZY_SYNCHRONIZATION<ELEMENT_TYPE>::Remove (const ELEMENT_TYPE &item)
       curr->isDeleted = true;
 
       prev->next = curr->next;
+
+      pthread_mutex_unlock(&curr->mutex);
       delete curr;
 
       pthread_mutex_unlock(&prev->mutex);

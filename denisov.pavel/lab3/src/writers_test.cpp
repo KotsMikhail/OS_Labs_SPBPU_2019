@@ -76,6 +76,7 @@ bool WRITERS_TEST_RUNNER::RunTest(SET<int> *set, DATA_SET_CREATOR *dataSetCreato
     if (needCheck) {
         if (!Check(set, dataSets)) {
             std::cout << "Fail." << std::endl;
+            return false;
         }
     }
 

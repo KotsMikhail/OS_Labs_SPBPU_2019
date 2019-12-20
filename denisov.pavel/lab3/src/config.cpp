@@ -44,7 +44,6 @@ void CONFIG::Clear (void)
 
 bool CONFIG::Load (void)
 {
-    std::cout << filePath << std::endl;
     std::ifstream input(filePath);
     std::string line;
 
