@@ -6,6 +6,7 @@
 #define LAB_3_STACK__TESTER_H
 #include "IStack.h"
 #include "SupremeTester.h"
+#include "TestData.h"
 
 class Tester {
 
@@ -15,7 +16,7 @@ public:
 
     ~Tester() {}
 
-    void DoStackTest(IStack *stack, int R_num, int W_num, int N, int repeat, bool is_need_print);
+    TestData DoStackTest(IStack *stack, int R_num, int W_num, int N, int repeat, bool is_need_print);
 
     void DoTest(int R_num, int W_num, int N, int repeat, bool is_need_print = false);
 
