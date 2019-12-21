@@ -26,9 +26,9 @@ TestData Tester::DoStackTest(IStack* stack, int R_num, int W_num, int N, int rep
 void Tester::DoTest(int R_num, int W_num, int N, int repeat, bool is_need_print) {
     std::string delimiter = "-------------------------------------------------------------------------";
     std::string title = "                                One-time                                 ";
-    std::string block_str          = "block      ";
-    std::string non_block_str      = "non block  ";
-    std::string stack_type_str     = "stack type ";
+    std::string block_str      = "block        ";
+    std::string non_block_str  = "non_block    ";
+    std::string stack_type_str = "stack_type   ";
 
     std::cout << delimiter << std::endl;
     std::cout << title << std::endl;
@@ -78,9 +78,9 @@ void Tester::DoIterTest(int N, int max_thread, int repeat, bool is_need_print) {
     std::string R_title   = "                               Reader Test                               ";
     std::string W_title   = "                               Writer Test                               ";
     std::string C_title   = "                               Common Test                               ";
-    std::string block_str          = "block      ";
-    std::string non_block_str      = "non block  ";
-    std::string stack_type_str     = "stack type ";
+    std::string block_str      = "block        ";
+    std::string non_block_str  = "non_block    ";
+    std::string stack_type_str = "stack_type   ";
 
     TestData data;
     int k, i, j;
