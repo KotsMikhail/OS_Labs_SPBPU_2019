@@ -10,7 +10,7 @@ class SetCreator;
 template<typename T>
 class OptimisticList: public Set<T>
 {
-protected:
+public:
   class Node
   {
   public:

@@ -3,6 +3,7 @@
 
 #include <set.h>
 #include <collector.h>
+#include "../optimistic_list/optimistic_list.h"
 
 template<typename T>
 class SetCreator;
@@ -10,9 +11,7 @@ class SetCreator;
 template<typename T>
 class LazyList: public Set<T>
 {
-private:
-  friend SetCreator<T>;
-
+public:
   class LazyNode: public OptimisticList<T>::Node
   {
   public:
@@ -26,6 +25,9 @@ private:
     {
     }
   };
+
+private:
+  friend SetCreator<T>;
 
   LazyNode* head;
   Collector<LazyNode> collector;
