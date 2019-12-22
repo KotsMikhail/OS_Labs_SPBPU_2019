@@ -19,6 +19,10 @@ wolf *wolf::get_instance() {
     return instance;
 }
 
+void wolf::release() {
+    delete instance;
+}
+
 
 void *wolf::ReadGoat(void *param) {
     struct timespec ts;
@@ -85,7 +89,10 @@ void wolf::CreateGoats() {
     std::cout << "Start creating goats" << std::endl;
     for (int i = 0; i < numGoats; i++) {
         conn *currentConnection = new conn();
-        currentConnection->Open((size_t) i);
+        if(!currentConnection->Open((size_t) i)){
+            delete currentConnection;
+            continue;
+        }
         sem_t *semClient = new sem_t();
         message msg(Owner::WOLF);
         if ((semClient = sem_open(("/sem_con" + std::to_string(i)).c_str(), O_CREAT, 0666, 1)) != SEM_FAILED) {
@@ -151,9 +158,16 @@ void wolf::start() {
         std::cout << "alive/numGoats: " << numAlive << "/" << numGoats << std::endl;
         if (numAlive == 0 && prevAlive == 0) {
             std::cout << "Game over" << std::endl;
-            for (auto iter:clients) {
-                iter.first->getConnection()->Close();
-                kill(iter.first->getPid(), SIGTERM);
+
+            std::map<goat *, message>::iterator cur, end;
+
+            cur = clients.begin();
+            end = clients.end();
+            while (cur != clients.end()) {
+                cur->first->getConnection()->Close();
+                kill(cur->first->getPid(), SIGTERM);
+                delete cur->first;
+                cur = clients.erase(cur);
             }
             exit(EXIT_SUCCESS);
         }

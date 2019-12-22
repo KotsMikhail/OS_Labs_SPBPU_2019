@@ -14,14 +14,13 @@ bool conn::Open(size_t id) {
     }
     int mode = 0666;
     struct mq_attr attr = ((struct mq_attr) {0, 1, sizeof(message), 0, {0}});
-    std::string nameSTR = "/lab1queue" + std::to_string(id);
-    mq_unlink(nameSTR.c_str());
-    if ((*fd = mq_open(nameSTR.c_str(), O_CREAT | O_RDWR, mode, &attr)) == -1) {
-        delete(fd);
+    name = "/lab1queue" + std::to_string(id);
+    if ((*fd = mq_open(name.c_str(), O_CREAT | O_RDWR, mode, &attr)) == -1) {
         std::cout << "ERROR: creating failed with error = " << strerror(errno) << std::endl;
+        delete fd;
+        fd = nullptr;
         return false;
     }
-    name = nameSTR.c_str();
     return true;
 
 }
@@ -43,7 +42,7 @@ bool conn::Write(void *buf, size_t count) {
 }
 
 void conn::Close() {
-    mq_unlink(name);
+    mq_unlink(name.c_str());
     mq_close(*fd);
-    delete(fd);
+    delete fd;
 }

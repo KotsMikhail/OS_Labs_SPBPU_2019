@@ -32,6 +32,8 @@ bool conn::Open(size_t id) {
     }
     if (pipe(fd) == -1) {
         std::cout << "ERROR: pipe failed with error = " << strerror(errno) << std::endl;
+        delete[] fd;
+        fd = nullptr;
         return false;
     }
     return true;
@@ -40,4 +42,5 @@ bool conn::Open(size_t id) {
 void conn::Close() {
     close(fd[0]);
     close(fd[1]);
+    delete[] fd;
 }

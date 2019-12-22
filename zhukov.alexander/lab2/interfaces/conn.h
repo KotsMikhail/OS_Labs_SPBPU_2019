@@ -18,7 +18,7 @@ public:
     void Close();
 private:
     int* fd;
-    const char* name;
+    std::string name;
 };
 
 #endif //LAB2_CONN_H

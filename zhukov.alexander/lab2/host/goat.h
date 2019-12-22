@@ -11,15 +11,23 @@ class goat {
 public:
     int start();
 
-    goat(Status st, conn *c, sem_t *sem) : status(st),connection(c), semaphore(sem) {}
+    goat(Status st, conn *c, sem_t *sem) : status(st), connection(c), semaphore(sem) {}
+
+    ~goat();
+
     Status getStatus();
-    sem_t* getSemaphore();
+
+    sem_t *getSemaphore();
+
     pid_t getPid();
-    conn* getConnection();
-    void setPid(pid_t p){pid = p;}
+
+    conn *getConnection();
+
+    void setPid(pid_t p);
+
 private:
     Status status;
-    conn* connection;
+    conn *connection;
     sem_t *semaphore;
     pid_t pid;
 

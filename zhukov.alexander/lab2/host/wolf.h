@@ -9,7 +9,7 @@
 class wolf {
 public:
     static wolf *get_instance();
-
+    static void release();
     void start();
 
 private:

@@ -40,3 +40,10 @@ sem_t *goat::getSemaphore() { return semaphore; }
 pid_t goat::getPid() { return pid; }
 
 conn *goat::getConnection() { return connection; }
+
+void goat::setPid(pid_t p) { pid = p; }
+
+goat::~goat() {
+    delete connection;
+    sem_destroy(semaphore);
+}

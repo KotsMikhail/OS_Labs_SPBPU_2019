@@ -28,9 +28,9 @@ bool conn::Write(void *buf, size_t count) {
 }
 
 bool conn::Open(size_t id) {
-    std::string nameSTR = "shm_file" + std::to_string(id);
+    name = "shm_file" + std::to_string(id);
     int shm;
-    if ((shm = shm_open(nameSTR.c_str(), O_CREAT | O_RDWR, 0666)) == -1) {
+    if ((shm = shm_open(name.c_str(), O_CREAT | O_RDWR, 0666)) == -1) {
         std::cout << "ERROR: shm_open failed with error = " << strerror(errno) << std::endl;
         return false;
     }
@@ -40,11 +40,10 @@ bool conn::Open(size_t id) {
         std::cout << "ERROR: mmap failed with error = " << strerror(errno) << std::endl;
         return false;
     }
-    name = nameSTR.c_str();
     return true;
 }
 
 void conn::Close() {
     munmap(fd, length);
-    shm_unlink(name);
+    shm_unlink(name.c_str());
 }
