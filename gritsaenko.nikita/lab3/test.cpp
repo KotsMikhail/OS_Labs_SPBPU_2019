@@ -62,33 +62,45 @@ void test_writers()
 
 void test_both()
 {
+    int writers_combinations = 10;
+    int readers_combinations = 10;
+    int tests_total = writers_combinations * readers_combinations;
+
+    int step_readers = N_READERS / readers_combinations;
+    int step_writers = N_WRITERS / writers_combinations;
+
     int time_lock_read = 0, time_lock_write = 0;
     int time_free_lock_read = 0, time_free_lock_write = 0;
 
-    for (int k = 1; k <= NUM_OF_REPEATS; k++)
+    for (int i = 1; i <= N_WRITERS; i += step_writers)
     {
-        tester_t<lock_stack_t<int>> lock_tester(ARRAY_SIZE, N_READERS, N_WRITERS);
+        for (int j = 1; j <= N_READERS; j += step_readers)
+        {
+            tester_t<lock_stack_t<int>> lock_tester(ARRAY_SIZE, i, j);
 
-        std::pair<int, int> time = lock_tester.test_readers_and_writers();   
-        time_lock_write += time.first;
-        time_lock_read += time.second;
+            std::pair<int, int> time = lock_tester.test_readers_and_writers();   
+            time_lock_write += time.first;
+            time_lock_read += time.second;
 
-        tester_t<lock_free_stack_t<int>> lock_free_tester(ARRAY_SIZE, N_READERS, N_WRITERS);
+            tester_t<lock_free_stack_t<int>> lock_free_tester(ARRAY_SIZE, i, j);
 
-        time = lock_free_tester.test_readers_and_writers();
-        time_free_lock_write += time.first;
-        time_free_lock_read += time.second;
+            time = lock_free_tester.test_readers_and_writers();
+            time_free_lock_write += time.first;
+            time_free_lock_read += time.second;
+        }
+        
     }
 
-    std::cout << "Test both.     Lock Stack.            Writers: " << N_WRITERS << "  Readers: " << N_READERS << "        ";
-    std::cout << "Write time: " << time_lock_write / NUM_OF_REPEATS << "       ";
-    std::cout << "Read time: " << time_lock_read / NUM_OF_REPEATS; 
+    std::cout << "Test both.     Lock Stack.         Writers max: " << N_WRITERS << "  Readers max: " << N_READERS << "     ";
+    std::cout << "Write time average: " << time_lock_write / tests_total << "    ";
+    std::cout << "Read time average: " << time_lock_read / tests_total; 
     std::cout << std::endl;
             
-    std::cout << "Test both.     Lock Free Stack.       Writers: " << N_WRITERS << "  Readers: " << N_READERS << "        ";
-    std::cout << "Write time: " << time_free_lock_write / NUM_OF_REPEATS << "       ";
-    std::cout << "Read time: " << time_free_lock_read / NUM_OF_REPEATS; 
+    std::cout << "Test both.     Lock Free Stack.    Writers max: " << N_WRITERS << "  Readers max: " << N_READERS << "     ";
+    std::cout << "Write time average: " << time_free_lock_write / tests_total << "    ";
+    std::cout << "Read time average: " << time_free_lock_read / tests_total; 
     std::cout << std::endl;
+
 }
 
 
