@@ -1,7 +1,7 @@
 #include "set_lazy.h"
 
 template<typename T, typename L>
-SetLazy<T, L>::SetLazy(): Set<T, L>(create_head())
+SetLazy<T, L>::SetLazy(): Set<T, L>(create_head()), _mutex(PTHREAD_MUTEX_INITIALIZER)
 {}
 
 template<typename T, typename L>

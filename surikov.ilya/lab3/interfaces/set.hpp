@@ -39,7 +39,9 @@ bool Set<T, L>::empty()
 template<typename T, typename L>
 void Set<T, L>::unlock(typename Set<T, L>::Node *pred, typename Set<T, L>::Node *curr)
 {
+//    std::cout << "pred unlock: " << pred->_item << std::endl;
     pred->unlock();
+//    std::cout << "curr unlock: " << curr->_item << std::endl;
     curr->unlock();
 }
 
@@ -51,7 +53,9 @@ void Set<T, L>::loop(typename Set<T, L>::Node *&pred, typename Set<T, L>::Node *
         pred = curr;
         curr = pred->_next;
     }
+//    std::cout << "pred lock: " << pred->_item << std::endl;
     pred->lock();
+//    std::cout << "curr lock: " << curr->_item << std::endl;
     curr->lock();
 }
 

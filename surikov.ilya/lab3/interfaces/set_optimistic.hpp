@@ -1,7 +1,7 @@
 #include "set_optimistic.h"
 
 template<typename T, typename L>
-SetOptimistic<T, L>::SetOptimistic(): Set<T, L>()
+SetOptimistic<T, L>::SetOptimistic(): Set<T, L>(), _mutex(PTHREAD_MUTEX_INITIALIZER)
 {}
 
 template<typename T, typename L>
@@ -43,6 +43,7 @@ bool SetOptimistic<T, L>::add(const T &item)
 template<typename T, typename L>
 bool SetOptimistic<T, L>::remove(const T &item)
 {
+//    std::cout << "remove" << std::endl;
     bool success = false;
     while (true)
     {
@@ -58,10 +59,10 @@ bool SetOptimistic<T, L>::remove(const T &item)
                 pthread_mutex_unlock(&_mutex);
                 success = true;
             }
-            this->unlock(curr, pred);
+            this->unlock(pred, curr);
             break;
         }
-        this->unlock(curr, pred);
+        this->unlock(pred, curr);
     }
     return success;
 }
@@ -69,6 +70,7 @@ bool SetOptimistic<T, L>::remove(const T &item)
 template<typename T, typename L>
 bool SetOptimistic<T, L>::contains(const T &item)
 {
+//    std::cout << "contains" << std::endl;
     while (true)
     {
         typename Set<T, L>::Node *pred = this->_head, *curr = pred->_next;
@@ -80,11 +82,13 @@ bool SetOptimistic<T, L>::contains(const T &item)
         }
         this->unlock(pred, curr);
     }
+    return false;
 }
 
 template<typename T, typename L>
 bool SetOptimistic<T, L>::validate(typename Set<T, L>::Node *pred, typename Set<T, L>::Node *curr)
 {
+//    std::cout << "validate" << std::endl;
     typename Set<T, L>::Node *node = this->_head;
     while (node->_item < pred->_item) {
         node = node->_next;

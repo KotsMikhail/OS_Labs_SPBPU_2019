@@ -63,10 +63,12 @@ void* Read(void *arg)
     ThreadInfo *threadInfo = (ThreadInfo*)arg;
     for (int i = 0; i < threadInfo->numberReadings; i++)
     {
+//        std::cout << "RS: " << threadInfo->data->at(threadInfo->index + i * threadInfo->numberReaders) << std::endl;
         while (!threadInfo->set->remove(threadInfo->data->at(threadInfo->index + i * threadInfo->numberReaders)))
             pthread_yield();
 
-        threadInfo->array->at(threadInfo->data->at(threadInfo->index + i * threadInfo->numberReaders)) = 1;
+        threadInfo->array->at(threadInfo->data->at(threadInfo->index + i * threadInfo->numberReaders)) += 1;
+//        std::cout << "RE: " << threadInfo->data->at(threadInfo->index + i * threadInfo->numberReaders) << std::endl;
     }
 
     return nullptr;
