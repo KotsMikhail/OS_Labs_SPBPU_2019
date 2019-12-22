@@ -13,7 +13,7 @@ template <typename T>
 class tester_t
 {
 public:
-	tester_t(int array_size, int n_writers = 0, int n_readers = 0): stack()
+	tester_t(int array_size, int n_writers, int n_readers): stack()
 	{
 		this->n_writers = n_writers;
 		this->array_size = array_size;
