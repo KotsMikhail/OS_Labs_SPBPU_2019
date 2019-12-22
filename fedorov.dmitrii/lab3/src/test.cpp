@@ -95,6 +95,7 @@ void* CommonReadTask (void* args) {
    for (int i = 0; i < thData->count; i++) { 
       if (!thData->pSet->Remove(thData->values->at(thData->start + i))) {
          i--;
+         pthread_yield();
       }
    }
    return args;
