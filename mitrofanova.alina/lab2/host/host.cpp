@@ -34,13 +34,7 @@ int main(int argc, char** argv) {
 
 		Wolf &wolf = Wolf::GetInstance();
 
-		bool isGameOver = false;
-
-		do {
-			Semaphore::TimedWait(hostSem);
-			isGameOver = wolf.CatchGoat();
-			Semaphore::Post(clientSem);
-		} while (!isGameOver);
+		wolf.Working(hostSem, clientSem);
 
 		Semaphore::Destroy(hostSem);
 		Semaphore::Destroy(clientSem);
@@ -54,14 +48,7 @@ int main(int argc, char** argv) {
 		sleep(1);
 
 		Goat &goat = Goat::GetInstance();
-		while (true) {
-			goat.MakeMove();
-
-			Semaphore::Post(hostSem);
-			Semaphore::Wait(clientSem);
-
-			goat.FindDeadOrAlive();
-		}
+		
+		goat.Working(hostSem, clientSem);
 	}
-
 }

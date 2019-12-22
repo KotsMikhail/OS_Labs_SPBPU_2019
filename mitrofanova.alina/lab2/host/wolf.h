@@ -2,15 +2,17 @@
 #define WOLF_H_INCLUDED
 
 #include "conn.h"
+#include "Semaphore.h"
 
 class Wolf {
 public:
 	static Wolf& GetInstance();
-	bool CatchGoat();
+	void Working(sem_t* hostSem, sem_t* clientSem);
 
 private:
 	Wolf();
 	Conn conn;
+	bool CatchGoat();
 
 	int cntMove;
 	int cntDeadMove;

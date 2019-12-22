@@ -7,6 +7,17 @@ Goat& Goat::GetInstance() {
 	return instance;
 }
 
+void Goat::Working(sem_t* hostSem, sem_t* clientSem) {
+	while (true) {
+		MakeMove();
+
+		Semaphore::Post(hostSem);
+		Semaphore::Wait(clientSem);
+
+		FindDeadOrAlive();
+	}
+}
+
 Goat::Goat() : conn(getppid(), false) {
 	isAlive = 1;
 	srand(time(nullptr));

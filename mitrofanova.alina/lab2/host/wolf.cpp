@@ -9,6 +9,16 @@ Wolf& Wolf::GetInstance() {
 	return instance;
 }
 
+void Wolf::Working(sem_t* hostSem, sem_t* clientSem) {
+	bool isGameOver = false;
+
+	do {
+		Semaphore::TimedWait(hostSem);
+		isGameOver = CatchGoat();
+		Semaphore::Post(clientSem);
+	} while (!isGameOver);
+}
+
 Wolf::Wolf() : conn(getpid(), true) {
 	cntMove = 1;
 	cntDeadMove = 0;

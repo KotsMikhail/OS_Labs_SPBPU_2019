@@ -2,16 +2,18 @@
 #define GOAT_H_INCLUDED
 
 #include "conn.h"
+#include "Semaphore.h"
 
 class Goat {
 public:
 	static Goat& GetInstance();
-	void MakeMove();
-	void FindDeadOrAlive();
+	void Working(sem_t* hostSem, sem_t* clientSem);
 
 private:
 	Goat();
 	Conn conn;
+	void MakeMove();
+	void FindDeadOrAlive();
 
 	int isAlive;
 
