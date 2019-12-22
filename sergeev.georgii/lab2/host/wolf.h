@@ -9,21 +9,23 @@
 #include "goat.h"
 #include <semaphore.h>
 #include <map>
+#include <list>
 
 class wolf {
 public:
     static wolf* get_instance();
+    static void release_instance();
     void start();
 private:
     static wolf *instance;
     static void *catch_goats(void *param);
     static void *eat_goats(void *param);
-    static void kill_client(conn* connection);
-    static std::map<conn*, goat*> clients;
-    static std::map<conn*, message> clients_messages;
+    static void kill_client(goat* client);
+    static std::list<goat*> clients;
+    static std::map<goat*, message> clients_messages;
     static int num_goats;
     static int num;
-    static const int TIMEOUT = 5;
+    static constexpr int TIMEOUT = 5;
     static constexpr double WOLF_WORK_WINDOW = 1;
     wolf();
     void start_game();

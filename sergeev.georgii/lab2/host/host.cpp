@@ -10,4 +10,6 @@
 int main () {
     wolf* host = wolf::get_instance();
     host->start();
+    wolf::release_instance();
+    return EXIT_SUCCESS;
 }

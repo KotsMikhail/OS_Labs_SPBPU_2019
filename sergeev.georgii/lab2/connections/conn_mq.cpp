@@ -16,6 +16,8 @@ bool conn::Open(size_t id) {
         if ((*fd = mq_open(name.c_str(), O_RDWR | O_CREAT, 0666, &attr)) != -1) {
             return true;
         }
+        delete fd;
+        fd = nullptr;
     }
     std::cout << "Error on opening connection for client " << id << std::endl;
     return false;
@@ -42,4 +44,5 @@ bool conn::Write(void *buf, size_t count) {
 void conn::Close() {
     mq_unlink(name.c_str());
     mq_close(*fd);
+    delete fd;
 }

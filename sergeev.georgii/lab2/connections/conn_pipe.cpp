@@ -14,7 +14,6 @@ bool conn::Read(void *buf, size_t count) {
         return true;
     }
     std::cout << "Error on reading message" << std::endl;
-
     return false;
 }
 
@@ -32,6 +31,8 @@ bool conn::Open(size_t id) {
         if (pipe(fd) != -1){
             return true;
         }
+        delete[] fd;
+        fd = nullptr;
     }
     std::cout << "Error on opening connection for client " << id << std::endl;
     return false;
@@ -40,4 +41,5 @@ bool conn::Open(size_t id) {
 void conn::Close(){
     close(fd[0]);
     close(fd[1]);
+    delete[] fd;
 }

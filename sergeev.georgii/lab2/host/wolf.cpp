@@ -12,12 +12,11 @@
 #include "conn.h"
 #include <semaphore.h>
 #include <random>
-#include <list>
 
 
 wolf *wolf::instance = new wolf();
-std::map<conn*, goat*> wolf::clients = std::map<conn*, goat*>();
-std::map<conn*, message> wolf::clients_messages = std::map<conn*, message>();
+std::list<goat*> wolf::clients = std::list<goat*>();
+std::map<goat*, message> wolf::clients_messages = std::map<goat*, message>();
 int wolf::num = 0;
 int wolf::num_goats = 0;
 
@@ -28,6 +27,15 @@ wolf *wolf::get_instance() {
     return instance;
 }
 
+void wolf::release_instance() {
+    while (!clients.empty()) {
+        delete clients.front();
+        clients.pop_front();
+    }
+    clients_messages.clear();
+    delete instance;
+}
+
 void *wolf::catch_goats(void *param) {
     struct timespec ts;
     struct timespec ts_work;
@@ -35,35 +43,33 @@ void *wolf::catch_goats(void *param) {
     clock_gettime(CLOCK_REALTIME, &ts);
     __time_t saved_time = ts.tv_sec + TIMEOUT;
     __time_t curr_time = ts.tv_sec;
-    conn *connection = (conn *) param;
-    auto *sem = clients[connection]->get_semaphore();
+    goat *client = (goat *) param;
+    auto *sem = client->get_semaphore();
     message buf(Owner::WOLF);
     while (curr_time < saved_time) {
         curr_time = ts.tv_sec;
         clock_gettime(CLOCK_REALTIME, &ts_work);
         ts_work.tv_sec += WOLF_WORK_WINDOW;
         if (sem_timedwait(sem, &ts_work) != -1) {
-            if (!connection->Read(&buf)){
+            if (!client->get_connection()->Read(&buf)){
                 error = true;
                 break;
             }
             if (buf.owner != Owner::WOLF) {
                 sem_post(sem);
-                clients_messages[connection] = buf;
+                clients_messages[client] = buf;
                 break;
             } else {
-                if (!connection->Write(&buf)){
+                if (!client->get_connection()->Write(&buf)){
                     error = true;
                     break;
                 }
             }
             sem_post(sem);
-        } else {
-            continue;
         }
     }
     if (curr_time >= saved_time || error) {
-        kill_client(connection);
+        kill_client(client);
         return nullptr;
     }
     return nullptr;
@@ -71,35 +77,36 @@ void *wolf::catch_goats(void *param) {
 
 void *wolf::eat_goats(void *param) {
     struct timespec ts;
-    conn *connection = (conn *) param;
-    auto *sem = clients[connection]->get_semaphore();
-    int client_number = clients_messages[connection].number;
-    Status st = clients_messages[connection].status;
+    goat *client = (goat *) param;
+    auto *sem = client->get_semaphore();
+    int client_number = clients_messages[client].number;
+    Status st = clients_messages[client].status;
     if (st == Status::ALIVE && abs(num - client_number) <= 70 / num_goats) {
         st = Status::ALIVE;
-        clients_messages[connection].status = Status::ALIVE;
+        clients_messages[client].status = Status::ALIVE;
     } else if (st == Status::DEAD && abs(num - client_number) <= 20 / num_goats) {
         st = Status::ALIVE;
-        clients_messages[connection].status = Status::ALIVE;
+        clients_messages[client].status = Status::ALIVE;
     } else {
         st = Status::DEAD;
-        clients_messages[connection].status = Status::DEAD;
+        clients_messages[client].status = Status::DEAD;
     }
     message msg(Owner::WOLF, num, st);
     clock_gettime(CLOCK_REALTIME, &ts);
     ts.tv_sec += WOLF_WORK_WINDOW;
     sem_timedwait(sem, &ts);
-    if (!connection->Write(&msg, sizeof(msg))){
-        kill_client(connection);
+    if (!client->get_connection()->Write(&msg, sizeof(msg))){
+        kill_client(client);
         return nullptr;
     }
     sem_post(sem);
     return nullptr;
 }
 
-void wolf::kill_client(conn* connection){
-    kill(clients[connection]->get_pid(), SIGTERM);
-    clients.erase(connection);
+void wolf::kill_client(goat* client){
+    kill(client->get_pid(), SIGTERM);
+    delete client;
+    clients.remove(client);
     num_goats--;
 }
 
@@ -109,7 +116,7 @@ void wolf::process_threads(void *(*start_routine) (void *)){
         pthread_t tid;
         pthread_attr_t attr;
         pthread_attr_init(&attr);
-        pthread_create(&tid, &attr, start_routine, iter.first);
+        pthread_create(&tid, &attr, start_routine, iter);
         tids.push_back(tid);
     }
     for (auto tid : tids) {
@@ -139,7 +146,7 @@ void wolf::init_game() {
         if (!current_connection->Open((size_t) i)) {
             continue;
         }
-        sem_t *semaphore_client = new sem_t();
+        sem_t *semaphore_client;
         if ((semaphore_client = sem_open(("/sem_conn" + std::to_string(i)).c_str(), O_CREAT, 0666, 1)) == SEM_FAILED) {
             std::cout << "Error on semaphore creating for client " << i << std::endl;
             continue;
@@ -162,7 +169,7 @@ void wolf::init_game() {
             return;
         }
         client->set_pid(pid);
-        clients.insert(std::pair<conn *, goat*>(current_connection, client));
+        clients.push_back(client);
     }
 }
 
@@ -176,8 +183,8 @@ void wolf::start_game() {
        process_threads(wolf::catch_goats);
         //print goats turn
         for (auto iter : clients) {
-            std::string goat_stat = clients_messages[iter.first].status == Status::ALIVE ? "A" : "D";
-            std::cout << "goat " << clients_messages[iter.first].number << " status: " << goat_stat << std::endl;
+            std::string goat_stat = clients_messages[iter].status == Status::ALIVE ? "A" : "D";
+            std::cout << "goat " << clients_messages[iter].number << " status: " << goat_stat << std::endl;
         }
         // wolf's turn
         std::cout << "Enter wolf's number: ";
@@ -196,18 +203,17 @@ void wolf::start_game() {
         // process turn results
         num_dead = 0;
         for (auto iter : clients) {
-            if (clients_messages[iter.first].status == Status::DEAD)
+            if (clients_messages[iter].status == Status::DEAD)
                 num_dead++;
         }
         std::cout << "dead/all: " << num_dead << "/" << num_goats << std::endl << std::endl;
         if (num_dead == num_goats && num_goats == prev_dead) {
             std::cout << "Wolf win" << std::endl;
             for (auto iter : clients) {
-                iter.first->Close();
-                kill(iter.second->get_pid(), SIGTERM);
+                iter->get_connection()->Close();
+                kill(iter->get_pid(), SIGTERM);
             }
-            clients.clear();
-            exit(EXIT_SUCCESS);
+            break;
         }
         prev_dead = num_dead;
     }

@@ -8,6 +8,7 @@
 #include "conn.h"
 #include <unistd.h>
 #include <semaphore.h>
+#include <iostream>
 
 class goat {
 public:
@@ -16,6 +17,10 @@ public:
         this->connection = connection;
         this->semaphore = semaphore;
         this->status = st;
+    }
+    ~goat(){
+        delete this->connection;
+        sem_destroy(this->semaphore);
     }
     Status get_status(){ return status; }
     conn* get_connection(){ return connection; }
