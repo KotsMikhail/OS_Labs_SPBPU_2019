@@ -4,6 +4,7 @@
 #include <random>
 #include <algorithm>
 #include <iomanip>
+#include <timer.h>
 #include "../test_creator/test_creator.h"
 
 template<typename T>

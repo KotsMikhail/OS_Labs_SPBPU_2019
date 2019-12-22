@@ -10,11 +10,11 @@ Set<T>* SetCreator<T>::get(const Type& type)
   case Type::OPTIMISTIC:
   {
     Logger::logDebug(tag, "Constructing optimistic list...");
-    Node<T>* head = NodeCreator<T>(MinValue::get<T>()).template get<Node<T>>();
-    NodeCollector<Node<T>> collector;
+    typename OptimisticList<T>::Node* head = OptimisticList<T>::Node::create(MinValue::get<T>());
+    Collector<typename OptimisticList<T>::Node> collector;
     if (head != nullptr && collector.init())
     {
-      head->next = NodeCreator<T>(MaxValue::get<T>()).template get<Node<T>>();
+      head->next = OptimisticList<T>::Node::create(MaxValue::get<T>());
       if (head->next != nullptr)
       {
         return new OptimisticList<T>(head, collector);
@@ -25,11 +25,11 @@ Set<T>* SetCreator<T>::get(const Type& type)
   case Type::LAZY:
   {
     Logger::logDebug(tag, "Constructing lazy list...");
-    LazyNode<T>* head = NodeCreator<T>(MinValue::get<T>()).template get<LazyNode<T>>();
-    NodeCollector<LazyNode<T>> collector;
+    typename LazyList<T>::LazyNode* head = LazyList<T>::LazyNode::create(MinValue::get<T>());
+    Collector<typename LazyList<T>::LazyNode> collector;
     if (head != nullptr && collector.init())
     {
-      head->next = NodeCreator<T>(MaxValue::get<T>()).template get<LazyNode<T>>();
+      head->next = LazyList<T>::LazyNode::create(MaxValue::get<T>());
       if (head->next != nullptr)
       {
         return new LazyList<T>(head, collector);

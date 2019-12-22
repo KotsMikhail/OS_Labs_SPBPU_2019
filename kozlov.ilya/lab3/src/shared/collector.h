@@ -3,12 +3,13 @@
 
 #include <vector>
 #include <pthread.h>
+#include <stdexcept>
 
-template<class NodeT>
-class NodeCollector
+template<class T>
+class Collector
 {
 private:
-  std::vector<NodeT*> deleted;
+  std::vector<T*> deleted;
   pthread_mutex_t mutex;
 public:
   int init()
@@ -18,7 +19,7 @@ public:
     return !pthread_mutex_init(&mutex, &attr);
   }
 
-  bool add(NodeT* node)
+  void add(T* node)
   {
     bool res = false;
     if (pthread_mutex_lock(&mutex) == 0)
@@ -26,10 +27,13 @@ public:
       deleted.push_back(node);
       res = pthread_mutex_unlock(&mutex) == 0;
     }
-    return res;
+    if (!res)
+    {
+      throw std::runtime_error("Mutex error while adding to collector");
+    }
   }
 
-  ~NodeCollector()
+  ~Collector()
   {
     for (auto it = deleted.begin(); it != deleted.end(); it++)
     {

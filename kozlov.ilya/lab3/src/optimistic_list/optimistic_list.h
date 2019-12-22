@@ -2,8 +2,7 @@
 #define OPTIMISTIC_LIST_H
 
 #include <set.h>
-#include <node/node.h>
-#include <node_collector.h>
+#include <collector.h>
 
 template<typename T>
 class SetCreator;
@@ -11,14 +10,32 @@ class SetCreator;
 template<typename T>
 class OptimisticList: public Set<T>
 {
+protected:
+  class Node
+  {
+  public:
+    T item;
+    int key;
+    pthread_mutex_t mutex;
+    Node *next;
+
+    static Node* create(const T& item);
+    bool operator==(const Node& other) const;
+    void lock();
+    void unlock();
+    ~Node();
+  protected:
+    Node(const T& item, int key, pthread_mutex_t& mutex) noexcept;
+  };
+
 private:
   friend SetCreator<T>;
 
-  Node<T>* head;
-  NodeCollector<Node<T>> collector;
+  Node* head;
+  Collector<Node> collector;
   const std::string tag = "OptimisticList";
 
-  OptimisticList(Node<T>* head, const NodeCollector<Node<T>>& collector);
+  OptimisticList(Node* head, const Collector<Node>& collector);
 
 public:
   ~OptimisticList();
@@ -28,7 +45,7 @@ public:
   bool empty() const override;
 
 private:
-  bool validate(Node<T>* prev, Node<T>* curr) const;
+  bool validate(Node* prev, Node* curr) const;
 };
 
 #include "optimistic_list.hpp"

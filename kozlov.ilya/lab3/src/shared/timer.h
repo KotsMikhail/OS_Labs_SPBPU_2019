@@ -9,6 +9,8 @@ class Timer
 private:
   timespec beg, end;
 public:
+  const double TIMEOUT = 1.0;
+
   Timer()
   {
     clock_gettime(CLOCK_REALTIME, &beg);

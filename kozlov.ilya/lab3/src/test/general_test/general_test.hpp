@@ -1,6 +1,7 @@
 #include <logger/logger.h>
 #include <util.h>
 #include <cassert>
+#include <timer.h>
 
 template<typename T>
 std::vector<int> GeneralTest<T>::check_array;
@@ -12,14 +13,21 @@ void* GeneralTest<T>::threadWriteFunc(void *param)
   Logger::logDebug(tag, "write()");
   auto info = reinterpret_cast<TestInfo<T>*>(param);
   Logger::logDebug(tag, "\n\tTestInfo.data = " + Util::toStr(info->data.begin(), info->data.end()));
-  for (int value : info->data)
+  try
   {
-    Logger::logDebug(tag, "writing: " + std::to_string(value));
-    if (!info->testing_set->add(value))
+    for (int value : info->data)
     {
-      Logger::logError(tag, "Cant write to set value = " + std::to_string(value) + "\n");
-      break;
+      Logger::logDebug(tag, "writing: " + std::to_string(value));
+      if (!info->testing_set->add(value))
+      {
+        Logger::logError(tag, "Cant write to set value = " + std::to_string(value) + "\n");
+        break;
+      }
     }
+  }
+  catch (std::exception& e)
+  {
+    Logger::logError(tag, e.what());
   }
   delete info;
   pthread_exit(nullptr);
@@ -33,15 +41,27 @@ void* GeneralTest<T>::threadReadFunc(void *param)
   Logger::logDebug(tag, "read()");
   auto info = reinterpret_cast<TestInfo<T>*>(param);
   Logger::logDebug(tag, "\n\tTestInfo.data = " + Util::toStr(info->data.begin(), info->data.end()));
-  for (int value : info->data)
+  try
   {
-    Logger::logDebug(tag, "reading: " + std::to_string(value));
-    while (!info->testing_set->remove(value))
+    for (int value : info->data)
     {
-      Logger::logDebug(tag, "Yet cant read value = " + std::to_string(value) + "\n");
-      pthread_yield();
+      Logger::logDebug(tag, "reading: " + std::to_string(value));
+      Timer t;
+      while (!info->testing_set->remove(value))
+      {
+        Logger::logDebug(tag, "Yet cant read value = " + std::to_string(value) + "\n");
+        if (t.elapsed() > t.TIMEOUT)
+        {
+          pthread_yield();
+          t.reset();
+        }
+      }
+      check_array[(int) value]++;
     }
-    check_array[(int)value]++;
+  }
+  catch (std::exception& e)
+  {
+    Logger::logError(tag, e.what());
   }
   delete info;
   pthread_exit(nullptr);

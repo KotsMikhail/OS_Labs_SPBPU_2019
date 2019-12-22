@@ -1,10 +1,63 @@
 #include <logger/logger.h>
 #include <min_max/min_value.h>
 #include <min_max/max_value.h>
-#include <node_creator/node_creator.h>
 
 template<typename T>
-OptimisticList<T>::OptimisticList(Node<T>* head, const NodeCollector<Node<T>>& collector):
+OptimisticList<T>::Node::Node(const T& item, int key, pthread_mutex_t& mutex) noexcept:
+  item(item), key(key), mutex(mutex), next(nullptr)
+{
+}
+
+template<typename T>
+bool OptimisticList<T>::Node::operator==(const Node& other) const
+{
+  return key == other.key && item == other.item;
+}
+
+template<typename T>
+void OptimisticList<T>::Node::lock()
+{
+  if (pthread_mutex_lock(&mutex) != 0)
+  {
+    throw std::runtime_error("Locking mutex error");
+  }
+}
+
+template<typename T>
+void OptimisticList<T>::Node::unlock()
+{
+  if (pthread_mutex_unlock(&mutex) != 0)
+  {
+    throw std::runtime_error("Unlocking mutex error");
+  }
+}
+
+template<typename T>
+OptimisticList<T>::Node::~Node()
+{
+  pthread_mutex_destroy(&mutex);
+}
+
+template<typename T>
+typename OptimisticList<T>::Node* OptimisticList<T>::Node::create(const T& item)
+{
+  int hash = std::hash<T>()(item);
+  pthread_mutexattr_t attr;
+  pthread_mutex_t mutex;
+  if (pthread_mutexattr_init(&attr) != 0)
+  {
+    return nullptr;
+  }
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+  if (pthread_mutex_init(&mutex, &attr) != 0)
+  {
+    return nullptr;
+  }
+  return new Node(item, hash, mutex);
+}
+
+template<typename T>
+OptimisticList<T>::OptimisticList(Node* head, const Collector<Node>& collector):
   head(head), collector(collector)
 {
 }
@@ -13,10 +66,10 @@ template<typename T>
 OptimisticList<T>::~OptimisticList()
 {
   Logger::logDebug(tag, "destructing...");
-  Node<T>* curr = head;
+  Node* curr = head;
   while (curr != nullptr)
   {
-    Node<T>* prev = curr;
+    Node* prev = curr;
     curr = curr->next;
     delete prev;
   }
@@ -31,21 +84,15 @@ bool OptimisticList<T>::add(T element)
   bool need_return = false;
   while (true)
   {
-    Node<T>* prev = head;
-    Node<T>* curr = prev->next;
+    Node* prev = head;
+    Node* curr = prev->next;
     while (curr->key < key)
     {
       prev = curr;
       curr = curr->next;
     }
-    if (prev->timedLock() != 0)
-    {
-      continue;
-    }
-    if (curr->timedLock() != 0)
-    {
-      continue;
-    }
+    prev->lock();
+    curr->lock();
     if (validate(prev, curr))
     {
       need_return = true;
@@ -55,7 +102,7 @@ bool OptimisticList<T>::add(T element)
       }
       else
       {
-        auto node = NodeCreator<T>(element).template get<Node<T>>();
+        auto node = Node::create(element);
         if (node == nullptr)
         {
           res = false;
@@ -86,21 +133,15 @@ bool OptimisticList<T>::remove(T element)
   bool need_return = false;
   while (true)
   {
-    Node<T>* prev = head;
-    Node<T>* curr = prev->next;
+    Node* prev = head;
+    Node* curr = prev->next;
     while (curr->key < key)
     {
       prev = curr;
       curr = curr->next;
     }
-    if (prev->timedLock() != 0)
-    {
-      continue;
-    }
-    if (curr->timedLock() != 0)
-    {
-      continue;
-    }
+    prev->lock();
+    curr->lock();
     if (validate(prev, curr))
     {
       need_return = true;
@@ -137,21 +178,15 @@ bool OptimisticList<T>::contains(T element) const
   bool need_return = false;
   while (true)
   {
-    Node<T>* prev = head;
-    Node<T>* curr = prev->next;
+    Node* prev = head;
+    Node* curr = prev->next;
     while (curr->key < key)
     {
       prev = curr;
       curr = curr->next;
     }
-    if (prev->timedLock() != 0)
-    {
-      continue;
-    }
-    if (curr->timedLock() != 0)
-    {
-      continue;
-    }
+    prev->lock();
+    curr->lock();
     if (validate(prev, curr))
     {
       need_return = true;
@@ -167,10 +202,10 @@ bool OptimisticList<T>::contains(T element) const
 }
 
 template<typename T>
-bool OptimisticList<T>::validate(Node<T>* prev, Node<T>* curr) const
+bool OptimisticList<T>::validate(Node* prev, Node* curr) const
 {
   //Logger::logDebug(tag, "validating...");
-  Node<T>* node = head;
+  Node* node = head;
   while (node->key <= prev->key)
   {
     if (node == prev)

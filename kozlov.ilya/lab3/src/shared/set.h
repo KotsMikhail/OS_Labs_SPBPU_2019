@@ -1,8 +1,6 @@
 #ifndef INTERFACE_H
 #define INTERFACE_H
 
-#include <node/node.h>
-
 enum class Type
 {
   OPTIMISTIC,

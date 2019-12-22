@@ -2,9 +2,7 @@
 #define LAZY_LIST_H
 
 #include <set.h>
-#include <node/node.h>
-#include "lazy_node.h"
-#include <node_collector.h>
+#include <collector.h>
 
 template<typename T>
 class SetCreator;
@@ -15,11 +13,25 @@ class LazyList: public Set<T>
 private:
   friend SetCreator<T>;
 
-  LazyNode<T>* head;
-  NodeCollector<LazyNode<T>> collector;
+  class LazyNode: public OptimisticList<T>::Node
+  {
+  public:
+    bool marked;
+    LazyNode *next;
+
+    static LazyNode* create(const T& item);
+  private:
+    LazyNode(const T& item, int key, pthread_mutex_t& mutex) noexcept:
+      OptimisticList<T>::Node(item, key, mutex), marked(false), next(nullptr)
+    {
+    }
+  };
+
+  LazyNode* head;
+  Collector<LazyNode> collector;
   const std::string tag = "LazyList";
 
-  LazyList(LazyNode<T>* head, const NodeCollector<LazyNode<T>>& collector);
+  LazyList(LazyNode* head, const Collector<LazyNode>& collector);
 
 public:
   ~LazyList();
@@ -29,7 +41,7 @@ public:
   bool empty() const override;
 
 private:
-  bool validate(LazyNode<T>* prev, LazyNode<T>* curr) const;
+  bool validate(LazyNode* prev, LazyNode* curr) const;
 };
 
 #include "lazy_list.hpp"

@@ -10,14 +10,21 @@ void* WriteTest<T>::threadFunc(void *param)
   Logger::logDebug(tag, "write()");
   auto info = reinterpret_cast<TestInfo<T>*>(param);
   Logger::logDebug(tag, "\n\tTestInfo.data = " + Util::toStr(info->data.begin(), info->data.end()));
-  for (int value : info->data)
+  try
   {
-    Logger::logDebug(tag, "writing: " + std::to_string(value));
-    if (!info->testing_set->add(value))
+    for (int value : info->data)
     {
-      Logger::logError(tag, "Cant write to set value = " + std::to_string(value) + "\n");
-      break;
+      Logger::logDebug(tag, "writing: " + std::to_string(value));
+      if (!info->testing_set->add(value))
+      {
+        Logger::logError(tag, "Cant write to set value = " + std::to_string(value) + "\n");
+        break;
+      }
     }
+  }
+  catch (std::exception& e)
+  {
+    Logger::logError(tag, e.what());
   }
   delete info;
   pthread_exit(nullptr);

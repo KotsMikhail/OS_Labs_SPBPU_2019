@@ -1,10 +1,27 @@
 #include <logger/logger.h>
 #include <min_max/min_value.h>
 #include <min_max/max_value.h>
-#include <node_creator/node_creator.h>
 
 template<typename T>
-LazyList<T>::LazyList(LazyNode<T>* head, const NodeCollector<LazyNode<T>>& collector):
+typename LazyList<T>::LazyNode* LazyList<T>::LazyNode::create(const T& item)
+{
+  int hash = std::hash<T>()(item);
+  pthread_mutexattr_t attr;
+  pthread_mutex_t mutex;
+  if (pthread_mutexattr_init(&attr) != 0)
+  {
+    return nullptr;
+  }
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+  if (pthread_mutex_init(&mutex, &attr) != 0)
+  {
+    return nullptr;
+  }
+  return new LazyNode(item, hash, mutex);
+}
+
+template<typename T>
+LazyList<T>::LazyList(LazyNode* head, const Collector<LazyNode>& collector):
   head(head), collector(collector)
 {
 }
@@ -13,10 +30,10 @@ template<typename T>
 LazyList<T>::~LazyList()
 {
   Logger::logDebug(tag, "destructing...");
-  LazyNode<T>* curr = head;
+  LazyNode* curr = head;
   while (curr != nullptr)
   {
-    LazyNode<T>* prev = curr;
+    LazyNode* prev = curr;
     curr = curr->next;
     delete prev;
   }
@@ -31,21 +48,15 @@ bool LazyList<T>::add(T element)
   bool need_return = false;
   while (true)
   {
-    LazyNode<T>* prev = head;
-    LazyNode<T>* curr = prev->next;
+    LazyNode* prev = head;
+    LazyNode* curr = prev->next;
     while (curr->key < key)
     {
       prev = curr;
       curr = curr->next;
     }
-    if (prev->timedLock() != 0)
-    {
-      continue;
-    }
-    if (curr->timedLock() != 0)
-    {
-      continue;
-    }
+    prev->lock();
+    curr->lock();
     if (validate(prev, curr))
     {
       need_return = true;
@@ -55,7 +66,7 @@ bool LazyList<T>::add(T element)
       }
       else
       {
-        auto node = NodeCreator<T>(element).template get<LazyNode<T>>();
+        auto node = LazyNode::create(element);
         if (node == nullptr)
         {
           res = false;
@@ -86,21 +97,15 @@ bool LazyList<T>::remove(T element)
   bool need_return = false;
   while (true)
   {
-    LazyNode<T>* prev = head;
-    LazyNode<T>* curr = prev->next;
+    LazyNode* prev = head;
+    LazyNode* curr = prev->next;
     while (curr->key < key)
     {
       prev = curr;
       curr = curr->next;
     }
-    if (prev->timedLock() != 0)
-    {
-      continue;
-    }
-    if (curr->timedLock() != 0)
-    {
-      continue;
-    }
+    prev->lock();
+    curr->lock();
     if (validate(prev, curr))
     {
       need_return = true;
@@ -134,7 +139,7 @@ bool LazyList<T>::contains(T element) const
 {
   Logger::logDebug(tag, "contains(" + std::to_string(element) + ")");
   int key = std::hash<T>()(element);
-  LazyNode<T>* curr = head;
+  LazyNode* curr = head;
   while (curr->key < key)
   {
     curr = curr->next;
@@ -143,7 +148,7 @@ bool LazyList<T>::contains(T element) const
 }
 
 template<typename T>
-bool LazyList<T>::validate(LazyNode<T>* prev, LazyNode<T>* curr) const
+bool LazyList<T>::validate(LazyNode* prev, LazyNode* curr) const
 {
   //Logger::logDebug(tag, "validating...");
   return !prev->marked && !curr->marked && prev->next == curr;

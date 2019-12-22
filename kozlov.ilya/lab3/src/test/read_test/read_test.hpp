@@ -9,14 +9,21 @@ void* ReadTest<T>::threadFunc(void *param)
   Logger::logDebug(tag, "read()");
   auto info = reinterpret_cast<TestInfo<T>*>(param);
   Logger::logDebug(tag, "\n\tTestInfo.data = " + Util::toStr(info->data.begin(), info->data.end()));
-  for (int value : info->data)
+  try
   {
-    Logger::logDebug(tag, "reading: " + std::to_string(value));
-    if (!info->testing_set->remove(value))
+    for (int value : info->data)
     {
-      Logger::logError(tag, "Cant read value = " + std::to_string(value) + "\n");
-      break;
+      Logger::logDebug(tag, "reading: " + std::to_string(value));
+      if (!info->testing_set->remove(value))
+      {
+        Logger::logError(tag, "Cant read value = " + std::to_string(value) + "\n");
+        break;
+      }
     }
+  }
+  catch (std::exception& e)
+  {
+    Logger::logError(tag, e.what());
   }
   delete info;
   pthread_exit(nullptr);
@@ -27,14 +34,21 @@ ReadTest<T>::ReadTest(Set<T>* set, int readers_num, int reads_num, const std::st
   Test<T>(name), curr_set(set), readers_num(readers_num), reads_num(reads_num)
 {
   Logger::logDebug(tag, "constructing...");
-  for (int i = readers_num - 1; i >= 0; i--)
+  try
   {
-    for (int j = reads_num - 1; j >= 0; j--)
+    for (int i = readers_num - 1; i >= 0; i--)
     {
-      T element = static_cast<T>(i * reads_num + j);
-      data_sets.push_back(element);
-      set->add(element);
+      for (int j = reads_num - 1; j >= 0; j--)
+      {
+        T element = static_cast<T>(i * reads_num + j);
+        data_sets.push_back(element);
+        set->add(element);
+      }
     }
+  }
+  catch (std::exception& e)
+  {
+    Logger::logError(tag, e.what());
   }
 }
 
@@ -42,12 +56,19 @@ template<typename T>
 ReadTest<T>::ReadTest(const data_set<T>& data_sets, Set<T>* set, int readers_num, int reads_num, const std::string& name) noexcept:
   Test<T>(name), curr_set(set), readers_num(readers_num), reads_num(reads_num), data_sets(data_sets)
 {
-  for (int i = 0; i < readers_num; i++)
+  try
   {
-    for (int j = 0; j < reads_num; j++)
+    for (int i = 0; i < readers_num; i++)
     {
-      set->add(data_sets[i * reads_num + j]);
+      for (int j = 0; j < reads_num; j++)
+      {
+        set->add(data_sets[i * reads_num + j]);
+      }
     }
+  }
+  catch (std::exception& e)
+  {
+    Logger::logError(tag, e.what());
   }
 }
 

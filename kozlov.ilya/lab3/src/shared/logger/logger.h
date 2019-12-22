@@ -16,7 +16,6 @@ public:
   static void destroy();
   static void logError(const std::string& tag, const std::string& msg);
   static void logDebug(const std::string& tag, const std::string& msg);
-  static void logNote(const std::string& tag, const std::string& msg);
 };
 
 #endif // LOGGER_H
