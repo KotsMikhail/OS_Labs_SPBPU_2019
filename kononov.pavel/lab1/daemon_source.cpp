@@ -20,16 +20,18 @@ struct ConfigReader {
 	void setPath(std::string path) { config_path = path; }
 	void read();
 	std::string getDirPath() { return dir_path; }
+	double getWaitTime() { return wt; }
 
 private:
 	std::string config_path;
 	std::string dir_path;
+	double wt;
 } config_reader;
 
 
 class FileDeleter {
 public:
-	void setPath(std::string path) {
+	void setPar(std::string path) {
 		this->path = path;
 	}
 	
@@ -89,7 +91,7 @@ private:
 	
 	ConfigReader config;
 	FileDeleter fd;
-	const double wait_sec = 120.0;
+	double wait_sec = 120.0;
 };
 
 void Daemon::make_fork()
@@ -197,7 +199,8 @@ void Daemon::exec()
 void Daemon::update()
 {
 	config.read();
-	fd.setPath(config.getDirPath());
+	fd.setPar(config.getDirPath());
+	wait_sec = config.getWaitTime();
 }
 
 
@@ -205,25 +208,33 @@ void ConfigReader::read()
 {
 	std::ifstream config = std::ifstream(config_path);
 	if (!config.is_open() || config.eof()) {
-        syslog(LOG_ERR, "Bad path or empty config");
-        exit(EXIT_FAILURE);
-    }
-
+        	syslog(LOG_ERR, "Bad path or empty config");
+        	exit(EXIT_FAILURE);
+    	}
+	
 	std::string line;
-	while (std::getline(config, line))
-	{
-		DIR *dp;
+	config >> line;
 
-		dp = opendir(line.c_str());
-		if (dp == NULL) 
-		{
-			syslog(LOG_NOTICE, "Path from config not exist");
-			exit(EXIT_FAILURE);
-		}
-		
-		dir_path = line;
-		closedir(dp);
+	wt = -1;
+	config >> wt;
+
+	DIR *dp;
+	dp = opendir(line.c_str());
+
+	if (wt <= 0.0)
+	{
+		syslog(LOG_NOTICE, "Use default wait time equals 120 sec");
+		wt = 120.0;
 	}
+
+	if (dp == NULL) 
+	{
+		syslog(LOG_NOTICE, "Path from config not exist");
+		exit(EXIT_FAILURE);
+	}
+		
+	dir_path = line;
+	closedir(dp);
 	
 	config.close();
 }
