@@ -12,10 +12,10 @@
 #include <unistd.h>
 #include <syslog.h>
 
-#define PID_LOGS "/var/run/first_lab.pid"
+#define PID_LOGS "/var/run/daemon_lab_14.pid"
 #define EPS 1
 
-typedef enum {w = 30, d = 86400, h = 3600, NONE = 0} EventType; // 604800
+typedef enum {w = 604800, d = 86400, h = 3600, NONE = 0} EventType; // 604800
 
 void update_pid_log()
 {
