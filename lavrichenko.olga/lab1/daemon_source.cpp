@@ -13,9 +13,10 @@
 #include <syslog.h>
 
 #define PID_LOGS "/var/run/daemon_lab_14.pid"
-#define EPS 1
+#define EPS 2
+#define SLEEP_TIME 1
 
-typedef enum {w = 604800, d = 86400, h = 3600, NONE = 0} EventType; // 604800
+typedef enum {w = 30, d = 86400, h = 3600, NONE = 0} EventType; // 604800
 
 void update_pid_log()
 {
@@ -63,32 +64,26 @@ private:
 bool Event::checkTime(time_t &currTime)
 {
 	double diff = std::difftime(std::mktime(&_time), currTime);
-	if (_done)
-		return false;
-
-	if (std::abs(diff) < 2 * EPS)
+	if (!_done)
 	{
-		_done = true;
-		return true;
-	}
-
-	if (diff < 0)
-	{
-		_done = true;
+		if (std::abs(diff) < 2 * EPS)
+		{
+			_done = true;
+			return true;
+		}
 		return false;
 	}
 
 	if (_last_remind == 0)
 	{
-		_last_remind = currTime;
-		return false;
+		_last_remind = std::mktime(&_time);
 	}
 	
 	if (_repeatTime != NONE)
 	{
 		if (_last_remind + _repeatTime < currTime)
 		{
-			_last_remind += _repeatTime;
+			_last_remind += _repeatTime * ((currTime - _last_remind) / _repeatTime);
 			return true;
 		}
 	}
@@ -307,7 +302,7 @@ int main(int argc, char** argv)
 	while (true)
 	{
 		reminder.exec();
-		sleep(EPS);
+		sleep(SLEEP_TIME);
 	}
 	
 /*
