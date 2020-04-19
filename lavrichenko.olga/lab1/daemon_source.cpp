@@ -12,9 +12,8 @@
 #include <unistd.h>
 #include <syslog.h>
 
-#define PID_LOGS "/var/run/daemon_lab_14.pid"
-#define EPS 2
-#define SLEEP_TIME 1
+const char*  PID_LOGS = "/var/run/daemon_lab_14.pid";
+const int SLEEP_TIME = 1;
 
 typedef enum {w = 30, d = 86400, h = 3600, NONE = 0} EventType; // 604800
 
@@ -66,7 +65,7 @@ bool Event::checkTime(time_t &currTime)
 	double diff = std::difftime(std::mktime(&_time), currTime);
 	if (!_done)
 	{
-		if (std::abs(diff) < 2 * EPS)
+		if (std::abs(diff) < 4 * SLEEP_TIME)
 		{
 			_done = true;
 			return true;
@@ -133,7 +132,8 @@ void Reminder::printText(std::string text)
 
 
 
-struct ConfigReader {
+class ConfigReader {
+public:
 	void setPath(std::string path) { config_path = path; }
 	void read();
 	ConfigReader() {}
@@ -165,8 +165,7 @@ bool ConfigReader::canParseLine(std::string & line)
 	ss >> token;
 	if (token != "add_event")
 		return false;
-	ss >> token;
-	return isDateTime(token);
+	ss >> token;	return isDateTime(token);
 }
 
 
@@ -314,7 +313,7 @@ int main(int argc, char** argv)
 	while (true)
 	{
 		reminder.exec();
-		sleep(EPS);
+		sleep(SLEEP_TIME);
 	}
 
 */
