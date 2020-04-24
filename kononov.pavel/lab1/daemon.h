@@ -20,21 +20,25 @@
 
 class Daemon {
 public:
-	void init(int, char**);
-	void exec();
-	void update();
-	static Daemon &getInstance(){
-		static Daemon d;
-		return d;
-	}
-	
+    void init(int, char **);
+
+    void exec();
+
+    void update();
+
+    static Daemon &getInstance() {
+        static Daemon d;
+        return d;
+    }
+
 private:
-	void make_fork();
-	void update_pid_log();
-	
-	ConfigReader config;
-	FileDeleter fd;
-	double wait_sec = 120.0;
+    void make_fork();
+
+    void update_pid_log();
+
+    ConfigReader config;
+    FileDeleter fd;
+    double wait_sec = 120.0;
 };
 
 #endif

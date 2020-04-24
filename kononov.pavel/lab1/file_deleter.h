@@ -9,15 +9,15 @@
 
 class FileDeleter {
 public:
-	void setPar(std::string path) {
-		this->path = path;
-	}
-	
-	void exec();
-	
+    void setPar(std::string path) {
+        this->path = path;
+    }
+
+    void exec();
+
 private:
-	std::string path;
-	const double treshold_seconds = 60.0;
+    std::string path;
+    const double treshold_seconds = 60.0;
 };
 
 #endif
