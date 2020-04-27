@@ -1,12 +1,10 @@
 #include <iostream>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <cstring>
 #include <new>
 #include <unistd.h>
 
 #include <conn.h>
-#include <message.h>
 #include "../utils/utils.h"
 
 const char * const SOCK_SERVER_PATH = "/tmp/lab2_socket_server";
@@ -21,34 +19,34 @@ public:
 };
 
 Conn::Conn () {
-    _pmem = new(std::nothrow) SocketInfo();
+    m_pmem = new(std::nothrow) SocketInfo();
 }
 
 Conn::~Conn () {
-    delete (SocketInfo *) _pmem;
+    delete (SocketInfo *) m_pmem;
 }
 
 bool Conn::Open (size_t id, bool create) {
-    SocketInfo *pInfo = (SocketInfo *) _pmem;
+    SocketInfo *pInfo = (SocketInfo *) m_pmem;
     if (pInfo == NULL) {
         std::cout << "[ERROR]: Socket connection's arguments invalid." << std::endl;
         return false;
     }
 
-    _id = id;
+    m_id = id;
 
     struct sockaddr_un saddr;
     saddr.sun_family = AF_UNIX;
-    strcpy(saddr.sun_path, GetName(SOCK_SERVER_PATH, _id).c_str());
+    strcpy(saddr.sun_path, GetName(SOCK_SERVER_PATH, m_id).c_str());
 
-    _owner = create;
+    m_owner = create;
     if (pInfo->created) {
-        if (_owner) {
+        if (m_owner) {
             pInfo->sock = accept(pInfo->listener, NULL, NULL);
             if (pInfo->sock == -1) {
                 std::cout << "[ERROR]: [HOST]: failed to accept the socket, error: " << strerror(errno) << std::endl;
                 close(pInfo->listener);
-                unlink(GetName(SOCK_SERVER_PATH, _id).c_str());
+                unlink(GetName(SOCK_SERVER_PATH, m_id).c_str());
                 return false;
             }
 
@@ -80,7 +78,7 @@ bool Conn::Open (size_t id, bool create) {
         if (listen(pInfo->listener, MAXMSGSNUM) == -1) {
             std::cout << "[ERROR]: [HOST]: Failed to listen, error: " << strerror(errno) << std::endl;
             close(pInfo->listener);
-            unlink(GetName(SOCK_SERVER_PATH, _id).c_str());
+            unlink(GetName(SOCK_SERVER_PATH, m_id).c_str());
             return false;
         }
 
@@ -88,7 +86,7 @@ bool Conn::Open (size_t id, bool create) {
         if (pInfo->sock == -1) {
             std::cout << "[ERROR]: [HOST]: Failed to accept the listener, error: " << strerror(errno) << std::endl;
             close(pInfo->listener);
-            unlink(GetName(SOCK_SERVER_PATH, _id).c_str());
+            unlink(GetName(SOCK_SERVER_PATH, m_id).c_str());
             return false;
         }
     } else {
@@ -111,7 +109,7 @@ bool Conn::Open (size_t id, bool create) {
 }
 
 bool Conn::Close () {
-    SocketInfo *pInfo = (SocketInfo *) _pmem;
+    SocketInfo *pInfo = (SocketInfo *) m_pmem;
     if (pInfo == NULL) {
         std::cout << "[ERROR]: Socket connection's arguments invalid." << std::endl;
         return false;
@@ -132,7 +130,7 @@ bool Conn::Close () {
             }
         }
 
-        if (!_owner || (_owner && unlink(GetName(SOCK_SERVER_PATH, _id).c_str()) == 0)) {
+        if (!m_owner || (m_owner && unlink(GetName(SOCK_SERVER_PATH, m_id).c_str()) == 0)) {
             std::cout << "Connection closed." << std::endl;
             pInfo->created = false;
             return true;
@@ -145,7 +143,7 @@ bool Conn::Close () {
 }
 
 bool Conn::Read (void *buf, size_t count) {
-    SocketInfo *pInfo = (SocketInfo *) _pmem;
+    SocketInfo *pInfo = (SocketInfo *) m_pmem;
     if (pInfo == NULL) {
         std::cout << "[ERROR]: Socket connection's arguments invalid." << std::endl;
         return false;
@@ -160,7 +158,7 @@ bool Conn::Read (void *buf, size_t count) {
 }
 
 bool Conn::Write (void *buf, size_t count) {
-    SocketInfo *pInfo = (SocketInfo *) _pmem;
+    SocketInfo *pInfo = (SocketInfo *) m_pmem;
     if (pInfo == NULL) {
         std::cout << "[ERROR]: Socket connection's arguments invalid." << std::endl;
         return false;

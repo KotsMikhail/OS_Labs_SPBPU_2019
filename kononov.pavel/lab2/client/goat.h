@@ -24,7 +24,7 @@ public:
     Goat &operator=(const Goat &) = delete;
 
 private:
-    int host_pid;
+    int m_host_pid;
     static const int RAND_LIMIT_ALIVE = 100;
     static const int RAND_LIMIT_DEAD = 50;
 
@@ -34,10 +34,10 @@ private:
 
     static void SignalHandler(int signum, siginfo_t *info, void *ptr);
 
-    int id;
-    Conn connection;
-    sem_t *semaphore_host;
-    sem_t *semaphore_client;
+    int m_id;
+    Conn m_connection;
+    sem_t *m_semaphore_host;
+    sem_t *m_semaphore_client;
 };
 
 #endif //OS_LABS_SPBPU_2019_GOAT_H

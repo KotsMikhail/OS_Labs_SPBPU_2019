@@ -3,7 +3,6 @@
 
 #include <csignal>
 #include "client_info.h"
-#include "identifier.h"
 #include <map>
 #include <unistd.h>
 #include <atomic>
@@ -26,13 +25,12 @@ public:
     void SetClientsNum(int n);
 
 private:
-    ClientInfo *client_info;
-    pthread_t *threads;
-    pthread_attr_t *attr;
-    int _clientsNum;
-    Identifier identifier;
+    ClientInfo *m_client_info;
+    pthread_t *m_threads;
+    pthread_attr_t *m_attr;
+    int m_clientsNum;
 
-    int curr_num;
+    int m_curr_num;
     const int RAND_LIMIT = 100;
 
     void Terminate(int signum);
@@ -41,6 +39,8 @@ private:
 
     static Message Step(Message &msg, ClientInfo &info);
 
+    int GetClientId();
+
     void GetNumber();
 
     static void *ThreadRun(void *pthrdData);
@@ -48,10 +48,10 @@ private:
     static void SignalHandler(int signum, siginfo_t *info, void *ptr);
 
 
-    std::atomic<int> finished;
-    std::atomic<int> step;
-    pthread_cond_t cond;
-    pthread_mutex_t mutx;
+    std::atomic<int> m_finished;
+    std::atomic<int> m_step;
+    pthread_cond_t m_cond;
+    pthread_mutex_t m_mutx;
 
 };
 

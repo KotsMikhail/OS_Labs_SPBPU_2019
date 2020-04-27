@@ -19,11 +19,11 @@ public:
     ~Conn();
 
 private:
-    bool _owner;
-    int _id;
-    std::string _name;
-    void *_pmem;
-    int _desc;
+    bool m_owner;
+    int m_id;
+    std::string m_name;
+    void *m_pmem;
+    int m_desc;
 };
 
 #endif // CONN_H

@@ -11,43 +11,43 @@ void Goat::Start() {
     Message msg;
 
     msg.number = GetRand(RAND_LIMIT_ALIVE);
-    std::cout << "Started goat number:" << msg.number << std::endl;
-    sem_wait(semaphore_client);
-    connection.Write(&msg, sizeof(msg));
-    sem_post(semaphore_host);
+    std::cout << "Goat number:" << msg.number << std::endl;
+    m_connection.Write(&msg, sizeof(msg));
+    sem_post(m_semaphore_host);
     while (true) {
-        sem_wait(semaphore_client);
-        if (connection.Read(&msg, sizeof(Message))) {
-            std::cout << "--------------------------------" << std::endl;
-            std::cout << "Status: " << ((msg.status == Status::ALIVE) ? "alive" : "dead") << " id: " << id << std::endl;
+        sem_wait(m_semaphore_client);
+        if (m_connection.Read(&msg, sizeof(Message))) {
             std::cout << "Wolf number: " << msg.number << std::endl;
+            std::cout << "Status: " << ((msg.status == Status::ALIVE) ? "alive" : "dead") << " id: " << m_id
+                      << std::endl;
+            std::cout << "--------------------------------" << std::endl;
             if (msg.status == Status::ALIVE) {
                 msg.number = GetRand(RAND_LIMIT_ALIVE);
             } else {
                 msg.number = GetRand(RAND_LIMIT_DEAD);
             }
             std::cout << "Goat number: " << msg.number << std::endl;
-            connection.Write(&msg, sizeof(msg));
+            m_connection.Write(&msg, sizeof(msg));
         }
-        sem_post(semaphore_host);
+        sem_post(m_semaphore_host);
     }
 }
 
 bool Goat::OpenConnection() {
     bool res = false;
 
-    if (host_pid == 0)
+    if (m_host_pid == 0)
         return false;
 
     alarm(5);
-    kill(host_pid, SIGUSR1);
-    while (id < 0)
+    kill(m_host_pid, SIGUSR1);
+    while (m_id < 0)
         pause();
 
-    if (connection.Open(id, false)) {
-        semaphore_host = sem_open(GetName(SEMAPHORE_HOST_NAME, id).c_str(), 0);
-        semaphore_client = sem_open(GetName(SEMAPHORE_CLIENT_NAME, id).c_str(), 0);
-        if (semaphore_host == SEM_FAILED || semaphore_client == SEM_FAILED) {
+    if (m_connection.Open(m_id, false)) {
+        m_semaphore_host = sem_open(GetName(SEMAPHORE_HOST_NAME, m_id).c_str(), 0);
+        m_semaphore_client = sem_open(GetName(SEMAPHORE_CLIENT_NAME, m_id).c_str(), 0);
+        if (m_semaphore_host == SEM_FAILED || m_semaphore_client == SEM_FAILED) {
             std::cout << "ERROR: sem_open failed with error: " << strerror(errno) << std::endl;
         } else {
             res = true;
@@ -59,7 +59,7 @@ bool Goat::OpenConnection() {
 
 void Goat::SetHostPid(int pid) {
     std::cout << "host pid: " << pid << std::endl;
-    host_pid = pid;
+    m_host_pid = pid;
 }
 
 Goat& Goat::GetInstance() {
@@ -68,13 +68,13 @@ Goat& Goat::GetInstance() {
 }
 
 void Goat::Terminate(int signum) {
-    kill(host_pid, SIGUSR2);
+    kill(m_host_pid, SIGUSR2);
     std::cout << "Exit" << std::endl;
-    if (sem_close(semaphore_client) == -1 || sem_close(semaphore_host) == -1) {
+    if (sem_close(m_semaphore_client) == -1 || sem_close(m_semaphore_host) == -1) {
         std::cout << "Failed: " << strerror(errno) << std::endl;
         exit(errno);
     }
-    if (!connection.Close()) {
+    if (!m_connection.Close()) {
         std::cout << "Failed: " << strerror(errno) << std::endl;
         exit(errno);
     }
@@ -82,8 +82,8 @@ void Goat::Terminate(int signum) {
 }
 
 Goat::Goat() {
-    host_pid = 0;
-    id = -1;
+    m_host_pid = 0;
+    m_id = -1;
     struct sigaction act;
     act.sa_sigaction = SignalHandler;
     act.sa_flags = SA_SIGINFO | SA_RESTART;
@@ -97,11 +97,11 @@ void Goat::SignalHandler(int signum, siginfo_t* info, void* ptr) {
     Goat &instance = Goat::GetInstance();
     switch (signum) {
         case SIGUSR1: {
-            instance.id = info->si_value.sival_int;
+            instance.m_id = info->si_value.sival_int;
             break;
         }
         case SIGALRM: {
-            if (instance.id >= 0)
+            if (instance.m_id >= 0)
                 break;
         }
         default: {

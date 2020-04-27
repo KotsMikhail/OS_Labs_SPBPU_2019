@@ -21,21 +21,10 @@ void ClientInfo::Delete() {
 bool ClientInfo::OpenConnection(int i) {
     bool res = false;
     id = i;
+    sem_unlink(GetName(SEMAPHORE_HOST_NAME, id).c_str());
+    sem_unlink(GetName(SEMAPHORE_CLIENT_NAME, id).c_str());
     semaphore_host = sem_open(GetName(SEMAPHORE_HOST_NAME, i).c_str(), O_CREAT, 0666, 0);
     semaphore_client = sem_open(GetName(SEMAPHORE_CLIENT_NAME, i).c_str(), O_CREAT, 0666, 0);
-
-    int siv;
-    sem_getvalue(semaphore_host, &siv);
-    if (siv != 0) {
-        sem_unlink(GetName(SEMAPHORE_HOST_NAME, id).c_str());
-        semaphore_host = sem_open(GetName(SEMAPHORE_HOST_NAME, i).c_str(), O_CREAT, 0666, 0);
-    }
-
-    sem_getvalue(semaphore_client, &siv);
-    if (siv != 0) {
-        sem_unlink(GetName(SEMAPHORE_CLIENT_NAME, id).c_str());
-        semaphore_host = sem_open(GetName(SEMAPHORE_CLIENT_NAME, i).c_str(), O_CREAT, 0666, 0);
-    }
 
     if (connection.Open(i, true)) {
         if (semaphore_host == SEM_FAILED ||

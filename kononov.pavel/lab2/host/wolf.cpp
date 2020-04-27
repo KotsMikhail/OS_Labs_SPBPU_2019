@@ -7,39 +7,38 @@
 #include <algorithm>
 #include <fcntl.h>
 #include "../utils/utils.h"
-#include "identifier.h"
 
 void Wolf::Start() {
     int attached_clients = 0;
 
-    if (_clientsNum == 0)
+    if (m_clientsNum == 0)
         return;
 
-    while (attached_clients != _clientsNum) {
+    while (attached_clients != m_clientsNum) {
         attached_clients = 0;
-        for (int i = 0; i < _clientsNum; ++i) {
-            if (client_info[i].attached)
+        for (int i = 0; i < m_clientsNum; ++i) {
+            if (m_client_info[i].attached)
                 attached_clients++;
         }
 
-        if (attached_clients != _clientsNum) {
-            std::cout << "Waiting " << _clientsNum - attached_clients << " clients." << std::endl;
+        if (attached_clients != m_clientsNum) {
+            std::cout << "Waiting " << m_clientsNum - attached_clients << " clients." << std::endl;
             pause();
         }
     }
     std::cout << "Clients attached!" << std::endl;
 
-    for (int i = 0; i < _clientsNum; ++i) {
-        pthread_attr_init(&attr[i]);
-        pthread_create(&(threads[i]), &attr[i], ThreadRun, &client_info[i]);
+    for (int i = 0; i < m_clientsNum; ++i) {
+        pthread_attr_init(&m_attr[i]);
+        pthread_create(&(m_threads[i]), &m_attr[i], ThreadRun, &m_client_info[i]);
     }
 
     while (true) {
-        if (finished == _clientsNum) {
-            pthread_mutex_lock(&mutx);
+        if (m_finished == m_clientsNum) {
+            pthread_mutex_lock(&m_mutx);
             int res = 0;
-            for (int i = 0; i < _clientsNum; ++i) {
-                if (client_info[i].count_dead < 2)
+            for (int i = 0; i < m_clientsNum; ++i) {
+                if (m_client_info[i].count_dead < 2)
                     ++res;
             }
 
@@ -51,10 +50,10 @@ void Wolf::Start() {
             std::cout.flush(); // ??
             GetNumber();
             std::cout.flush(); // ??
-            finished = 0;
-            step++;
-            pthread_cond_broadcast(&cond);
-            pthread_mutex_unlock(&mutx);
+            m_finished = 0;
+            m_step++;
+            pthread_cond_broadcast(&m_cond);
+            pthread_mutex_unlock(&m_mutx);
         } else {
             sleep(1);
         }
@@ -64,8 +63,8 @@ void Wolf::Start() {
 bool Wolf::OpenConnection() {
     bool res = true;
 
-    for (int i = 0; i < _clientsNum; ++i) {
-        res &= client_info[i].OpenConnection(i);
+    for (int i = 0; i < m_clientsNum; ++i) {
+        res &= m_client_info[i].OpenConnection(i);
     }
 
     if (res)
@@ -84,37 +83,33 @@ Wolf& Wolf::GetInstance() {
 void Wolf::Terminate(int signum) {
     std::cout << "Exit" << std::endl;
 
-    for (int i = 0; i < _clientsNum; ++i)
-        client_info[i].Dettach();
+    for (int i = 0; i < m_clientsNum; ++i)
+        m_client_info[i].Dettach();
 
-    for (int i = 0; i < _clientsNum; ++i)
-        kill(client_info[i].pid, signum);
+    for (int i = 0; i < m_clientsNum; ++i)
+        kill(m_client_info[i].pid, signum);
 
-    for (int i = 0; i < _clientsNum; i++) {
-        client_info[i].Delete();
-        pthread_cancel(threads[i]);
-    }
+    for (int i = 0; i < m_clientsNum; i++)
+        pthread_cancel(m_threads[i]);
 
     exit(signum);
 }
 
 void Wolf::SetClientsNum(int n) {
-    _clientsNum = n;
-    delete[] client_info;
-    delete[] threads;
-    delete[] attr;
-    client_info = new ClientInfo[n];
-    threads = new pthread_t[n];
-    attr = new pthread_attr_t[n];
-    identifier = Identifier(n);
+    m_clientsNum = n;
+    delete[] m_client_info;
+    delete[] m_threads;
+    delete[] m_attr;
+    m_client_info = new ClientInfo[n];
+    m_threads = new pthread_t[n];
+    m_attr = new pthread_attr_t[n];
 }
 
 Wolf::Wolf() {
-    step = 0;
-    curr_num = 0;
-    finished = 0;
-    _clientsNum = 0;
-    identifier = Identifier(0);
+    m_step = 0;
+    m_curr_num = 0;
+    m_finished = 0;
+    m_clientsNum = 0;
 
     struct sigaction act;
     act.sa_sigaction = SignalHandler;
@@ -124,34 +119,37 @@ Wolf::Wolf() {
     sigaction(SIGUSR1, &act, nullptr);
     sigaction(SIGUSR2, &act, nullptr);
 
-    client_info = nullptr;
-    threads = nullptr;
-    attr = nullptr;
+    m_client_info = nullptr;
+    m_threads = nullptr;
+    m_attr = nullptr;
 
-    pthread_cond_init(&cond, NULL);
-    pthread_mutex_init(&mutx, NULL);
+    pthread_cond_init(&m_cond, NULL);
+    pthread_mutex_init(&m_mutx, NULL);
 }
 
 Wolf::~Wolf() {
-    delete[]threads;
-    delete[]attr;
-    delete[] client_info;
+    for (int i = 0; i < m_clientsNum; i++)
+        m_client_info[i].Delete();
 
-    pthread_cond_destroy(&cond);
-    pthread_mutex_destroy(&mutx);
+    delete[]m_threads;
+    delete[]m_attr;
+    delete[]m_client_info;
+
+    pthread_cond_destroy(&m_cond);
+    pthread_mutex_destroy(&m_mutx);
 }
 
 Message Wolf::Step(Message &ans, ClientInfo &info) {
     Message msg;
     Wolf &instance = GetInstance();
-    if ((ans.status == Status::ALIVE && abs(instance.curr_num - ans.number) <= 70) ||
-        (ans.status == Status::DEAD && abs(instance.curr_num - ans.number) <= 20)) {
+    if ((ans.status == Status::ALIVE && abs(instance.m_curr_num - ans.number) <= 70 / instance.m_clientsNum) ||
+        (ans.status == Status::DEAD && abs(instance.m_curr_num - ans.number) <= 20 / instance.m_clientsNum)) {
         info.count_dead = 0;
     } else {
         msg.status = Status::DEAD;
         info.count_dead++;
     }
-    msg.number = instance.curr_num;
+    msg.number = instance.m_curr_num;
     return msg;
 }
 
@@ -165,7 +163,7 @@ void Wolf::GetNumber() {
 
         if (!(std::cin.fail())) {
             if (num >= 1 && num <= RAND_LIMIT)
-                curr_num = num;
+                m_curr_num = num;
             else {
                 std::cout << "Input should be an integer in range [1; " << RAND_LIMIT << "]. Please, try again..."
                           << std::endl;
@@ -182,11 +180,16 @@ void Wolf::GetNumber() {
     }
 }
 
+int Wolf::GetClientId() {
+    static int i = 0;
+    return i != m_clientsNum ? i++ : -1;
+}
+
 void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr) {
     static Wolf &instance = GetInstance();
     switch (signum) {
         case SIGUSR1: {
-            int iClient = instance.identifier.GetId();
+            int iClient = instance.GetClientId();
             if (iClient == -1) {
                 std::cout << "Too many clients" << std::endl;
             } else {
@@ -195,14 +198,14 @@ void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr) {
                 value.sival_int = iClient;
                 if (sigqueue(info->si_pid, SIGUSR1, value) == 0) {
                     std::cout << "Attaching client with pid: " << info->si_pid << " and id: " << iClient << std::endl;
-                    instance.client_info[iClient].Attach(info->si_pid);
+                    instance.m_client_info[iClient].Attach(info->si_pid);
                 }
             }
             break;
         }
         case SIGUSR2: {
-            for (int i = 0; i < instance._clientsNum; ++i)
-                if (instance.client_info[i].pid == info->si_pid && instance.client_info[i].attached) {
+            for (int i = 0; i < instance.m_clientsNum; ++i)
+                if (instance.m_client_info[i].pid == info->si_pid && instance.m_client_info[i].attached) {
                     instance.Terminate(SIGINT);
                     break;
                 }
@@ -228,24 +231,20 @@ void *Wolf::ThreadRun(void *pthrData) {
     struct timespec ts;
     Message msg;
 
-
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-    instance.finished++;
-    sem_post(semaphore_client);
+    instance.m_finished++;
     while (true) {
         if (info->attached) {
-            pthread_mutex_lock(&instance.mutx);
-            while (clientStep >= instance.step)
-                pthread_cond_wait(&instance.cond, &instance.mutx);
+            pthread_mutex_lock(&instance.m_mutx);
+            while (clientStep >= instance.m_step)
+                pthread_cond_wait(&instance.m_cond, &instance.m_mutx);
             clientStep++;
 
             clock_gettime(CLOCK_REALTIME, &ts);
             ts.tv_sec += TIMEOUT;
             if (sem_timedwait(semaphore_host, &ts) == -1) {
                 std::cout << "Time wait id:" << id << std::endl; //debug
-                kill(info->pid, SIGTERM);
-                info->Dettach();
-                continue;
+                instance.Terminate(SIGTERM);
             }
             if (connection.Read(&msg, sizeof(Message))) {
                 std::cout << "--------------------------------" << std::endl;
@@ -259,8 +258,8 @@ void *Wolf::ThreadRun(void *pthrData) {
                 connection.Write(&msg, sizeof(msg));
             }
             sem_post(semaphore_client);
-            ++instance.finished;
-            pthread_mutex_unlock(&instance.mutx);
+            ++instance.m_finished;
+            pthread_mutex_unlock(&instance.m_mutx);
         } else
             pthread_exit(nullptr);
     }
