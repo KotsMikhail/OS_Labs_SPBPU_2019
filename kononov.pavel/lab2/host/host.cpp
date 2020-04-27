@@ -17,7 +17,9 @@ int main(int argc, char**argv) {
         return 0;
     }
 
-    Wolf &wolf = Wolf::GetInstance(n);
+    Wolf &wolf = Wolf::GetInstance();
+    wolf.SetClientsNum(n);
+
     if (wolf.OpenConnection()) {
         wolf.Start();
     }

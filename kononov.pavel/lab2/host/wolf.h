@@ -15,27 +15,29 @@ public:
 
     bool OpenConnection();
 
-    static Wolf &GetInstance(int n);
-
-    Wolf(Wolf &) = delete;
+    static Wolf &GetInstance();
 
     Wolf(const Wolf &) = delete;
 
     Wolf &operator=(const Wolf &) = delete;
 
-private:
-    static ClientInfo *client_info;
-    static pthread_t *threads;
-    static pthread_attr_t *attr;
-    static int _clientsNum;
-    static Identifier identifier;
+    ~Wolf();
 
-    static int curr_num;
-    static const int RAND_LIMIT = 100;
+    void SetClientsNum(int n);
+
+private:
+    ClientInfo *client_info;
+    pthread_t *threads;
+    pthread_attr_t *attr;
+    int _clientsNum;
+    Identifier identifier;
+
+    int curr_num;
+    const int RAND_LIMIT = 100;
 
     void Terminate(int signum);
 
-    Wolf(int n);
+    Wolf();
 
     static Message Step(Message &msg, ClientInfo &info);
 
@@ -46,10 +48,10 @@ private:
     static void SignalHandler(int signum, siginfo_t *info, void *ptr);
 
 
-    static std::atomic<int> finished;
-    static std::atomic<int> step;
-    static pthread_cond_t cond;
-    static pthread_mutex_t mutx;
+    std::atomic<int> finished;
+    std::atomic<int> step;
+    pthread_cond_t cond;
+    pthread_mutex_t mutx;
 
 };
 
