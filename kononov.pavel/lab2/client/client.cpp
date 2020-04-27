@@ -17,7 +17,8 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "Starting client..." << std::endl;
 
-    Goat &goat = Goat::GetInstance(pid);
+    Goat &goat = Goat::GetInstance();
+    goat.SetHostPid(pid);
     if (goat.OpenConnection()) {
         goat.Start();
     }

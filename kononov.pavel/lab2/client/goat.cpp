@@ -6,7 +6,6 @@
 #include <cstring>
 #include <unistd.h>
 
-int Goat::id;
 
 void Goat::Start() {
     Message msg;
@@ -37,6 +36,9 @@ void Goat::Start() {
 bool Goat::OpenConnection() {
     bool res = false;
 
+    if (host_pid == 0)
+        return false;
+
     alarm(5);
     kill(host_pid, SIGUSR1);
     while (id < 0)
@@ -55,8 +57,13 @@ bool Goat::OpenConnection() {
     return res;
 }
 
-Goat& Goat::GetInstance(int host_pid) {
-    static Goat instance(host_pid);
+void Goat::SetHostPid(int pid) {
+    std::cout << "host pid: " << pid << std::endl;
+    host_pid = pid;
+}
+
+Goat& Goat::GetInstance() {
+    static Goat instance;
     return instance;
 }
 
@@ -74,9 +81,8 @@ void Goat::Terminate(int signum) {
     exit(signum);
 }
 
-Goat::Goat(int pid) {
-    std::cout << "host pid: " << pid << std::endl;
-    host_pid = pid;
+Goat::Goat() {
+    host_pid = 0;
     id = -1;
     struct sigaction act;
     act.sa_sigaction = SignalHandler;
@@ -88,17 +94,17 @@ Goat::Goat(int pid) {
 }
 
 void Goat::SignalHandler(int signum, siginfo_t* info, void* ptr) {
+    Goat &instance = Goat::GetInstance();
     switch (signum) {
         case SIGUSR1: {
-            id = info->si_value.sival_int;
+            instance.id = info->si_value.sival_int;
             break;
         }
         case SIGALRM: {
-            if (id >= 0)
+            if (instance.id >= 0)
                 break;
         }
         default: {
-            Goat &instance = Goat::GetInstance(13);
             instance.Terminate(signum);
         }
     }

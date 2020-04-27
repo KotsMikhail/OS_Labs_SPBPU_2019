@@ -7,13 +7,15 @@
 #include <csignal>
 
 
-class Goat {
+class Goat{
 public:
     void Start();
 
     bool OpenConnection();
 
-    static Goat &GetInstance(int host_pid);
+    static Goat &GetInstance();
+
+    void SetHostPid(int pid);
 
     Goat(Goat &) = delete;
 
@@ -28,12 +30,11 @@ private:
 
     void Terminate(int signum);
 
-    Goat(int host_pid);
+    Goat();
 
     static void SignalHandler(int signum, siginfo_t *info, void *ptr);
 
-    static int id;
-
+    int id;
     Conn connection;
     sem_t *semaphore_host;
     sem_t *semaphore_client;
