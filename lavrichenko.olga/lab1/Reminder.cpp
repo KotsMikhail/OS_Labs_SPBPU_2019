@@ -10,7 +10,7 @@ void Reminder::exec() {
 
 
 void Reminder::printText(std::string text) {
-    std::string query = _form + text;
+    std::string query = form + text;
     system(query.c_str());
 }
 

@@ -29,9 +29,9 @@ public:
 
     void read();
 
-    Reminder() : _form("gnome-terminal -- ") {
+    Reminder() : form("gnome-terminal -- ") {
         std::string _print_text_path = realpath("print_text", nullptr);
-        _form += _print_text_path + " ";
+        form += _print_text_path + " ";
         events = nullptr;
     }
 
@@ -40,7 +40,7 @@ public:
     }
 
 private:
-    std::string _form;
+    std::string form;
     std::list<Event> *events;
     ConfigReader config_reader;
 };

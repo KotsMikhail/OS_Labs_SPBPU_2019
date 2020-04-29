@@ -3,22 +3,22 @@ static const int SLEEP_TIME = 1;
 
 
 bool Event::checkTime(time_t &currTime) {
-    double diff = std::difftime(std::mktime(&_time), currTime);
-    if (!_done) {
+    double diff = std::difftime(std::mktime(&time), currTime);
+    if (!done) {
         if (std::abs(diff) < 4 * SLEEP_TIME) {
-            _done = true;
+            done = true;
             return true;
         }
         return false;
     }
 
-    if (_last_remind == 0) {
-        _last_remind = std::mktime(&_time);
+    if (last_remind == 0) {
+        last_remind = std::mktime(&time);
     }
 
-    if (_repeatTime != NONE) {
-        if (_last_remind + _repeatTime < currTime) {
-            _last_remind += _repeatTime * ((currTime - _last_remind) / _repeatTime);
+    if (repeatTime != NONE) {
+        if (last_remind + repeatTime < currTime) {
+            last_remind += repeatTime * ((currTime - last_remind) / repeatTime);
             return true;
         }
     }
