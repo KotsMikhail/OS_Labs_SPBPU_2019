@@ -37,7 +37,7 @@ private:
 
     Wolf();
 
-    static Message Step(Message &msg, ClientInfo &info);
+    Message Step(Message &msg, ClientInfo &info);
 
     int GetClientId();
 

@@ -3,8 +3,6 @@
 
 #include <string>
 
-#define SEMAPHORE_HOST_NAME "LAB2_HOST"
-#define SEMAPHORE_CLIENT_NAME "LAB2_CLIENT"
 static const int TIMEOUT = 5;
 
 int GetRand(int limit);

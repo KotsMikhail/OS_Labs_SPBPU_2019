@@ -17,7 +17,7 @@ void Wolf::Start() {
     while (attached_clients != m_clientsNum) {
         attached_clients = 0;
         for (int i = 0; i < m_clientsNum; ++i) {
-            if (m_client_info[i].attached)
+            if (m_client_info[i].IsAttached())
                 attached_clients++;
         }
 
@@ -47,9 +47,9 @@ void Wolf::Start() {
                 Terminate(SIGINT);
             }
 
-            std::cout.flush(); // ??
+            std::cout.flush();
             GetNumber();
-            std::cout.flush(); // ??
+            std::cout.flush();
             m_finished = 0;
             m_step++;
             pthread_cond_broadcast(&m_cond);
@@ -87,7 +87,7 @@ void Wolf::Terminate(int signum) {
         m_client_info[i].Dettach();
 
     for (int i = 0; i < m_clientsNum; ++i)
-        kill(m_client_info[i].pid, signum);
+        kill(m_client_info[i].GetPid(), signum);
 
     for (int i = 0; i < m_clientsNum; i++)
         pthread_cancel(m_threads[i]);
@@ -186,7 +186,7 @@ int Wolf::GetClientId() {
 }
 
 void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr) {
-    static Wolf &instance = GetInstance();
+    Wolf &instance = GetInstance();
     switch (signum) {
         case SIGUSR1: {
             int iClient = instance.GetClientId();
@@ -205,7 +205,7 @@ void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr) {
         }
         case SIGUSR2: {
             for (int i = 0; i < instance.m_clientsNum; ++i)
-                if (instance.m_client_info[i].pid == info->si_pid && instance.m_client_info[i].attached) {
+                if (instance.m_client_info[i].GetPid() == info->si_pid && instance.m_client_info[i].IsAttached()) {
                     instance.Terminate(SIGINT);
                     break;
                 }
@@ -222,10 +222,10 @@ void Wolf::SignalHandler(int signum, siginfo_t* info, void* ptr) {
 void *Wolf::ThreadRun(void *pthrData) {
     ClientInfo *info = (ClientInfo *) pthrData;
     Wolf &instance = Wolf::GetInstance();
-    int id = info->id;
-    sem_t *semaphore_host = info->semaphore_host;
-    sem_t *semaphore_client = info->semaphore_client;
-    Conn connection = info->connection;
+    int id = info->GetId();
+    sem_t &semaphore_host = info->GetHostSemaphore();
+    sem_t &semaphore_client = info->GetClientSemaphore();
+    Conn connection = info->GetConnection();
 
     int clientStep = 0;
     struct timespec ts;
@@ -234,7 +234,7 @@ void *Wolf::ThreadRun(void *pthrData) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     instance.m_finished++;
     while (true) {
-        if (info->attached) {
+        if (info->IsAttached()) {
             pthread_mutex_lock(&instance.m_mutx);
             while (clientStep >= instance.m_step)
                 pthread_cond_wait(&instance.m_cond, &instance.m_mutx);
@@ -242,8 +242,8 @@ void *Wolf::ThreadRun(void *pthrData) {
 
             clock_gettime(CLOCK_REALTIME, &ts);
             ts.tv_sec += TIMEOUT;
-            if (sem_timedwait(semaphore_host, &ts) == -1) {
-                std::cout << "Time wait id:" << id << std::endl; //debug
+            if (sem_timedwait(&semaphore_host, &ts) == -1) {
+                std::cout << "Time wait id:" << id << std::endl;
                 instance.Terminate(SIGTERM);
             }
             if (connection.Read(&msg, sizeof(Message))) {
@@ -257,7 +257,7 @@ void *Wolf::ThreadRun(void *pthrData) {
 
                 connection.Write(&msg, sizeof(msg));
             }
-            sem_post(semaphore_client);
+            sem_post(&semaphore_client);
             ++instance.m_finished;
             pthread_mutex_unlock(&instance.m_mutx);
         } else

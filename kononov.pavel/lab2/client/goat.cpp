@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <iostream>
 #include "../utils/utils.h"
+#include "../utils/sem_names.h"
 #include <cstring>
 #include <unistd.h>
 

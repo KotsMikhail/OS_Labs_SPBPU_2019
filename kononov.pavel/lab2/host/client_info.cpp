@@ -1,6 +1,7 @@
 #include <iostream>
 #include "client_info.h"
 #include "../utils/utils.h"
+#include "../utils/sem_names.h"
 #include <fcntl.h>
 
 void ClientInfo::Delete() {
@@ -45,4 +46,28 @@ void ClientInfo::Dettach() {
 void ClientInfo::Attach(int pid) {
     this->pid = pid;
     this->attached = true;
+}
+
+bool ClientInfo::IsAttached() {
+    return attached;
+}
+
+int ClientInfo::GetId() {
+    return id;
+}
+
+int ClientInfo::GetPid() {
+    return pid;
+}
+
+Conn &ClientInfo::GetConnection() {
+    return connection;
+}
+
+sem_t &ClientInfo::GetHostSemaphore() {
+    return *semaphore_host;
+}
+
+sem_t &ClientInfo::GetClientSemaphore() {
+    return *semaphore_client;
 }
