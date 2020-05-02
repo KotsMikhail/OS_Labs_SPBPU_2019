@@ -1,7 +1,3 @@
-//
-// Created by peter on 11/22/19.
-//
-
 #include <fcntl.h>
 #include <mqueue.h>
 #include <iostream>
@@ -10,57 +6,56 @@
 
 #include "../interface/conn.h"
 
-void Connection::open( const std::string &id, bool is_create )
-{
-  m_is_owner = is_create;
-  m_id = "/" + id;
+static const char *MQ_NAME = "/LAB2_MQ";
 
-  if (m_is_owner)
-    mq_unlink(m_id.c_str());
+bool Conn::Open(int id, bool create ) {
+    m_owner = create;
 
-  unsigned flags = O_RDWR;
-  const int perm = 0666;
+    unsigned flags = O_RDWR;
 
-  if (is_create)
-  {
-    //std::cout << "Creating message queue with name = " << id << std::endl;
-    flags |= O_CREAT;
+    if (create) {
+        mq_unlink(MQ_NAME);
+        flags |= O_CREAT;
 
-    struct mq_attr attr = ((struct mq_attr){0, 1, sizeof(int), 0, {0}});
-    m_desc[0] = mq_open(m_id.c_str(), flags, perm, &attr);
-  }
-  else
-  {
-    //std::cout << "Connecting to message queue with name = " << id << std::endl;
-    m_desc[0] = mq_open(m_id.c_str(), flags);
-  }
+        struct mq_attr attr = ((struct mq_attr) {0, 1, sizeof(Message), 0, {0}});
+        m_desc = mq_open(MQ_NAME, flags, 0666, &attr);
+    } else {
+        m_desc = mq_open(MQ_NAME, flags);
+    }
 
-  if (m_desc[0] == -1)
-    std::runtime_error("Failed to open message queue");
-  //std::cout << "Message queue descriptor = " << m_desc[0] << std::endl;
-} // end of 'Connection::open' function
+    if (m_desc == -1) {
+        std::cout << "Can't open message queue" << std::endl;
+        return false;
+    }
 
-int Connection::read()
-{
-  int message;
+    return true;
+}
 
-  if (mq_receive(m_desc[0], (char *)&message, sizeof(int), nullptr) == -1)
-    std::runtime_error("Failed to receive message");
+bool Conn::Read(void *buf, size_t count) {
+    if (mq_receive(m_desc, (char *)buf, count, nullptr) == -1) {
+        std::cout << "Can't read message" << std::endl;
+        return false;
+    }
+    return true;
+}
 
-  return message;
-} // end of 'Connection::read' function
+bool Conn::Write(void *buf, size_t count) {
+    if (mq_send(m_desc, (char *)buf, count, 0) == -1) {
+        std::cout << "Can't write message" << std::endl;
+        return false;
+    }
+    return true;
+}
 
-void Connection::write( int message )
-{
-  if (mq_send(m_desc[0], (char*)&message, sizeof(int), 0) == -1)
-    std::runtime_error("Failed to send message");
-} // end of 'Connection::write' function
+bool Conn::Close() {
+    if (mq_close(m_desc) != 0) {
+        std::cout << "Can't close mq descriptor = " << m_desc;
+        return false;
+    }
+    else if (m_owner && mq_unlink(MQ_NAME) != 0) {
+        std::cout << "Can't unlink message queue with name = " << MQ_NAME;
+        return false;
+    }
 
-void Connection::close()
-{
-  if (mq_close(m_desc[0]) != 0)
-    std::cout << "ERROR: Failed to close mq descriptor = " << m_desc[0];
-  else
-    if (m_is_owner && mq_unlink(m_id.c_str()) != 0)
-      std::cout << "ERROR: Failed to unlink message queue with name = " << m_id;
-} // end of 'Connection::close' function
+    return true;
+}

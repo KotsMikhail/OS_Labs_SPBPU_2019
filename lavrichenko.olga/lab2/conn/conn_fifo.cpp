@@ -1,62 +1,63 @@
-//
-// Created by peter on 11/22/19.
-//
-
-#include <syslog.h>
-#include <csignal>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <cstdlib>
 #include <string>
-#include <sstream>
 #include <cstring>
 #include <iostream>
 
 #include "../interface/conn.h"
 
-void Connection::open( const std::string &id, bool is_create )
-{
-  m_is_owner = is_create;
-  m_id = id;
+static const char * const FIFO_PATH = "/tmp/fifo_file";
 
-  // unlink old fifo file just in case
-  if (m_is_owner)
-    unlink(id.c_str());
+bool Conn::Open( int id, bool create ) {
+    m_owner = create;
 
-  int flags = S_IWUSR | S_IRUSR | S_IWGRP | S_IRGRP | S_IWOTH | S_IROTH;
-  if (is_create && mkfifo(id.c_str(), flags) == -1)
-    std::runtime_error("Failed to create fifo file");
+    if (m_owner) {
+        unlink(FIFO_PATH);
+        int flags = S_IWUSR | S_IRUSR | S_IWGRP | S_IRGRP | S_IWOTH | S_IROTH;
+        if (mkfifo(FIFO_PATH, flags) == -1) {
+            std::cout << "ERROR: Cann't create fifo file" << std::endl;
+            return false;
+        }
+    }
 
-  m_desc[0] = ::open(id.c_str(), O_RDWR);
-  if (m_desc[0] == -1)
-    std::runtime_error("Failed to open fifo file");
+    if ((m_desc = ::open(FIFO_PATH, O_RDWR)) == -1) {
+        std::cout << "ERROR: Cann't open fifo file" << std::endl;
+        return false;
+    }
 
-  std::cout << "Opened fifo connection" << std::endl;
-} // end of 'Connection::open' function
+    return true;
+}
 
-void Connection::write( int message )
-{
-  if (::write(m_desc[0], &message, sizeof(int)) == -1)
-    std::runtime_error("Failed to write message");
-} // end of 'Connection::write' function
+bool Conn::Write( void *buf, size_t count) {
+    Message *msg = (Message *) buf;
+    if (::write(m_desc, msg, count) == -1) {
+        std::cout << "ERROR: Can't write message" << std::endl;
+        return false;
+    }
+    return true;
+}
 
-int Connection::read()
-{
-  int message;
+bool Conn::Read(void *buf, size_t count) {
+    if (::read(m_desc, buf, count) == -1) {
+        std::cout << "ERROR: Can't read message" << std::endl;
+        return false;
+    }
 
-  if (::read(m_desc[0], &message, sizeof(int)) == -1)
-    std::runtime_error("Failed to read message");
+    return true;
+}
 
-  return message;
-} // end of 'Connection::read' function
+bool Conn::Close() {
+    bool ans = true;
+    if (::close(m_desc) == -1) {
+        std::cout << "ERROR: Can't close file, errno = " << strerror(errno) << std::endl;
+        ans = false;
+    }
 
-void Connection::close()
-{
-  if (::close(m_desc[0]) == -1)
-    std::cout << "ERROR: Failed to close file handle, errno = " << strerror(errno) << std::endl;
+    if (m_owner && unlink(FIFO_PATH) == -1) {
+        std::cout << "ERROR: Can't unlink file, errno = " << strerror(errno) << std::endl;
+        ans = false;
+    }
 
-  if (m_is_owner)
-    if (unlink(m_id.c_str()) == -1)
-      std::cout << "ERROR: Failed to unlink file, errno = " << strerror(errno) << std::endl;
-} // end of 'Connection::close' function
+    return ans;
+}

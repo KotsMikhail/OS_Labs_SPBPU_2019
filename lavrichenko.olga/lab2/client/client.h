@@ -6,17 +6,26 @@
 
 #include "../interface/conn.h"
 
-class Client
-{
+class Client {
 private:
-  Connection m_connection;
-  sem_t *m_host_semaphore;
-  sem_t *m_client_semaphore;
+    Conn m_connection;
+    sem_t *m_host_semaphore;
+    sem_t *m_client_semaphore;
 
 public:
-  Client(const std::string &connectionId, sem_t *host_semaphore, sem_t *client_semaphore);
-  ~Client();
-  void start();
+    Client(const Client &host) = delete;
+
+    Client &operator=(const Client &host) = delete;
+
+    static Client &getInstance();
+
+    Client();
+
+    ~Client();
+
+    void start();
+
+    bool Init(sem_t *host_sem, sem_t *client_sem);
 };
 
 #endif //LAB2_CLIENT_H

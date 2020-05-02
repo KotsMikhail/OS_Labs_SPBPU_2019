@@ -1,24 +1,16 @@
-//
-// Created by peter on 11/22/19.
-//
-
-#include <stdexcept>
+#include <cstring>
 #include <iostream>
 
-#include "host_class.h"
+#include "host_impl.h"
 
-int main( int argc, char **argv )
-{
-  try
-  {
+int main( int argc, char **argv ) {
     Host &host = Host::getInstance();
-    host.start();
-  }
-  catch (std::exception &e)
-  {
-    std::cout << "ERROR: " << e.what() << ", errno = " << strerror(errno) << std::endl;
-    return 1;
-  }
+    if (host.Init()) {
+        host.start();
+    } else {
+        std::cout << "ERROR: errno = " << strerror(errno) << std::endl;
+        return 1;
+    }
 
-  return 0;
+    return 0;
 }

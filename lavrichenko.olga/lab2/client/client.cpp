@@ -1,40 +1,68 @@
-#include <stdexcept>
 #include <iostream>
-#include <cstdlib>
+#include <random>
 
 #include "client.h"
 
-Client::Client(const std::string &connectionId, sem_t *host_semaphore,
-  sem_t *client_semaphore) :
-    m_host_semaphore(host_semaphore),
-    m_client_semaphore(client_semaphore)
-{
-  m_connection.open(connectionId, false);
+Client &Client::getInstance() {
+    static Client instance;
+    return instance;
 }
 
-void Client::start()
-{
-  while (true)
-  {
+Client::Client() : m_host_semaphore(nullptr), m_client_semaphore(nullptr)
+{}
+
+bool Client::Init(sem_t *host_sem, sem_t *client_sem) {
+    if (host_sem == nullptr || client_sem == nullptr)
+        return false;
+    m_host_semaphore = host_sem;
+    m_client_semaphore = client_sem;
     sem_wait(m_client_semaphore);
-
-    int message = m_connection.read();
-
-    if (message == -1)
-    {
-      std::cout << "Client received 'exit' message" << std::endl;
-      sem_post(m_host_semaphore);
-      return;
-    }
-    srand(message);
-    int temperature = (int)(((2.0 * rand()) / RAND_MAX - 1.0) * 69);
-
-    m_connection.write(temperature);
-    sem_post(m_host_semaphore);
-  }
+    return m_connection.Open(0, false);
 }
 
-Client::~Client()
-{
-  m_connection.close();
+void Client::start() {
+    Message msg;
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_int_distribution<int> dist(1, 100);
+    msg.num = dist(mt);
+    m_connection.Write(&msg, sizeof(msg));
+    sem_post(m_host_semaphore);
+
+    while (true) {
+        sem_wait(m_client_semaphore);
+
+        if (!m_connection.Read(&msg, sizeof(msg))) {
+            std::cout << "ERROR: Can't read message" << std::endl;
+            sem_post(m_host_semaphore);
+            return;
+        }
+
+        if (msg.num == -1) {
+            sem_post(m_host_semaphore);
+            return;
+        }
+
+        std::random_device rd;
+        std::mt19937 mt(rd());
+        if (msg.state == 0) {
+            std::uniform_int_distribution<int> dist(1, 100);
+            msg.num = dist(mt);
+        } else {
+            std::uniform_int_distribution<int> dist(1, 50);
+            msg.num = dist(mt);
+        }
+
+        if (!m_connection.Write(&msg, sizeof(Message))) {
+            std::cout << "ERROR: Can't write message" << std::endl;
+            sem_post(m_host_semaphore);
+            return;
+        }
+
+        sem_post(m_host_semaphore);
+    }
+}
+
+Client::~Client() {
+    m_connection.Close();
 }

@@ -10,83 +10,62 @@
 #include <iostream>
 
 static void *shared_memory;
-const key_t key = 2;
+static const key_t key = 2;
 
-void Connection::open(const std::string &id, bool create) {
-	m_is_owner = create;
-	m_id = id;
+bool Conn::Open(int id, bool create) {
+    m_owner = create;
 
-	int shm_flags = 0666;
-	if (m_is_owner) {
-		shm_flags |= IPC_CREAT;
-	}
-	
-	if ((m_desc[0] = shmget(key, sizeof(int), shm_flags)) < 0) {
-		syslog(LOG_ERR, "Error: failed to create shared memory segment");
-		syslog(LOG_ERR, "Error: %s", strerror(errno));
+    int shm_flags = 0666;
+    if (m_owner)
+        shm_flags |= IPC_CREAT;
 
-		return;
-	}
+    if ((m_desc = shmget(key, sizeof(int), shm_flags)) < 0) {
+        std::cout << "Can't create shared memory segment strerror:" << strerror(errno) << std::endl;
+        return false;
+    }
 
-	void* m = shmat(m_desc[0], NULL, 0);
-	if (m == (void*) -1) {
-		syslog(LOG_ERR, "Error: Connection::create_connection : shmat failed");
-		syslog(LOG_ERR, "Error: %s", strerror(errno));
+    void *m = shmat(m_desc, NULL, 0);
+    if (m == (void *) -1) {
+        std::cout << "Can't shmat failed error: " << strerror(errno) << std::endl;
 
-		return;
-	}
-	
-	shared_memory = m;
+        return false;
+    }
+
+    shared_memory = m;
+    return true;
 }
 
-void Connection::write(int message) {
-        int *buf = &message;
-	if (!shared_memory) {
-		syslog(LOG_ERR, "Error: no memory to write to (seg)");
-		return;
-	}
+bool Conn::Write(void *buf, size_t count) {
+    if (!shared_memory) {
+        std::cout << "No memory to write for seg" << std::endl;
+        return false;
+    }
 
-	memcpy(shared_memory, buf, sizeof(int));
+    memcpy(shared_memory, buf, count);
+    return true;
 }
 
-int Connection::read(void) {
-        int buf[1];
-	if (!shared_memory) {
-		syslog(LOG_ERR, "Error: no memory to read from (seg)");
-		return -1;
-	}
+bool Conn::Read(void *buf, size_t count) {
+    if (!shared_memory) {
+        std::cout << "No memory to read for seg" << std::endl;
+        return false;
+    }
 
-	memcpy(buf, shared_memory, sizeof(int));
-	return *buf;
+    memcpy(buf, shared_memory, count);
+    return true;
 }
 
-void Connection::close() {
-	
-	if (shared_memory && shmdt(shared_memory) != 0) {
-		syslog(LOG_ERR, "Error: failed segment detach");
-		syslog(LOG_ERR, "Error: %s", strerror(errno));
+bool Conn::Close() {
+    if (shared_memory && shmdt(shared_memory) != 0) {
+        std::cout << "Failed segment detach error: " << strerror(errno) << std::endl;
+        return false;
+    }
 
-		return;
-	}
+    if (m_owner && shmctl(m_desc, IPC_RMID, NULL) != 0) {
+        std::cout << "Failed to delete segment";
+        return false;
+    }
 
-	if (!m_is_owner) {
-		return;
-	}
-
-	if (m_desc[0] < 0) {
-		syslog(LOG_ERR, "Error: Connection::destroy_connection : no id given");
-		return;
-	}
-
-	if (shmctl(m_desc[0], IPC_RMID, NULL) != 0) {
-                syslog(LOG_ERR, "Error: failed to delete segment");
-		return;
-        }
-
-	syslog(LOG_INFO, "Info: seg-connection destroyed");
-
-	shared_memory = NULL;
-	m_desc[0] = -1;
-
-	return;
+    shared_memory = nullptr;
+    return true;
 }
