@@ -38,7 +38,7 @@ void Config::ReadConfig()
         syslog(LOG_ERR, "Error: Config could't be open.");
         exit(EXIT_FAILURE);
     }
-    if (!configFile.eof())
+    if (configFile.eof())
     {
         syslog(LOG_ERR, "Error: Incorrect config file.");
         exit(EXIT_FAILURE);
