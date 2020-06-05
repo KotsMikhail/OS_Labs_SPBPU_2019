@@ -10,6 +10,7 @@ public:
     static void DeleteSubDir();
     static void Wait();
 private:
+    static void DeleteDir(std::string dirPath);
     static void HandleSignal(int signal);
     static void SetPidToFile();
     static void CheckPidFile();
