@@ -17,10 +17,11 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    Daemon::Create(argv[1]);
+    
+    Daemon my_daemon(argv[1]);
     while (true)
     {
-        Daemon::DeleteSubDir();
-        Daemon::Wait();
+        my_daemon.DeleteSubDir();
+        my_daemon.Wait();
     }
 }
