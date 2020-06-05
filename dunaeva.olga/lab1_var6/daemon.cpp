@@ -11,7 +11,13 @@
 
 using namespace std;
 
-const std::string Daemon::PID_PATH = "/var/run/daemon.pid";
+Daemon::Daemon(char* conf)
+{
+    openlog("daemon", LOG_CONS | LOG_PID, LOG_DAEMON);
+    Config::GetInstance(conf);
+     
+    Create();
+}
 
 void Daemon::CheckPidFile()
 {
@@ -30,16 +36,9 @@ void Daemon::SetPidToFile()
    pidFile.close();
 }
 
-void Daemon::Init(char* conf)
-{
-    openlog("daemon", LOG_CONS | LOG_PID, LOG_DAEMON);
-    Config::GetInstance(conf);
-}
 
-void Daemon::Create(char* conf)
+void Daemon::Create()
 {
-    Init(conf);
-
 
     int pid = fork();
     if (pid == -1)
