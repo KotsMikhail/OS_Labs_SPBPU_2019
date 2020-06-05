@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <fstream>
+#include <iostream>
 
 #include "config.h"
 #include "daemon.h"
@@ -38,7 +39,6 @@ void Daemon::Init(char* conf)
 void Daemon::Create(char* conf)
 {
     Init(conf);
-    CheckPidFile();
 
 
     int pid = fork();
@@ -69,6 +69,7 @@ void Daemon::Create(char* conf)
     signal(SIGHUP, HandleSignal);
     signal(SIGTERM, HandleSignal);
 
+    CheckPidFile();
     SetPidToFile();
 }
 
@@ -94,14 +95,13 @@ void Daemon::HandleSignal(int signal)
     }
 }
 
-void Daemon::DeleteSubDir()
+void Daemon::DeleteDir(string dirPath)
 {
-    Config &conf = Config::GetInstance();
-    DIR *dir = opendir(conf.GetFolderPath().c_str());
+    DIR *dir = opendir(dirPath.c_str());
 
     if (dir == nullptr)
     {
-        syslog(LOG_ERR, "Error: Couldn't open folder.");
+        syslog(LOG_ERR, "Couldn't open subfolder %s.", dirPath.c_str());
         exit(EXIT_FAILURE);
     }
 
@@ -110,8 +110,56 @@ void Daemon::DeleteSubDir()
     {
         if (entry->d_type == DT_DIR)
         {
-            string subdirPath = conf.GetFolderPath() + "/" + entry->d_name;
-            std::system((std::string("rm -r " + subdirPath)).c_str());
+            string subdirPath = dirPath + "/" + entry->d_name;
+            string subdirName = entry->d_name;
+
+            if (subdirName != "." && subdirName != "..")
+            {
+                DeleteDir(subdirPath);
+                if (rmdir(subdirPath.c_str()) != 0)
+                {
+                    syslog(LOG_ERR, "Couldn't delete subfolder.");
+                    exit(EXIT_FAILURE);
+                }
+            }
+        }
+        else
+        {
+           string filePath = dirPath + "/" + entry->d_name;
+           if(unlink(filePath.c_str()) != 0)
+            {
+                syslog(LOG_ERR, "Couldn't delete subfolder.");
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+    closedir(dir);
+}
+
+
+void Daemon::DeleteSubDir()
+{
+    Config &conf = Config::GetInstance();
+    DIR *dir = opendir(conf.GetFolderPath().c_str());
+ 
+    if (dir == nullptr)
+    {
+        syslog(LOG_ERR, "Couldn't open folder.");
+        exit(EXIT_FAILURE);
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != nullptr)
+    {
+        if (entry->d_type == DT_DIR)
+        {
+            string Name = entry->d_name;
+            if (Name != "." && Name != "..")
+            {
+                string subdirPath = conf.GetFolderPath() + "/" + entry->d_name;
+                DeleteDir(subdirPath);
+                rmdir(subdirPath.c_str());
+            }
         }
     }
 
