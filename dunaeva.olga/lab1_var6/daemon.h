@@ -6,20 +6,21 @@
 class Daemon
 {
 public:
-    static void Create(char* conf);
-    static void DeleteSubDir();
-    static void Wait();
+    Daemon(char *conf);
+    void DeleteSubDir();
+    void Wait();
 private:
-    static void DeleteDir(std::string dirPath);
     static void HandleSignal(int signal);
-    static void SetPidToFile();
-    static void CheckPidFile();
-    static void Init(char* conf);
+    void DeleteDir(std::string dirPath);
+    void SetPidToFile();
+    void CheckPidFile();
+    void Create();
 
-    static const std::string PID_PATH;
+    const std::string PID_PATH = "/var/run/daemon.pid";
 };
 
 #endif //DAEMON_H
+
 
 
 
